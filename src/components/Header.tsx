@@ -1,25 +1,19 @@
 import React from 'react';
-import { Volume2, Gauge, Stethoscope, Layers, LayoutGrid, Sparkles } from 'lucide-react';
+import { Volume2, Gauge, Stethoscope, Sparkles } from 'lucide-react';
 import { SpeechSpeed } from '../types/medication';
 
 interface HeaderProps {
   isTtsApiKeyConfigured: boolean;
   isGeminiApiKeyConfigured: boolean;
-  voiceName: string;
   speed: SpeechSpeed;
   onToggleSpeed: () => void;
-  studyMode: 'grid' | 'deck';
-  onToggleStudyMode: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   isTtsApiKeyConfigured,
   isGeminiApiKeyConfigured,
-  voiceName,
   speed,
   onToggleSpeed,
-  studyMode,
-  onToggleStudyMode,
 }) => {
   return (
     <header className="bg-ambulance-green text-white shadow-md sticky top-0 z-30 border-b-4 border-nhs-warmYellow">
@@ -38,21 +32,21 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-emerald-100/90">
-                Pre-Hospital &amp; NHS Community Medication Pronunciation Study
+                Pre-Hospital &amp; NHS Community Medication Study
               </p>
             </div>
           </div>
         </div>
 
-        {/* Voice Status, Gemini Status & Study Controls */}
+        {/* Voice Status, Gemini Status & Speed Control */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
-          {/* Google Cloud TTS British Neural Voice Badge */}
+          {/* Friendly UK Voice Badge */}
           <div
             className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1.5 rounded-lg border border-white/15"
-            title="Powered by Google Cloud Text-to-Speech API (British Neural2 Voice)"
+            title="Powered by Google Cloud Text-to-Speech (British English Neural Voice)"
           >
             <Volume2 className="w-4 h-4 text-nhs-warmYellow shrink-0" aria-hidden="true" />
-            <span className="font-medium text-emerald-50">🇬🇧 {voiceName}</span>
+            <span className="font-medium text-emerald-50">🇬🇧 UK English Voice</span>
             <span
               className={`ml-1 inline-block w-2 h-2 rounded-full ${
                 isTtsApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'
@@ -93,26 +87,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Gauge className="w-4 h-4 text-nhs-warmYellow" aria-hidden="true" />
             <span>{speed === 1.0 ? '1.0x Normal' : '0.75x Slow'}</span>
-          </button>
-
-          {/* Grid vs Single-Card Study Deck Mode */}
-          <button
-            type="button"
-            onClick={onToggleStudyMode}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium bg-white/10 hover:bg-white/20 active:bg-white/25 border border-white/20 transition-colors cursor-pointer ml-auto sm:ml-0"
-            title="Switch between Flashcard Grid and Single-Card Focus Deck"
-          >
-            {studyMode === 'grid' ? (
-              <>
-                <Layers className="w-4 h-4 text-nhs-warmYellow" aria-hidden="true" />
-                <span>Deck Mode</span>
-              </>
-            ) : (
-              <>
-                <LayoutGrid className="w-4 h-4 text-nhs-warmYellow" aria-hidden="true" />
-                <span>Grid View</span>
-              </>
-            )}
           </button>
         </div>
       </div>

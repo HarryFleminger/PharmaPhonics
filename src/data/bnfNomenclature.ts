@@ -2,10 +2,11 @@ import { BnfMedicationItem } from '../types/medication';
 
 /**
  * Comprehensive UK BNF (British National Formulary) nomenclature & code dataset.
- * Used as an automatic fallback if OpenPrescribing's Cloudflare firewall returns HTTP 403.
+ * Covers all JRCALC Core Emergency drugs, High-Risk Trauma/Beta-Blocker drugs,
+ * and UK Starter Formulary Top 100 drugs.
  */
 export const UK_BNF_FALLBACK_ITEMS: BnfMedicationItem[] = [
-  // Analgesics & CNS (Chapter 04)
+  // Analgesics, Anaesthetics & CNS (Chapters 04 & 15)
   { id: '0407010H0', name: 'Paracetamol', type: 'chemical' },
   { id: '0407010H0AAAMAM', name: 'Paracetamol 500mg tablets', type: 'product' },
   { id: '0407010H0AAAPAP', name: 'Paracetamol 1g/100ml solution for infusion vials', type: 'product' },
@@ -18,15 +19,19 @@ export const UK_BNF_FALLBACK_ITEMS: BnfMedicationItem[] = [
   { id: '040702040', name: 'Tramadol hydrochloride', type: 'chemical' },
   { id: '0407020A0', name: 'Fentanyl', type: 'chemical' },
   { id: '0407020AD', name: 'Oxycodone hydrochloride', type: 'chemical' },
-  { id: '0407010M0', name: 'Methoxyflurane', type: 'chemical' },
+  { id: '0407010M0', name: 'Methoxyflurane (Penthrox)', type: 'chemical' },
+  { id: '1501010F0', name: 'Ketamine', type: 'chemical' },
+  { id: '1501041T0', name: 'Nitrous oxide (Entonox 50% N2O / 50% O2)', type: 'chemical' },
+  { id: '1502010J0', name: 'Lidocaine hydrochloride', type: 'chemical' },
   { id: '0406000J0', name: 'Ondansetron', type: 'chemical' },
   { id: '0406000J0AAADAD', name: 'Ondansetron 4mg/2ml solution for injection ampoules', type: 'product' },
   { id: '0406000F0', name: 'Cyclizine', type: 'chemical' },
   { id: '0406000M0', name: 'Metoclopramide hydrochloride', type: 'chemical' },
-  { id: '0406000T0', name: 'Prochlorperazine', type: 'chemical' },
+  { id: '0406000T0', name: 'Prochlorperazine maleate', type: 'chemical' },
   { id: '0408010C0', name: 'Diazepam', type: 'chemical' },
   { id: '0408020W0', name: 'Midazolam', type: 'chemical' },
   { id: '0408010Q0', name: 'Lorazepam', type: 'chemical' },
+  { id: '0401010Z0', name: 'Zopiclone', type: 'chemical' },
   { id: '0408010H0', name: 'Levetiracetam', type: 'chemical' },
   { id: '0408010W0', name: 'Sodium valproate', type: 'chemical' },
   { id: '0408010A0', name: 'Carbamazepine', type: 'chemical' },
@@ -44,13 +49,14 @@ export const UK_BNF_FALLBACK_ITEMS: BnfMedicationItem[] = [
   { id: '040201030', name: 'Risperidone', type: 'chemical' },
   { id: '0402010J0', name: 'Haloperidol', type: 'chemical' },
 
-  // Respiratory System (Chapter 03)
+  // Respiratory System & Medical Gases (Chapter 03)
   { id: '0301011R0', name: 'Salbutamol', type: 'chemical' },
   { id: '0301011R0AAAPAP', name: 'Salbutamol 100micrograms/dose inhaler CFC free', type: 'product' },
   { id: '0301011R0AAANAN', name: 'Salbutamol 2.5mg/2.5ml nebuliser liquid unit dose vials', type: 'product' },
   { id: '0301020I0', name: 'Ipratropium bromide', type: 'chemical' },
   { id: '0301020I0AAADAD', name: 'Ipratropium bromide 500micrograms/2ml nebuliser liquid', type: 'product' },
   { id: '0301020Q0', name: 'Tiotropium', type: 'chemical' },
+  { id: '0301020S0', name: 'Glycopyrronium bromide', type: 'chemical' },
   { id: '0302000C0', name: 'Beclometasone dipropionate', type: 'chemical' },
   { id: '0302000K0', name: 'Budesonide', type: 'chemical' },
   { id: '0302000N0', name: 'Fluticasone propionate', type: 'chemical' },
@@ -60,10 +66,14 @@ export const UK_BNF_FALLBACK_ITEMS: BnfMedicationItem[] = [
   { id: '0304010N0', name: 'Loratadine', type: 'chemical' },
   { id: '0304010D0', name: 'Fexofenadine hydrochloride', type: 'chemical' },
   { id: '0304030C0', name: 'Adrenaline (epinephrine)', type: 'chemical' },
-  { id: '0304030C0AAAAAA', name: 'Adrenaline (base) 1mg/1ml (1 in 1,000) solution for injection', type: 'product' },
+  { id: '0304030C0AAAAAA', name: 'Adrenaline 1mg/1ml (1 in 1,000) solution for injection', type: 'product' },
+  { id: '0207010B0AAADAD', name: 'Adrenaline 1mg/10ml (1 in 10,000) dilute solution for injection', type: 'product' },
+  { id: '0306000A0', name: 'Oxygen', type: 'chemical' },
   { id: '0307000J0', name: 'Carbocisteine', type: 'chemical' },
 
   // Cardiovascular System (Chapter 02)
+  { id: '0203020A0', name: 'Adenosine', type: 'chemical' },
+  { id: '0210020B0', name: 'Alteplase', type: 'chemical' },
   { id: '0212000B0', name: 'Atorvastatin', type: 'chemical' },
   { id: '0212000Y0', name: 'Simvastatin', type: 'chemical' },
   { id: '0212000AA', name: 'Rosuvastatin calcium', type: 'chemical' },
@@ -114,6 +124,7 @@ export const UK_BNF_FALLBACK_ITEMS: BnfMedicationItem[] = [
   { id: '0103050P0', name: 'Omeprazole', type: 'chemical' },
   { id: '0103050E0', name: 'Esomeprazole', type: 'chemical' },
   { id: '0103050R0', name: 'Pantoprazole', type: 'chemical' },
+  { id: '0103040M0', name: 'Misoprostol', type: 'chemical' },
   { id: '0103010H0', name: 'Famotidine', type: 'chemical' },
   { id: '0102000J0', name: 'Hyoscine butylbromide', type: 'chemical' },
   { id: '0102000P0', name: 'Mebeverine hydrochloride', type: 'chemical' },
@@ -122,7 +133,7 @@ export const UK_BNF_FALLBACK_ITEMS: BnfMedicationItem[] = [
   { id: '0106020M0', name: 'Senna', type: 'chemical' },
   { id: '0106040G0', name: 'Lactulose', type: 'chemical' },
 
-  // Endocrine System (Chapter 06)
+  // Endocrine, Obstetrics & Nutrition/Electrolytes (Chapters 06, 07, 09)
   { id: '0601022B0', name: 'Metformin hydrochloride', type: 'chemical' },
   { id: '0601021M0', name: 'Gliclazide', type: 'chemical' },
   { id: '0601023X0', name: 'Sitagliptin', type: 'chemical' },
@@ -132,20 +143,29 @@ export const UK_BNF_FALLBACK_ITEMS: BnfMedicationItem[] = [
   { id: '0601011A0', name: 'Insulin aspart', type: 'chemical' },
   { id: '0601012V0', name: 'Insulin glargine', type: 'chemical' },
   { id: '0601040G0', name: 'Glucagon', type: 'chemical' },
+  { id: '0601040D0', name: 'Glucose (Dextrose 10% / 40% oral gel)', type: 'chemical' },
   { id: '0602010V0', name: 'Levothyroxine sodium', type: 'chemical' },
   { id: '0602020C0', name: 'Carbimazole', type: 'chemical' },
   { id: '0603020J0', name: 'Hydrocortisone', type: 'chemical' },
   { id: '0603020T0', name: 'Prednisolone', type: 'chemical' },
   { id: '0603020G0', name: 'Dexamethasone', type: 'chemical' },
+  { id: '0606020A0', name: 'Alendronic acid', type: 'chemical' },
+  { id: '0701011B0', name: 'Syntometrine (Ergometrine maleate with oxytocin)', type: 'chemical' },
+  { id: '0902021S0', name: 'Sodium chloride 0.9%', type: 'chemical' },
+  { id: '0905011D0', name: 'Calcium chloride', type: 'chemical' },
+  { id: '0905013G0', name: 'Magnesium sulfate', type: 'chemical' },
 
   // Infections / Antibiotics (Chapter 05)
   { id: '0501013B0', name: 'Amoxicillin', type: 'chemical' },
   { id: '0501013K0', name: 'Co-amoxiclav', type: 'chemical' },
   { id: '0501012G0', name: 'Flucloxacillin sodium', type: 'chemical' },
+  { id: '0501014N0', name: 'Pivmecillinam hydrochloride', type: 'chemical' },
+  { id: '0501021L0', name: 'Cefalexin', type: 'chemical' },
   { id: '0501011J0', name: 'Benzylpenicillin sodium (Penicillin G)', type: 'chemical' },
   { id: '0501011P0', name: 'Phenoxymethylpenicillin (Penicillin V)', type: 'chemical' },
   { id: '0501050B0', name: 'Clarithromycin', type: 'chemical' },
   { id: '0501050A0', name: 'Azithromycin', type: 'chemical' },
+  { id: '0501060D0', name: 'Clindamycin', type: 'chemical' },
   { id: '0501030I0', name: 'Doxycycline hyclate', type: 'chemical' },
   { id: '0501080W0', name: 'Trimethoprim', type: 'chemical' },
   { id: '0501130R0', name: 'Nitrofurantoin', type: 'chemical' },

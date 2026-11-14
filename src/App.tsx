@@ -1,8 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  ChevronLeft,
-  ChevronRight,
-  Shuffle,
   SearchX,
   AlertCircle,
   X,
@@ -22,14 +19,16 @@ import { MedicationCard, MedicationCardSkeleton } from './components/MedicationC
 
 export function App() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string | null>('JRCALC Core Emergency');
   const debouncedQuery = useDebounce(searchQuery, 400);
 
   const [results, setResults] = useState<BnfMedicationItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const [studyMode, setStudyMode] = useState<'grid' | 'deck'>('grid');
-  const [deckIndex, setDeckIndex] = useState(0);
+  // Track whether the search was triggered by clicking a Quick Practice Category drug
+  // so we can automatically expand and fetch Gemini clinical details for the top matching card
+  const autoExpandNextResultRef = useRef(false);
 
   // Track which flashcards are selected/expanded and their Gemini clinical details state
   const [selectedCardKeys, setSelectedCardKeys] = useState<Record<string, boolean>>({});
@@ -41,7 +40,6 @@ export function App() {
 
   const {
     isApiKeyConfigured: isTtsApiKeyConfigured,
-    voiceName,
     loadingId: audioLoadingId,
     speakingId,
     error: ttsError,
@@ -98,6 +96,11 @@ export function App() {
     ]
   );
 
+  const handleSelectCategoryDrug = useCallback((drugName: string) => {
+    autoExpandNextResultRef.current = true;
+    setSearchQuery(drugName);
+  }, []);
+
   // Fetch live UK BNF records from OpenPrescribing after 400ms debounce when input length > 2
   useEffect(() => {
     const trimmed = debouncedQuery.trim();
@@ -117,8 +120,17 @@ export function App() {
       .then((items) => {
         if (!abortController.signal.aborted) {
           setResults(items);
-          setDeckIndex(0);
           setIsSearching(false);
+
+          // If the user clicked a drug from Quick Practice Categories, automatically
+          // select the first returned BNF card to trigger the Gemini clinical details fetch
+          if (autoExpandNextResultRef.current && items.length > 0) {
+            autoExpandNextResultRef.current = false;
+            const firstItem = items[0];
+            const firstKey = getCardKey(firstItem);
+            setSelectedCardKeys((prev) => ({ ...prev, [firstKey]: true }));
+            void loadClinicalDetailsForMedication(firstItem);
+          }
         }
       })
       .catch((err) => {
@@ -126,6 +138,7 @@ export function App() {
           return;
         }
         if (!abortController.signal.aborted) {
+          autoExpandNextResultRef.current = false;
           setSearchError(
             err instanceof Error
               ? err.message
@@ -139,32 +152,17 @@ export function App() {
     return () => {
       abortController.abort();
     };
-  }, [debouncedQuery]);
+  }, [debouncedQuery, loadClinicalDetailsForMedication]);
 
   const hasActiveQuery = debouncedQuery.trim().length > 2;
-  const activeDeckCard = results[deckIndex] ?? null;
-
-  const handleRandomCard = () => {
-    if (results.length <= 1) return;
-    let nextIdx = deckIndex;
-    while (nextIdx === deckIndex) {
-      nextIdx = Math.floor(Math.random() * results.length);
-    }
-    setDeckIndex(nextIdx);
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <Header
         isTtsApiKeyConfigured={isTtsApiKeyConfigured}
         isGeminiApiKeyConfigured={hasGeminiApiKey()}
-        voiceName={voiceName}
         speed={speed}
         onToggleSpeed={toggleSpeed}
-        studyMode={studyMode}
-        onToggleStudyMode={() =>
-          setStudyMode((prev) => (prev === 'grid' ? 'deck' : 'grid'))
-        }
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 sm:px-6 sm:py-8">
@@ -219,6 +217,9 @@ export function App() {
         <SearchAndFilter
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          activeCategory={activeCategory}
+          onSelectCategory={setActiveCategory}
+          onSelectDrug={handleSelectCategoryDrug}
           isSearching={isSearching}
           resultCount={results.length}
           hasActiveQuery={hasActiveQuery}
@@ -245,9 +246,9 @@ export function App() {
               Search the Live UK BNF Database
             </h2>
             <p className="text-sm sm:text-base text-slate-600 mt-1.5 leading-relaxed">
-              Type at least <strong>3 characters</strong> above (or tap a Quick BNF Lookup pill) to
-              search UK medications. Select any flashcard to generate{' '}
-              <strong>Phonetic Spelling, Class, and Clinical Indications</strong> with Gemini AI.
+              Select a medication from the <strong>Quick Practice Categories</strong> above or type
+              at least <strong>3 characters</strong> in the search bar to load its BNF flashcard and
+              on-scene clinical notes.
             </p>
           </div>
         ) : results.length === 0 ? (
@@ -260,8 +261,7 @@ export function App() {
               No BNF entries found for &ldquo;{debouncedQuery.trim()}&rdquo;
             </h2>
             <p className="text-sm text-slate-600 mt-1">
-              Check your spelling or try a UK BNF generic name (e.g., <em>Paracetamol</em>,{' '}
-              <em>Salbutamol</em>, <em>Furosemide</em>, <em>Amiodarone</em>).
+              Check your spelling or select a drug from the Quick Practice Categories above.
             </p>
             <button
               type="button"
@@ -271,7 +271,7 @@ export function App() {
               Clear Search
             </button>
           </div>
-        ) : studyMode === 'grid' ? (
+        ) : (
           /* Responsive Flashcard Grid */
           <section
             aria-label="OpenPrescribing BNF Medication Flashcards"
@@ -296,62 +296,6 @@ export function App() {
               );
             })}
           </section>
-        ) : (
-          /* Single-Card Focused Deck Mode */
-          <section aria-label="Single Flashcard Study Deck" className="max-w-2xl mx-auto">
-            <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-xs sm:text-sm font-semibold text-slate-500">
-                Card {deckIndex + 1} of {results.length}
-              </span>
-              <button
-                type="button"
-                onClick={handleRandomCard}
-                disabled={results.length <= 1}
-                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-ambulance-green hover:underline disabled:opacity-40 cursor-pointer"
-              >
-                <Shuffle className="w-4 h-4" aria-hidden="true" />
-                Shuffle Card
-              </button>
-            </div>
-
-            {activeDeckCard && (
-              <MedicationCard
-                medication={activeDeckCard}
-                isSelected={Boolean(selectedCardKeys[getCardKey(activeDeckCard)])}
-                onSelect={handleSelectMedication}
-                clinicalDetails={clinicalDetailsByKey[getCardKey(activeDeckCard)]}
-                isClinicalLoading={Boolean(clinicalLoadingByKey[getCardKey(activeDeckCard)])}
-                clinicalError={clinicalErrorByKey[getCardKey(activeDeckCard)]}
-                onRetryClinical={loadClinicalDetailsForMedication}
-                isAudioLoading={audioLoadingId === activeDeckCard.id}
-                isSpeaking={speakingId === activeDeckCard.id}
-                onListen={speak}
-              />
-            )}
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setDeckIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1))
-                }
-                className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-white border border-slate-300 font-semibold text-slate-800 hover:bg-slate-100 active:scale-[0.99] transition-all shadow-sm cursor-pointer"
-              >
-                <ChevronLeft className="w-5 h-5" aria-hidden="true" />
-                <span>Previous</span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setDeckIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0))
-                }
-                className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-ambulance-green text-white font-semibold hover:bg-emerald-800 active:scale-[0.99] transition-all shadow-sm cursor-pointer"
-              >
-                <span>Next Card</span>
-                <ChevronRight className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-          </section>
         )}
       </main>
 
@@ -366,11 +310,7 @@ export function App() {
           >
             OpenPrescribing BNF API
           </a>
-          , Google Gemini AI, &amp; Google Cloud Text-to-Speech (
-          <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">
-            {voiceName}
-          </code>
-          ).
+          , Google Gemini AI, &amp; Google Cloud Text-to-Speech (UK English Voice).
         </p>
       </footer>
     </div>
