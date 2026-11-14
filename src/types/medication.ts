@@ -18,6 +18,11 @@ export interface GeminiClinicalDetails {
   phoneticSpelling: string;
   class: string;
   indications: string[];
+  /**
+   * Plain-English, pre-hospital summary explaining why a patient is typically prescribed
+   * this medication and what an ambulance crew needs to be aware of on scene.
+   */
+  medicSummary: string;
 }
 
 export type SpeechSpeed = 1.0 | 0.75;

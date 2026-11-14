@@ -11,6 +11,7 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Stethoscope,
 } from 'lucide-react';
 import { BnfMedicationItem, GeminiClinicalDetails } from '../types/medication';
 
@@ -187,6 +188,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                 </div>
                 <div className="h-8 w-48 bg-slate-100 rounded-xl" />
                 <div className="h-5 w-64 bg-slate-100 rounded-lg" />
+                <div className="h-16 w-full bg-slate-100 rounded-xl" />
                 <div className="space-y-2 pt-1">
                   <div className="h-4 w-full bg-slate-100 rounded" />
                   <div className="h-4 w-5/6 bg-slate-100 rounded" />
@@ -217,8 +219,8 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                 )}
               </div>
             ) : (
-              /* Resolved Gemini Clinical Details: Phonetic Spelling, Class, and Indications */
-              <div className="space-y-3.5">
+              /* Resolved Gemini Clinical Details: Phonetic Spelling, Class, On-Scene Context, and Indications */
+              <div className="space-y-4">
                 {/* Phonetic Spelling */}
                 <div>
                   <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
@@ -235,7 +237,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                 </div>
 
                 {/* Drug Class */}
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-2">
                   <Pill className="w-4 h-4 text-nhs-blue shrink-0" aria-hidden="true" />
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Class:
@@ -243,6 +245,22 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                   <span className="text-sm font-semibold text-nhs-blue">
                     {clinicalDetails.class}
                   </span>
+                </div>
+
+                {/* Prominent Paramedic Pre-Hospital Overview: "On-Scene Context" */}
+                <div className="rounded-xl bg-emerald-50/70 border border-emerald-200/80 p-3.5 sm:p-4">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Stethoscope
+                      className="w-4 h-4 text-ambulance-green shrink-0"
+                      aria-hidden="true"
+                    />
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                      On-Scene Context
+                    </h3>
+                  </div>
+                  <p className="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+                    {clinicalDetails.medicSummary}
+                  </p>
                 </div>
 
                 {/* Indications */}

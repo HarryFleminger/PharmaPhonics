@@ -32,10 +32,11 @@ export function hasGeminiApiKey(): boolean {
 }
 
 /**
- * Builds the exact required JRCALC / BNF pharmacology prompt for a selected drug name.
+ * Builds the JRCALC / BNF pharmacology prompt requesting `phoneticSpelling`, `class`,
+ * `indications`, and a pre-hospital `medicSummary`.
  */
 export function buildClinicalPrompt(selectedDrugName: string): string {
-  return `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${selectedDrugName}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string), 'class' (string), and 'indications' (array of brief strings). No markdown, no extra text.`;
+  return `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${selectedDrugName}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string), 'class' (string), 'indications' (array of brief strings), and 'medicSummary' (string: a plain-English, pre-hospital summary explaining why a patient is typically prescribed this medication and what an ambulance crew needs to be aware of on scene, such as bleeding risks, masked heart rates, or postural hypotension—highly relevant to a paramedic's primary survey and assessment, while strictly avoiding overly dense academic jargon). No markdown, no extra text.`;
 }
 
 /**
@@ -62,8 +63,10 @@ function parseAndValidateClinicalJson(rawText: string): GeminiClinicalDetails {
         .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
         .map((item) => item.trim())
     : [];
+  const medicSummary =
+    typeof record.medicSummary === 'string' ? record.medicSummary.trim() : '';
 
-  if (!phoneticSpelling || !drugClass || indications.length === 0) {
+  if (!phoneticSpelling || !drugClass || indications.length === 0 || !medicSummary) {
     throw new Error('Gemini response missing required clinical fields.');
   }
 
@@ -71,6 +74,7 @@ function parseAndValidateClinicalJson(rawText: string): GeminiClinicalDetails {
     phoneticSpelling,
     class: drugClass,
     indications,
+    medicSummary,
   };
 }
 
@@ -87,7 +91,6 @@ async function callGeminiEndpoint(
   const trimmedKey = apiKey.trim();
   const encodedKey = encodeURIComponent(trimmedKey);
 
-  // Pass both `?key=` and `x-goog-api-key` header so both legacy `AIza` keys and new `AQ.` auth keys work
   return fetch(`${endpoint}?key=${encodedKey}`, {
     method: 'POST',
     headers: {
@@ -100,7 +103,7 @@ async function callGeminiEndpoint(
 }
 
 /**
- * Fetches UK Paramedic (JRCALC) & BNF clinical details (`phoneticSpelling`, `class`, `indications`)
+ * Fetches UK Paramedic (JRCALC) & BNF clinical details (`phoneticSpelling`, `class`, `indications`, `medicSummary`)
  * for a selected medication from the Gemini API with strict `application/json` output.
  */
 export async function fetchMedicationClinicalDetails(
@@ -144,7 +147,6 @@ export async function fetchMedicationClinicalDetails(
       }
       lastResponse = response;
       lastErrorBody = await response.text().catch(() => '');
-      // Continue to fallback model if 404 (model retired/not found)
       if (response.status !== 404) {
         break;
       }
