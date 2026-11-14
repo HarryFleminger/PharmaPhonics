@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Medication, SpeechSpeed } from '../types/medication';
+import { SpeechSpeed } from '../types/medication';
 import {
   synthesizeMedicationSpeech,
   hasGoogleTtsApiKey,
@@ -15,7 +15,7 @@ export interface UseSpeechSynthesisReturn {
   clearError: () => void;
   speed: SpeechSpeed;
   toggleSpeed: () => void;
-  speak: (medication: Pick<Medication, 'id' | 'name' | 'ssml'>) => Promise<void>;
+  speak: (id: string, name: string) => Promise<void>;
   stop: () => void;
 }
 
@@ -59,9 +59,7 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
   }, []);
 
   const speak = useCallback(
-    async (medication: Pick<Medication, 'id' | 'name' | 'ssml'>) => {
-      const { id, name, ssml } = medication;
-
+    async (id: string, name: string) => {
       // If clicking the same card while it is already playing or loading, stop it
       if (speakingId === id || loadingId === id) {
         stop();
@@ -76,9 +74,9 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
       abortControllerRef.current = abortController;
 
       try {
+        // Pass the fetched OpenPrescribing API `name` string directly to Google Cloud TTS
         const audioDataUrl = await synthesizeMedicationSpeech({
           name,
-          ssml,
           speakingRate: speed,
           signal: abortController.signal,
         });
@@ -102,7 +100,7 @@ export function useSpeechSynthesis(): UseSpeechSynthesisReturn {
         audio.onerror = () => {
           setLoadingId((current) => (current === id ? null : current));
           setSpeakingId((current) => (current === id ? null : current));
-          setError(`Failed to play synthesized audio for ${name}.`);
+          setError(`Failed to play synthesized audio for "${name}".`);
         };
 
         await audio.play();

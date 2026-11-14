@@ -1,9 +1,10 @@
 import React from 'react';
-import { Volume2, Gauge, Stethoscope, Layers, LayoutGrid } from 'lucide-react';
+import { Volume2, Gauge, Stethoscope, Layers, LayoutGrid, Sparkles } from 'lucide-react';
 import { SpeechSpeed } from '../types/medication';
 
 interface HeaderProps {
-  isApiKeyConfigured: boolean;
+  isTtsApiKeyConfigured: boolean;
+  isGeminiApiKeyConfigured: boolean;
   voiceName: string;
   speed: SpeechSpeed;
   onToggleSpeed: () => void;
@@ -12,7 +13,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  isApiKeyConfigured,
+  isTtsApiKeyConfigured,
+  isGeminiApiKeyConfigured,
   voiceName,
   speed,
   onToggleSpeed,
@@ -42,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Voice Status & Study Controls */}
+        {/* Voice Status, Gemini Status & Study Controls */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
           {/* Google Cloud TTS British Neural Voice Badge */}
           <div
@@ -50,17 +52,34 @@ export const Header: React.FC<HeaderProps> = ({
             title="Powered by Google Cloud Text-to-Speech API (British Neural2 Voice)"
           >
             <Volume2 className="w-4 h-4 text-nhs-warmYellow shrink-0" aria-hidden="true" />
-            <span className="font-medium text-emerald-50">
-              🇬🇧 {voiceName}
-            </span>
+            <span className="font-medium text-emerald-50">🇬🇧 {voiceName}</span>
             <span
               className={`ml-1 inline-block w-2 h-2 rounded-full ${
-                isApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'
+                isTtsApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'
               }`}
               title={
-                isApiKeyConfigured
+                isTtsApiKeyConfigured
                   ? 'VITE_GOOGLE_TTS_API_KEY configured'
                   : 'VITE_GOOGLE_TTS_API_KEY missing in .env.local'
+              }
+            />
+          </div>
+
+          {/* Gemini AI Clinical Pharmacology Status Badge */}
+          <div
+            className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1.5 rounded-lg border border-white/15"
+            title="Powered by Google Gemini API for JRCALC & BNF Clinical Details"
+          >
+            <Sparkles className="w-4 h-4 text-nhs-warmYellow shrink-0" aria-hidden="true" />
+            <span className="font-medium text-emerald-50">Gemini Clinical AI</span>
+            <span
+              className={`ml-1 inline-block w-2 h-2 rounded-full ${
+                isGeminiApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'
+              }`}
+              title={
+                isGeminiApiKeyConfigured
+                  ? 'VITE_GEMINI_API_KEY configured'
+                  : 'VITE_GEMINI_API_KEY missing in .env.local'
               }
             />
           </div>
