@@ -1,11 +1,12 @@
 import React from 'react';
-import { Volume2, VolumeX, Pill, CheckCircle2, BookOpen } from 'lucide-react';
+import { Volume2, VolumeX, Loader2, Pill, CheckCircle2, BookOpen, Sparkles } from 'lucide-react';
 import { Medication } from '../types/medication';
 
 interface MedicationCardProps {
   medication: Medication;
+  isLoading: boolean;
   isSpeaking: boolean;
-  onListen: (id: string, name: string) => void;
+  onListen: (medication: Medication) => void;
 }
 
 /**
@@ -66,6 +67,7 @@ function getCategoryBadgeStyles(category: Medication['category']): {
 
 export const MedicationCard: React.FC<MedicationCardProps> = ({
   medication,
+  isLoading,
   isSpeaking,
   onListen,
 }) => {
@@ -74,19 +76,29 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
   return (
     <article
       className={`group bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden ${
-        isSpeaking
+        isSpeaking || isLoading
           ? 'border-ambulance-green ring-2 ring-ambulance-green/30 shadow-md'
           : 'border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300'
       }`}
     >
       {/* Top Section: Category, Drug Name, Phonetic Spelling & Listen Button */}
       <div className="p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}
           >
             {label}
           </span>
+
+          {medication.ssml && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700 border border-violet-200"
+              title={`SSML Pronunciation Markup: ${medication.ssml}`}
+            >
+              <Sparkles className="w-3 h-3" aria-hidden="true" />
+              SSML Tuned
+            </span>
+          )}
         </div>
 
         {/* Drug Name + Listen Button Row */}
@@ -107,22 +119,32 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
             </div>
           </div>
 
-          {/* Listen Button (en-GB Web Speech API) */}
+          {/* Listen Button (Google Cloud TTS en-GB-Neural2-B with Loading Spinner) */}
           <button
             type="button"
-            onClick={() => onListen(medication.id, medication.name)}
+            onClick={() => onListen(medication)}
+            aria-busy={isLoading}
             aria-label={
-              isSpeaking
+              isLoading
+                ? `Fetching pronunciation audio for ${medication.name}`
+                : isSpeaking
                 ? `Stop pronunciation of ${medication.name}`
                 : `Listen to British English pronunciation of ${medication.name}`
             }
-            className={`shrink-0 inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer select-none shadow-sm ${
-              isSpeaking
+            className={`shrink-0 inline-flex items-center justify-center gap-2 min-w-[112px] px-4 py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer select-none shadow-sm ${
+              isLoading
+                ? 'bg-emerald-800 text-emerald-50 ring-2 ring-emerald-500/40'
+                : isSpeaking
                 ? 'bg-emerald-700 text-white ring-4 ring-emerald-500/30 animate-pulse'
                 : 'bg-ambulance-green text-white hover:bg-emerald-800 active:scale-[0.98]'
             }`}
           >
-            {isSpeaking ? (
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 shrink-0 animate-spin" aria-hidden="true" />
+                <span>Loading…</span>
+              </>
+            ) : isSpeaking ? (
               <>
                 <VolumeX className="w-5 h-5 shrink-0" aria-hidden="true" />
                 <span>Stop</span>

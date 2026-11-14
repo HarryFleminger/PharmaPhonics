@@ -6,6 +6,11 @@ export interface Medication {
   name: string;
   /** Syllabic British English phonetic spelling with stressed syllables capitalized */
   phonetic: string;
+  /**
+   * Optional SSML markup (e.g., "<speak>a-mee-oh-da-rone</speak>") sent to Google Cloud TTS
+   * when a medical term requires guided phonetic or prosodic synthesis.
+   */
+  ssml?: string;
   /** Pharmacological class per BNF / JRCALC */
   drugClass: string;
   /** Clinical context where paramedics encounter this medication */

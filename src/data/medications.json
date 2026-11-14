@@ -16,6 +16,7 @@
     "id": "salbutamol",
     "name": "Salbutamol",
     "phonetic": "sal-BYOO-ta-mol",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"sælˈbjuːtəmɒl\">Salbutamol</phoneme></speak>",
     "drugClass": "Short-Acting Beta-2 Agonist (SABA)",
     "category": "Both",
     "indications": [
@@ -29,6 +30,7 @@
     "id": "ipratropium",
     "name": "Ipratropium Bromide",
     "phonetic": "ip-ra-TRO-pee-um BRO-mide",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"ˌɪprəˈtrəʊpiəm ˈbrəʊmaɪd\">Ipratropium Bromide</phoneme></speak>",
     "drugClass": "Antimuscarinic Bronchodilator (SAMA)",
     "category": "Both",
     "indications": [
@@ -41,6 +43,7 @@
     "id": "furosemide",
     "name": "Furosemide",
     "phonetic": "fyoor-OH-se-mide",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"fjʊəˈrəʊsɪmaɪd\">Furosemide</phoneme></speak>",
     "drugClass": "Loop Diuretic",
     "category": "Both",
     "indications": [
@@ -54,6 +57,7 @@
     "id": "ondansetron",
     "name": "Ondansetron",
     "phonetic": "on-DAN-se-tron",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"ɒnˈdænsɪtrɒn\">Ondansetron</phoneme></speak>",
     "drugClass": "5-HT3 Receptor Antagonist (Antiemetic)",
     "category": "JRCALC Pre-Hospital",
     "indications": [
@@ -80,6 +84,7 @@
     "id": "amlodipine",
     "name": "Amlodipine",
     "phonetic": "am-LO-di-peen",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"æmˈlɒdɪpiːn\">Amlodipine</phoneme></speak>",
     "drugClass": "Dihydropyridine Calcium-Channel Blocker",
     "category": "NHS Community",
     "indications": [
@@ -92,6 +97,7 @@
     "id": "lansoprazole",
     "name": "Lansoprazole",
     "phonetic": "lan-SO-pra-zole",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"lænˈsɒprəzəʊl\">Lansoprazole</phoneme></speak>",
     "drugClass": "Proton Pump Inhibitor (PPI)",
     "category": "NHS Community",
     "indications": [
@@ -119,6 +125,7 @@
     "id": "omeprazole",
     "name": "Omeprazole",
     "phonetic": "oh-MEP-ra-zole",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"əʊˈmɛprəzəʊl\">Omeprazole</phoneme></speak>",
     "drugClass": "Proton Pump Inhibitor (PPI)",
     "category": "NHS Community",
     "indications": [
@@ -132,6 +139,7 @@
     "id": "bisoprolol",
     "name": "Bisoprolol",
     "phonetic": "bi-SOP-ro-lol",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"bɪˈsɒprəlɒl\">Bisoprolol</phoneme></speak>",
     "drugClass": "Cardioselective Beta-1 Adrenoceptor Blocker",
     "category": "NHS Community",
     "indications": [
@@ -184,6 +192,7 @@
     "id": "glyceryl-trinitrate",
     "name": "Glyceryl Trinitrate",
     "phonetic": "GLIS-er-il try-NY-trate",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"ˈɡlɪsərɪl traɪˈnaɪtreɪt\">Glyceryl Trinitrate</phoneme></speak>",
     "drugClass": "Organic Nitrate Vasodilator",
     "category": "Both",
     "indications": [
@@ -197,6 +206,7 @@
     "id": "chlorphenamine",
     "name": "Chlorphenamine",
     "phonetic": "klor-FEN-a-meen",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"klɔːˈfɛnəmiːn\">Chlorphenamine</phoneme></speak>",
     "drugClass": "Sedating Antihistamine (H1 Antagonist)",
     "category": "Both",
     "indications": [
@@ -222,6 +232,7 @@
     "id": "amiodarone",
     "name": "Amiodarone",
     "phonetic": "a-mee-OH-da-rone",
+    "ssml": "<speak>a-mee-oh-da-rone</speak>",
     "drugClass": "Class III Antiarrhythmic",
     "category": "Both",
     "indications": [
@@ -234,6 +245,7 @@
     "id": "levothyroxine",
     "name": "Levothyroxine",
     "phonetic": "lee-vo-thy-ROX-een",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"ˌliːvəʊθaɪˈrɒksiːn\">Levothyroxine</phoneme></speak>",
     "drugClass": "Synthetic Thyroid Hormone (T4)",
     "category": "NHS Community",
     "indications": [
@@ -246,6 +258,7 @@
     "id": "clopidogrel",
     "name": "Clopidogrel",
     "phonetic": "klo-PID-o-grel",
+    "ssml": "<speak><phoneme alphabet=\"ipa\" ph=\"kləˈpɪdəɡrɛl\">Clopidogrel</phoneme></speak>",
     "drugClass": "Antiplatelet (P2Y12 Receptor Inhibitor)",
     "category": "Both",
     "indications": [

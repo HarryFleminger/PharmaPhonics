@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Shuffle, SearchX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Shuffle, SearchX, AlertCircle, X } from 'lucide-react';
 import medicationsData from './data/medications.json';
 import { Medication, CategoryFilter } from './types/medication';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
@@ -16,11 +16,12 @@ export function App() {
   const [deckIndex, setDeckIndex] = useState(0);
 
   const {
-    isSupported,
-    ukVoices,
-    selectedVoice,
-    setSelectedVoiceByName,
+    isApiKeyConfigured,
+    voiceName,
+    loadingId,
     speakingId,
+    error,
+    clearError,
     speed,
     toggleSpeed,
     speak,
@@ -72,10 +73,8 @@ export function App() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <Header
-        isSupported={isSupported}
-        ukVoices={ukVoices}
-        selectedVoice={selectedVoice}
-        onSelectVoice={setSelectedVoiceByName}
+        isApiKeyConfigured={isApiKeyConfigured}
+        voiceName={voiceName}
         speed={speed}
         onToggleSpeed={toggleSpeed}
         studyMode={studyMode}
@@ -85,6 +84,30 @@ export function App() {
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 sm:px-6 sm:py-8">
+        {/* Error Banner if Google Cloud TTS fails or API key is missing */}
+        {error && (
+          <div
+            role="alert"
+            className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 shadow-sm"
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <p className="font-semibold">Audio Synthesis Error</p>
+                <p className="mt-0.5 text-red-800">{error}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={clearError}
+              aria-label="Dismiss error"
+              className="p-1 rounded-lg text-red-500 hover:bg-red-100 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <SearchAndFilter
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -125,6 +148,7 @@ export function App() {
               <MedicationCard
                 key={med.id}
                 medication={med}
+                isLoading={loadingId === med.id}
                 isSpeaking={speakingId === med.id}
                 onListen={speak}
               />
@@ -151,6 +175,7 @@ export function App() {
             {activeDeckCard && (
               <MedicationCard
                 medication={activeDeckCard}
+                isLoading={loadingId === activeDeckCard.id}
                 isSpeaking={speakingId === activeDeckCard.id}
                 onListen={speak}
               />
@@ -188,12 +213,13 @@ export function App() {
 
       <footer className="border-t border-slate-200 bg-white py-4 px-4 sm:px-6 text-center text-xs text-slate-500">
         <p>
-          <strong>PharmaPhonics</strong> — Uses UK BNF / rINN nomenclature &amp; native{' '}
+          <strong>PharmaPhonics</strong> — Uses UK BNF / rINN nomenclature &amp; Google Cloud
+          Text-to-Speech (
           <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">
-            en-GB
-          </code>{' '}
-          Web Speech synthesis. For educational &amp; pronunciation study only; always consult current
-          JRCALC and BNF clinical guidelines in practice.
+            {voiceName}
+          </code>
+          ). For educational &amp; pronunciation study only; always consult current JRCALC and BNF
+          clinical guidelines in practice.
         </p>
       </footer>
     </div>

@@ -3,10 +3,8 @@ import { Volume2, Gauge, Stethoscope, Layers, LayoutGrid } from 'lucide-react';
 import { SpeechSpeed } from '../types/medication';
 
 interface HeaderProps {
-  isSupported: boolean;
-  ukVoices: SpeechSynthesisVoice[];
-  selectedVoice: SpeechSynthesisVoice | null;
-  onSelectVoice: (name: string) => void;
+  isApiKeyConfigured: boolean;
+  voiceName: string;
   speed: SpeechSpeed;
   onToggleSpeed: () => void;
   studyMode: 'grid' | 'deck';
@@ -14,10 +12,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  isSupported,
-  ukVoices,
-  selectedVoice,
-  onSelectVoice,
+  isApiKeyConfigured,
+  voiceName,
   speed,
   onToggleSpeed,
   studyMode,
@@ -46,34 +42,27 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Voice Controls & View Switcher */}
+        {/* Voice Status & Study Controls */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
-          {/* en-GB Voice Status / Selector */}
-          <div className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1.5 rounded-lg border border-white/15">
+          {/* Google Cloud TTS British Neural Voice Badge */}
+          <div
+            className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1.5 rounded-lg border border-white/15"
+            title="Powered by Google Cloud Text-to-Speech API (British Neural2 Voice)"
+          >
             <Volume2 className="w-4 h-4 text-nhs-warmYellow shrink-0" aria-hidden="true" />
-            {!isSupported ? (
-              <span className="text-amber-200 font-medium">Web Speech Unsupported</span>
-            ) : ukVoices.length > 1 ? (
-              <label className="flex items-center gap-1.5">
-                <span className="sr-only">Select British English Voice</span>
-                <select
-                  value={selectedVoice?.name ?? ''}
-                  onChange={(e) => onSelectVoice(e.target.value)}
-                  className="bg-transparent text-white font-medium focus:outline-none cursor-pointer max-w-[165px] sm:max-w-[200px] truncate"
-                  title="Active en-GB British English Voice"
-                >
-                  {ukVoices.map((voice) => (
-                    <option key={voice.name} value={voice.name} className="text-slate-900">
-                      🇬🇧 {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <span className="font-medium text-emerald-50 truncate max-w-[180px]">
-                🇬🇧 {selectedVoice ? `${selectedVoice.name} (en-GB)` : 'en-GB System Voice'}
-              </span>
-            )}
+            <span className="font-medium text-emerald-50">
+              🇬🇧 {voiceName}
+            </span>
+            <span
+              className={`ml-1 inline-block w-2 h-2 rounded-full ${
+                isApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'
+              }`}
+              title={
+                isApiKeyConfigured
+                  ? 'VITE_GOOGLE_TTS_API_KEY configured'
+                  : 'VITE_GOOGLE_TTS_API_KEY missing in .env.local'
+              }
+            />
           </div>
 
           {/* Speech Rate Toggle */}
