@@ -19,7 +19,11 @@ import { MedicationCard, MedicationCardSkeleton } from './components/MedicationC
 
 export function App() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>('JRCALC Core Emergency');
+  // No category is pre-applied when the page opens; user clicks a category pill to open it
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [isCategoryMinimized, setIsCategoryMinimized] = useState(false);
+  const [selectedCategoryDrug, setSelectedCategoryDrug] = useState<string | null>(null);
+
   const debouncedQuery = useDebounce(searchQuery, 400);
 
   const [results, setResults] = useState<BnfMedicationItem[]>([]);
@@ -96,8 +100,41 @@ export function App() {
     ]
   );
 
+  // Clicking a category pill in the top row:
+  // - If clicking a different category: open it expanded
+  // - If clicking the same category while minimized: re-expand it
+  // - If clicking the same category while already expanded: close it
+  const handleSelectCategory = useCallback(
+    (category: string | null) => {
+      if (category === null) {
+        setActiveCategory(null);
+        setIsCategoryMinimized(false);
+        setSelectedCategoryDrug(null);
+        return;
+      }
+
+      if (activeCategory === category) {
+        if (isCategoryMinimized) {
+          setIsCategoryMinimized(false);
+        } else {
+          setActiveCategory(null);
+          setIsCategoryMinimized(false);
+        }
+      } else {
+        setActiveCategory(category);
+        setIsCategoryMinimized(false);
+      }
+    },
+    [activeCategory, isCategoryMinimized]
+  );
+
+  // Clicking a drug inside a category list:
+  // - Records the selected drug, minimizes the category list so flashcards are visible below,
+  //   and triggers the OpenPrescribing + Gemini fetch flow
   const handleSelectCategoryDrug = useCallback((drugName: string) => {
     autoExpandNextResultRef.current = true;
+    setSelectedCategoryDrug(drugName);
+    setIsCategoryMinimized(true);
     setSearchQuery(drugName);
   }, []);
 
@@ -165,7 +202,7 @@ export function App() {
         onToggleSpeed={toggleSpeed}
       />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 sm:px-6 sm:py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 py-4 sm:px-6 sm:py-8">
         {/* Google Cloud TTS Error Alert */}
         {ttsError && (
           <div
@@ -216,9 +253,17 @@ export function App() {
 
         <SearchAndFilter
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={(q) => {
+            setSearchQuery(q);
+            if (!q.trim()) {
+              setSelectedCategoryDrug(null);
+            }
+          }}
           activeCategory={activeCategory}
-          onSelectCategory={setActiveCategory}
+          isCategoryMinimized={isCategoryMinimized}
+          selectedCategoryDrug={selectedCategoryDrug}
+          onSelectCategory={handleSelectCategory}
+          onToggleMinimizeCategory={() => setIsCategoryMinimized((prev) => !prev)}
           onSelectDrug={handleSelectCategoryDrug}
           isSearching={isSearching}
           resultCount={results.length}
@@ -238,7 +283,7 @@ export function App() {
           </section>
         ) : !hasActiveQuery ? (
           /* Initial Prompt State before >2 chars are entered */
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-10 text-center max-w-xl mx-auto my-6 shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 text-center max-w-xl mx-auto my-4 sm:my-6 shadow-sm">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-ambulance-green border border-emerald-200 flex items-center justify-center mx-auto mb-3.5">
               <BookOpenCheck className="w-6 h-6" aria-hidden="true" />
             </div>
@@ -246,14 +291,14 @@ export function App() {
               Search the Live UK BNF Database
             </h2>
             <p className="text-sm sm:text-base text-slate-600 mt-1.5 leading-relaxed">
-              Select a medication from the <strong>Quick Practice Categories</strong> above or type
-              at least <strong>3 characters</strong> in the search bar to load its BNF flashcard and
-              on-scene clinical notes.
+              Tap one of the <strong>Quick Categories</strong> above to browse UK study
+              medications, or type at least <strong>3 characters</strong> in the search bar to load
+              flashcards and on-scene clinical notes.
             </p>
           </div>
         ) : results.length === 0 ? (
           /* No Results State */
-          <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center max-w-lg mx-auto my-8 shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-10 text-center max-w-lg mx-auto my-6 shadow-sm">
             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">
               <SearchX className="w-6 h-6" aria-hidden="true" />
             </div>
@@ -261,7 +306,7 @@ export function App() {
               No BNF entries found for &ldquo;{debouncedQuery.trim()}&rdquo;
             </h2>
             <p className="text-sm text-slate-600 mt-1">
-              Check your spelling or select a drug from the Quick Practice Categories above.
+              Check your spelling or select a drug from the Quick Categories above.
             </p>
             <button
               type="button"

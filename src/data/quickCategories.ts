@@ -56,7 +56,7 @@ export const quickCategories: Record<string, string[]> = {
     'Syntometrine',
     'Tranexamic Acid',
   ],
-  'Blood Thinners (Trauma Risk)': [
+  'Blood Thinners': [
     'Apixaban',
     'Rivaroxaban',
     'Warfarin',
@@ -65,7 +65,7 @@ export const quickCategories: Record<string, string[]> = {
     'Edoxaban',
     'Dabigatran',
   ],
-  'Beta Blockers (Masks Tachycardia)': [
+  'Beta Blockers': [
     'Bisoprolol',
     'Atenolol',
     'Propranolol',
