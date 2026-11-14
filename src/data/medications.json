@@ -1,0 +1,258 @@
+[
+  {
+    "id": "paracetamol",
+    "name": "Paracetamol",
+    "phonetic": "pa-ra-SEE-ta-mol",
+    "drugClass": "Non-Opioid Analgesic & Antipyretic",
+    "category": "Both",
+    "indications": [
+      "Mild to moderate pain",
+      "Moderate to severe pain (adjunct with opioids via IV/PO)",
+      "Pyrexia with discomfort"
+    ],
+    "clinicalNote": "JRCALC & NHS staple. Always check cumulative 24-hour intake (including over-the-counter cold remedies like Lemsip or Co-codamol) before administering to prevent hepatotoxicity."
+  },
+  {
+    "id": "salbutamol",
+    "name": "Salbutamol",
+    "phonetic": "sal-BYOO-ta-mol",
+    "drugClass": "Short-Acting Beta-2 Agonist (SABA)",
+    "category": "Both",
+    "indications": [
+      "Acute asthma exacerbation",
+      "Acute exacerbation of COPD",
+      "Wheeze associated with anaphylaxis or smoke inhalation"
+    ],
+    "clinicalNote": "Nebulised oxygen-driven in acute asthma (6–8 L/min); in COPD, limit oxygen-driven nebulisation to 6 minutes to minimize hypercapnic respiratory acidosis risk."
+  },
+  {
+    "id": "ipratropium",
+    "name": "Ipratropium Bromide",
+    "phonetic": "ip-ra-TRO-pee-um BRO-mide",
+    "drugClass": "Antimuscarinic Bronchodilator (SAMA)",
+    "category": "Both",
+    "indications": [
+      "Moderate to life-threatening acute asthma (with Salbutamol)",
+      "Acute exacerbation of COPD unresponsive to initial SABA"
+    ],
+    "clinicalNote": "Blocks vagally mediated bronchoconstriction. Single 500 microgram nebulised dose in pre-hospital emergency care per JRCALC guidelines."
+  },
+  {
+    "id": "furosemide",
+    "name": "Furosemide",
+    "phonetic": "fyoor-OH-se-mide",
+    "drugClass": "Loop Diuretic",
+    "category": "Both",
+    "indications": [
+      "Acute cardiogenic pulmonary oedema",
+      "Chronic heart failure fluid overload",
+      "Resistant peripheral oedema"
+    ],
+    "clinicalNote": "UK rINN name (formerly Frusemide). Inhibits Na+/K+/2Cl- cotransporter in the ascending loop of Henle; also produces early venodilation in acute pulmonary oedema."
+  },
+  {
+    "id": "ondansetron",
+    "name": "Ondansetron",
+    "phonetic": "on-DAN-se-tron",
+    "drugClass": "5-HT3 Receptor Antagonist (Antiemetic)",
+    "category": "JRCALC Pre-Hospital",
+    "indications": [
+      "Prevention and treatment of nausea and vomiting",
+      "Opioid-induced or trauma-associated emesis",
+      "Travel sickness during ambulance transfer"
+    ],
+    "clinicalNote": "Administer IV slowly over at least 2–3 minutes (or IM). Contraindicated in congenital long QT syndrome."
+  },
+  {
+    "id": "atorvastatin",
+    "name": "Atorvastatin",
+    "phonetic": "a-TOR-va-sta-tin",
+    "drugClass": "Statin (HMG-CoA Reductase Inhibitor)",
+    "category": "NHS Community",
+    "indications": [
+      "Primary and secondary prevention of cardiovascular disease",
+      "Primary hypercholesterolaemia",
+      "Post-ACS / post-stroke lipid lowering"
+    ],
+    "clinicalNote": "The single most dispensed medication in England. On history taking, its presence indicates cardiovascular risk profile or prior vascular event."
+  },
+  {
+    "id": "amlodipine",
+    "name": "Amlodipine",
+    "phonetic": "am-LO-di-peen",
+    "drugClass": "Dihydropyridine Calcium-Channel Blocker",
+    "category": "NHS Community",
+    "indications": [
+      "Essential hypertension",
+      "Prophylaxis of chronic stable and Prinzmetal's angina"
+    ],
+    "clinicalNote": "Causes peripheral arterial vasodilation. Commonly causes ankle oedema (which does not respond to diuretics) and can contribute to postural hypotension in older patients."
+  },
+  {
+    "id": "lansoprazole",
+    "name": "Lansoprazole",
+    "phonetic": "lan-SO-pra-zole",
+    "drugClass": "Proton Pump Inhibitor (PPI)",
+    "category": "NHS Community",
+    "indications": [
+      "Gastro-oesophageal reflux disease (GORD)",
+      "Peptic ulcer disease",
+      "Gastric protection alongside NSAID or antiplatelet therapy"
+    ],
+    "clinicalNote": "Suppresses gastric acid secretion by inhibiting the H+/K+ ATPase pump in gastric parietal cells."
+  },
+  {
+    "id": "ramipril",
+    "name": "Ramipril",
+    "phonetic": "ra-MI-pril",
+    "drugClass": "ACE Inhibitor",
+    "category": "NHS Community",
+    "indications": [
+      "Hypertension",
+      "Symptomatic heart failure (HFrEF)",
+      "Secondary prevention post-myocardial infarction",
+      "Diabetic nephropathy"
+    ],
+    "clinicalNote": "Pre-hospital pearls: well-known cause of persistent dry cough and non-histaminergic bradykinin-mediated angioedema (often affecting lips/tongue without urticaria)."
+  },
+  {
+    "id": "omeprazole",
+    "name": "Omeprazole",
+    "phonetic": "oh-MEP-ra-zole",
+    "drugClass": "Proton Pump Inhibitor (PPI)",
+    "category": "NHS Community",
+    "indications": [
+      "Dyspepsia and gastro-oesophageal reflux disease (GORD)",
+      "NSAID-associated ulcer prophylaxis",
+      "Zollinger-Ellison syndrome"
+    ],
+    "clinicalNote": "Frequently prescribed alongside Dual Antiplatelet Therapy (DAPT) or DOACs to reduce upper GI bleeding risk."
+  },
+  {
+    "id": "bisoprolol",
+    "name": "Bisoprolol",
+    "phonetic": "bi-SOP-ro-lol",
+    "drugClass": "Cardioselective Beta-1 Adrenoceptor Blocker",
+    "category": "NHS Community",
+    "indications": [
+      "Atrial fibrillation (rate control)",
+      "Chronic heart failure",
+      "Angina pectoris",
+      "Hypertension"
+    ],
+    "clinicalNote": "Important during trauma or sepsis assessment: blunts physiological compensatory tachycardia, potentially masking early hypovolaemic or septic shock."
+  },
+  {
+    "id": "apixaban",
+    "name": "Apixaban",
+    "phonetic": "a-PIX-a-ban",
+    "drugClass": "Direct Oral Anticoagulant (Factor Xa Inhibitor)",
+    "category": "NHS Community",
+    "indications": [
+      "Stroke prevention in non-valvular atrial fibrillation",
+      "Treatment and prophylaxis of DVT and pulmonary embolism"
+    ],
+    "clinicalNote": "Critical red flag in head injury / silver trauma: patients on DOACs require hospital assessment after head injury per NICE & JRCALC guidelines even if GCS is 15."
+  },
+  {
+    "id": "metformin",
+    "name": "Metformin",
+    "phonetic": "met-FOR-min",
+    "drugClass": "Biguanide Antidiabetic",
+    "category": "NHS Community",
+    "indications": [
+      "Type 2 diabetes mellitus",
+      "Polycystic ovary syndrome (PCOS)"
+    ],
+    "clinicalNote": "Increases insulin sensitivity without stimulating insulin secretion (rarely causes hypoglycaemia alone). Risk of lactic acidosis in severe dehydration, sepsis, or acute kidney injury."
+  },
+  {
+    "id": "adrenaline",
+    "name": "Adrenaline",
+    "phonetic": "a-DREN-a-lin",
+    "drugClass": "Sympathomimetic Catecholamine",
+    "category": "JRCALC Pre-Hospital",
+    "indications": [
+      "Cardiac arrest (1:10,000 IV/IO)",
+      "Anaphylaxis (1:1,000 IM)",
+      "Life-threatening acute asthma",
+      "Severe croup (nebulised)"
+    ],
+    "clinicalNote": "UK BNF/rINN prefers Adrenaline (Epinephrine). Always double-check concentration: 1:1,000 (1mg/1mL) for IM anaphylaxis vs 1:10,000 (1mg/10mL) for IV/IO cardiac arrest."
+  },
+  {
+    "id": "glyceryl-trinitrate",
+    "name": "Glyceryl Trinitrate",
+    "phonetic": "GLIS-er-il try-NY-trate",
+    "drugClass": "Organic Nitrate Vasodilator",
+    "category": "Both",
+    "indications": [
+      "Acute coronary syndrome / ischaemic cardiac chest pain",
+      "Acute cardiogenic pulmonary oedema (when systolic BP > 110 mmHg)",
+      "Prophylaxis of angina"
+    ],
+    "clinicalNote": "Commonly abbreviated GTN. Contraindicated in hypotension (SBP < 90 mmHg), severe aortic stenosis, and recent PDE-5 inhibitor use (e.g., Sildenafil, Tadalafil)."
+  },
+  {
+    "id": "chlorphenamine",
+    "name": "Chlorphenamine",
+    "phonetic": "klor-FEN-a-meen",
+    "drugClass": "Sedating Antihistamine (H1 Antagonist)",
+    "category": "Both",
+    "indications": [
+      "Symptomatic relief of allergy and urticaria",
+      "Adjunct after initial resuscitation in anaphylaxis"
+    ],
+    "clinicalNote": "UK rINN name (formerly Chlorpheniramine / Piriton). Second-line symptom control after Adrenaline in allergic reactions."
+  },
+  {
+    "id": "tranexamic-acid",
+    "name": "Tranexamic Acid",
+    "phonetic": "tran-ex-AM-ik AS-id",
+    "drugClass": "Antifibrinolytic Haemostatic",
+    "category": "JRCALC Pre-Hospital",
+    "indications": [
+      "Major trauma with actual or suspected severe haemorrhage",
+      "Significant postpartum haemorrhage (PPH)",
+      "Moderate to severe traumatic brain injury (within 3 hours)"
+    ],
+    "clinicalNote": "Inhibits plasminogen activation to stabilize blood clots. Must be administered within 3 hours of injury (1g IV over 10 minutes in adults)."
+  },
+  {
+    "id": "amiodarone",
+    "name": "Amiodarone",
+    "phonetic": "a-mee-OH-da-rone",
+    "drugClass": "Class III Antiarrhythmic",
+    "category": "Both",
+    "indications": [
+      "Shock-refractory VF / pulseless VT (after 3rd and 5th shocks)",
+      "Supraventricular and ventricular arrhythmias"
+    ],
+    "clinicalNote": "Prolongs phase 3 repolarisation of the cardiac action potential. Administered as 300mg IV/IO bolus after 3rd shock, and 150mg after 5th shock in ALS."
+  },
+  {
+    "id": "levothyroxine",
+    "name": "Levothyroxine",
+    "phonetic": "lee-vo-thy-ROX-een",
+    "drugClass": "Synthetic Thyroid Hormone (T4)",
+    "category": "NHS Community",
+    "indications": [
+      "Primary and secondary hypothyroidism",
+      "Post-thyroidectomy hormone replacement"
+    ],
+    "clinicalNote": "Among the top 5 most prescribed NHS community medications. Long half-life (~7 days); non-adherence over weeks can precipitate hypothermia and bradycardia."
+  },
+  {
+    "id": "clopidogrel",
+    "name": "Clopidogrel",
+    "phonetic": "klo-PID-o-grel",
+    "drugClass": "Antiplatelet (P2Y12 Receptor Inhibitor)",
+    "category": "Both",
+    "indications": [
+      "Secondary prevention post-TIA or ischaemic stroke",
+      "Acute coronary syndrome / PCI stenting (with Aspirin)",
+      "Peripheral arterial disease"
+    ],
+    "clinicalNote": "Irreversibly inhibits platelet aggregation for the lifespan of the platelet (7–10 days). Increases bleeding risk in trauma."
+  }
+]
