@@ -121,8 +121,17 @@ export function App() {
     ]
   );
 
+  // Triggers the first-time JRCALC+ / Clinical Disclaimer warning modal
+  // whenever the user first interacts with ANY Quick Category or the search bar
+  const triggerFirstTimeClinicalWarning = useCallback(() => {
+    if (!hasSeenJrcalcWarning) {
+      setHasSeenJrcalcWarning(true);
+      setIsJrcalcModalOpen(true);
+    }
+  }, [hasSeenJrcalcWarning]);
+
   // Clicking a category pill in the top row:
-  // - Shows a first-time JRCALC+ warning pop-up when "JRCALC Core Emergency" is selected
+  // - Shows the first-time JRCALC+ clinical warning pop-up when any category is first selected
   // - If clicking a different category: open it expanded
   // - If clicking the same category while minimized: re-expand it
   // - If clicking the same category while already expanded: close it
@@ -135,10 +144,7 @@ export function App() {
         return;
       }
 
-      if (category === 'JRCALC Core Emergency' && !hasSeenJrcalcWarning) {
-        setHasSeenJrcalcWarning(true);
-        setIsJrcalcModalOpen(true);
-      }
+      triggerFirstTimeClinicalWarning();
 
       if (activeCategory === category) {
         if (isCategoryMinimized) {
@@ -152,7 +158,7 @@ export function App() {
         setIsCategoryMinimized(false);
       }
     },
-    [activeCategory, isCategoryMinimized, hasSeenJrcalcWarning]
+    [activeCategory, isCategoryMinimized, triggerFirstTimeClinicalWarning]
   );
 
   // Clicking the "Listen" voice button on a medication card:
@@ -331,7 +337,9 @@ export function App() {
 
         <SearchAndFilter
           searchQuery={searchQuery}
+          onSearchInteract={triggerFirstTimeClinicalWarning}
           onSearchChange={(q) => {
+            triggerFirstTimeClinicalWarning();
             setSearchQuery(q);
             if (!q.trim()) {
               setSelectedCategoryDrug(null);

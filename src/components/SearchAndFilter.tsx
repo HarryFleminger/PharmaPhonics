@@ -15,6 +15,7 @@ import { quickCategories } from '../data/quickCategories';
 interface SearchAndFilterProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onSearchInteract?: () => void;
   activeCategory: string | null;
   isCategoryMinimized: boolean;
   selectedCategoryDrug: string | null;
@@ -31,6 +32,7 @@ const categoryNames = Object.keys(quickCategories);
 export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   searchQuery,
   onSearchChange,
+  onSearchInteract,
   activeCategory,
   isCategoryMinimized,
   selectedCategoryDrug,
@@ -67,6 +69,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           <input
             type="search"
             value={searchQuery}
+            onFocus={onSearchInteract}
+            onClick={onSearchInteract}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search UK BNF database (type 3+ chars, or pick a category below)..."
             aria-label="Search live UK BNF medications via OpenPrescribing API"
