@@ -16,6 +16,7 @@ import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { Header } from './components/Header';
 import { SearchAndFilter } from './components/SearchAndFilter';
 import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
+import { NoticeModal } from './components/NoticeModal';
 
 export function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,13 +25,23 @@ export function App() {
   const [isCategoryMinimized, setIsCategoryMinimized] = useState(false);
   const [selectedCategoryDrug, setSelectedCategoryDrug] = useState<string | null>(null);
 
+  // First-time warning modals state
+  const [hasSeenJrcalcWarning, setHasSeenJrcalcWarning] = useState(false);
+  const [isJrcalcModalOpen, setIsJrcalcModalOpen] = useState(false);
+
+  const [hasSeenVoiceNotice, setHasSeenVoiceNotice] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [pendingSpeech, setPendingSpeech] = useState<{ id: string; name: string } | null>(
+    null
+  );
+
   const debouncedQuery = useDebounce(searchQuery, 400);
 
   const [results, setResults] = useState<BnfMedicationItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  // Track whether the search was triggered by clicking a Quick Practice Category drug
+  // Track whether the search was triggered by clicking a Quick Category drug
   // so we can automatically expand and fetch Gemini clinical details for the top matching card
   const autoExpandNextResultRef = useRef(false);
 
@@ -101,6 +112,7 @@ export function App() {
   );
 
   // Clicking a category pill in the top row:
+  // - Shows a first-time JRCALC+ warning pop-up when "JRCALC Core Emergency" is selected
   // - If clicking a different category: open it expanded
   // - If clicking the same category while minimized: re-expand it
   // - If clicking the same category while already expanded: close it
@@ -111,6 +123,11 @@ export function App() {
         setIsCategoryMinimized(false);
         setSelectedCategoryDrug(null);
         return;
+      }
+
+      if (category === 'JRCALC Core Emergency' && !hasSeenJrcalcWarning) {
+        setHasSeenJrcalcWarning(true);
+        setIsJrcalcModalOpen(true);
       }
 
       if (activeCategory === category) {
@@ -125,8 +142,38 @@ export function App() {
         setIsCategoryMinimized(false);
       }
     },
-    [activeCategory, isCategoryMinimized]
+    [activeCategory, isCategoryMinimized, hasSeenJrcalcWarning]
   );
+
+  // Clicking the "Listen" voice button on a medication card:
+  // - The first time a user clicks any voice button, show a pop-up explaining that
+  //   all pronunciations are reasonable approximations, not inherently definitive/correct.
+  const handleListenClick = useCallback(
+    (id: string, name: string) => {
+      if (!hasSeenVoiceNotice) {
+        setHasSeenVoiceNotice(true);
+        setPendingSpeech({ id, name });
+        setIsVoiceModalOpen(true);
+        return;
+      }
+
+      void speak(id, name);
+    },
+    [hasSeenVoiceNotice, speak]
+  );
+
+  const handleConfirmVoiceModal = useCallback(() => {
+    setIsVoiceModalOpen(false);
+    if (pendingSpeech) {
+      void speak(pendingSpeech.id, pendingSpeech.name);
+      setPendingSpeech(null);
+    }
+  }, [pendingSpeech, speak]);
+
+  const handleCloseVoiceModal = useCallback(() => {
+    setIsVoiceModalOpen(false);
+    setPendingSpeech(null);
+  }, []);
 
   // Clicking a drug inside a category list:
   // - Records the selected drug, minimizes the category list so flashcards are visible below,
@@ -159,7 +206,7 @@ export function App() {
           setResults(items);
           setIsSearching(false);
 
-          // If the user clicked a drug from Quick Practice Categories, automatically
+          // If the user clicked a drug from Quick Categories, automatically
           // select the first returned BNF card to trigger the Gemini clinical details fetch
           if (autoExpandNextResultRef.current && items.length > 0) {
             autoExpandNextResultRef.current = false;
@@ -195,6 +242,27 @@ export function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      {/* First-Time JRCALC Core Emergency Clinical Disclaimer Modal */}
+      <NoticeModal
+        isOpen={isJrcalcModalOpen}
+        variant="clinical-warning"
+        title="JRCALC Clinical Disclaimer"
+        message="Practitioners must always check JRCALC+ (or local Trust clinical guidelines) for use on the road. Do not make any clinical decisions based on the information on this app — it is for learning purposes only."
+        confirmLabel="I Understand"
+        onConfirm={() => setIsJrcalcModalOpen(false)}
+      />
+
+      {/* First-Time Voice Pronunciation Notice Modal */}
+      <NoticeModal
+        isOpen={isVoiceModalOpen}
+        variant="pronunciation-notice"
+        title="Pronunciation Notice"
+        message="Please note that all pronunciations in this app are reasonable approximations for study, but are not inherently definitive or guaranteed to be correct in every clinical setting."
+        confirmLabel="Got It, Play Audio"
+        onConfirm={handleConfirmVoiceModal}
+        onClose={handleCloseVoiceModal}
+      />
+
       <Header
         isTtsApiKeyConfigured={isTtsApiKeyConfigured}
         isGeminiApiKeyConfigured={hasGeminiApiKey()}
@@ -336,7 +404,7 @@ export function App() {
                   onRetryClinical={loadClinicalDetailsForMedication}
                   isAudioLoading={audioLoadingId === item.id}
                   isSpeaking={speakingId === item.id}
-                  onListen={speak}
+                  onListen={handleListenClick}
                 />
               );
             })}
