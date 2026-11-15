@@ -1,4 +1,5 @@
 import { GeminiClinicalDetails } from '../types/medication';
+import { findPregeneratedClinicalDetails } from '../data/pregeneratedClinicalDetails';
 
 /**
  * Active Gemini Flash model endpoints.
@@ -9,8 +10,8 @@ const GEMINI_ENDPOINTS = [
 ];
 
 /**
- * Versioned localStorage key for persisting AI-generated clinical details across browser sessions
- * so previously looked-up drugs load instantaneously without consuming Gemini API tokens.
+ * Versioned localStorage key for persisting AI-generated clinical details for custom searched
+ * drugs across browser sessions.
  */
 const CLINICAL_STORAGE_KEY = 'pharmaphonics_clinical_cache_v1';
 
@@ -95,11 +96,18 @@ export function hasGeminiApiKey(): boolean {
 }
 
 /**
- * Synchronously checks if clinical details for a drug are already cached locally.
+ * Synchronously checks if clinical details for a drug are already available in:
+ * 1. The built-in pre-generated Quick Categories dataset (`PREGENERATED_CLINICAL_DETAILS`)
+ * 2. The persistent `localStorage` cache (`clinicalDetailsCache`)
  */
 export function getCachedClinicalDetails(
   selectedDrugName: string
 ): GeminiClinicalDetails | undefined {
+  const pregenerated = findPregeneratedClinicalDetails(selectedDrugName);
+  if (pregenerated) {
+    return pregenerated;
+  }
+
   const normalizedKey = selectedDrugName.trim().toLowerCase();
   return clinicalDetailsCache.get(normalizedKey);
 }
@@ -176,19 +184,22 @@ async function callGeminiEndpoint(
 }
 
 /**
- * Fetches UK Paramedic (JRCALC) & BNF clinical details (`phoneticSpelling`, `class`, `indications`, `medicSummary`)
- * for a selected medication. Checks persistent `localStorage` first so previously looked-up
- * medications resolve immediately without using Gemini API tokens.
+ * Resolves UK Paramedic (JRCALC) & BNF clinical details (`phoneticSpelling`, `class`, `indications`, `medicSummary`):
+ * 1. Returns pre-generated details immediately if the drug belongs to any Quick Category (0 tokens used).
+ * 2. Returns cached details from `localStorage` if previously looked up (0 tokens used).
+ * 3. Calls the live Gemini API only for custom searched drugs not in the Quick Categories,
+ *    then persists the response to `localStorage`.
  */
 export async function fetchMedicationClinicalDetails(
   selectedDrugName: string,
   signal?: AbortSignal
 ): Promise<GeminiClinicalDetails> {
-  const normalizedKey = selectedDrugName.trim().toLowerCase();
-  const cached = clinicalDetailsCache.get(normalizedKey);
-  if (cached) {
-    return cached;
+  const existing = getCachedClinicalDetails(selectedDrugName);
+  if (existing) {
+    return existing;
   }
+
+  const normalizedKey = selectedDrugName.trim().toLowerCase();
 
   try {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
