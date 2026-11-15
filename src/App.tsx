@@ -27,6 +27,7 @@ import {
   ToxCalculator,
   ToxCalculatorValues,
   computeToxDoseMetrics,
+  detectPreferredToxUnit,
 } from './components/ToxCalculator';
 import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
 import { NoticeModal } from './components/NoticeModal';
@@ -128,9 +129,13 @@ export function App() {
   const loadToxicityDetailsForMedication = useCallback(async (item: BnfMedicationItem) => {
     const cardKey = `${item.id}::${item.name}`;
 
-    // If already stored in persistent localStorage toxicity cache, resolve immediately
+    // If already stored in pre-generated bundle or persistent localStorage toxicity cache, resolve immediately
     const cached = getCachedToxicityDetails(item.name);
     if (cached) {
+      const preferredUnit = detectPreferredToxUnit(item.name, cached.toxicThreshold);
+      setToxCalculatorValues((prev) =>
+        prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+      );
       setToxicityDetailsByKey((prev) => ({ ...prev, [cardKey]: cached }));
       setToxicityLoadingByKey((prev) => ({ ...prev, [cardKey]: false }));
       setToxicityErrorByKey((prev) => ({ ...prev, [cardKey]: null }));
@@ -142,6 +147,10 @@ export function App() {
 
     try {
       const details = await fetchMedicationToxicityDetails(item.name);
+      const preferredUnit = detectPreferredToxUnit(item.name, details.toxicThreshold);
+      setToxCalculatorValues((prev) =>
+        prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+      );
       setToxicityDetailsByKey((prev) => ({ ...prev, [cardKey]: details }));
       setToxicityLoadingByKey((prev) => ({ ...prev, [cardKey]: false }));
     } catch (error) {
@@ -164,6 +173,12 @@ export function App() {
       }));
 
       if (willBeSelected) {
+        const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
+        const preferredUnit = detectPreferredToxUnit(item.name, existingTox?.toxicThreshold);
+        setToxCalculatorValues((prev) =>
+          prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+        );
+
         if (isToxicityMode) {
           if (!toxicityDetailsByKey[cardKey] && !toxicityLoadingByKey[cardKey]) {
             void loadToxicityDetailsForMedication(item);
@@ -197,6 +212,13 @@ export function App() {
     results.forEach((item) => {
       const cardKey = getCardKey(item);
       if (selectedCardKeys[cardKey]) {
+        const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
+        if (existingTox) {
+          const preferredUnit = detectPreferredToxUnit(item.name, existingTox.toxicThreshold);
+          setToxCalculatorValues((prev) =>
+            prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+          );
+        }
         if (nextToxMode) {
           if (!toxicityDetailsByKey[cardKey] && !toxicityLoadingByKey[cardKey]) {
             void loadToxicityDetailsForMedication(item);
@@ -334,6 +356,14 @@ export function App() {
             const firstItem = items[0];
             const firstKey = getCardKey(firstItem);
             setSelectedCardKeys((prev) => ({ ...prev, [firstKey]: true }));
+            const existingTox = getCachedToxicityDetails(firstItem.name);
+            const preferredUnit = detectPreferredToxUnit(
+              firstItem.name,
+              existingTox?.toxicThreshold
+            );
+            setToxCalculatorValues((prev) =>
+              prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+            );
             if (isToxicityModeRef.current) {
               void loadToxicityDetailsForMedication(firstItem);
             } else {

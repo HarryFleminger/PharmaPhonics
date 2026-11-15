@@ -16,6 +16,45 @@ interface ToxCalculatorProps {
 }
 
 /**
+ * Automatically detects whether a drug's toxic threshold (or BNF name) is expressed in
+ * micrograms (`mcg` / `mcg/kg`) or milligrams (`mg` / `mg/kg`).
+ */
+export function detectPreferredToxUnit(
+  drugName: string,
+  toxicThreshold?: string
+): ToxDoseUnit {
+  if (toxicThreshold) {
+    const mcgPerKgMatch = /(mcg|micrograms?|µg)\s*\/\s*kg/i.exec(toxicThreshold);
+    const mgPerKgMatch = /\b(mg|milligrams?)\s*\/\s*kg/i.exec(toxicThreshold);
+
+    if (mcgPerKgMatch && mgPerKgMatch) {
+      return mcgPerKgMatch.index <= mgPerKgMatch.index ? 'mcg' : 'mg';
+    }
+    if (mcgPerKgMatch) {
+      return 'mcg';
+    }
+    if (mgPerKgMatch) {
+      return 'mg';
+    }
+
+    const mcgMatch = /\b(mcg|micrograms?|µg)\b/i.exec(toxicThreshold);
+    const mgMatch = /\b(mg|milligrams?)\b/i.exec(toxicThreshold);
+    if (mcgMatch && !mgMatch) {
+      return 'mcg';
+    }
+    if (mcgMatch && mgMatch && mcgMatch.index < mgMatch.index) {
+      return 'mcg';
+    }
+  }
+
+  if (/\b(mcg|micrograms?|µg)\b/i.test(drugName) && !/\bmg\b/i.test(drugName)) {
+    return 'mcg';
+  }
+
+  return 'mg';
+}
+
+/**
  * Computes total ingested dose and weight-adjusted ingested dose (in the selected unit: mg or mcg)
  * from raw input strings.
  */

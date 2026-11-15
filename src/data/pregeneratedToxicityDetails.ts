@@ -14,7 +14,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   adrenaline: {
     toxicThreshold:
-      'Inadvertent IV administration of an IM anaphylaxis dose (>500 micrograms IV) or >1 mg IM in a non-arrested patient.',
+      '>10 mcg/kg IV (or inadvertent IV administration of a >500 micrograms IM anaphylaxis dose) in a non-arrested patient.',
     overdoseEffects:
       'Sudden severe hypertension (hypertensive crisis), extreme sinus tachycardia, ventricular ectopics, ventricular tachycardia or fibrillation (VT/VF), myocardial ischaemia ("Takotsubo" stress cardiomyopathy), pallor, tremor, severe headache, and acute pulmonary oedema.',
   },
@@ -86,13 +86,13 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   atropine: {
     toxicThreshold:
-      '>3 mg in adults (>0.05–0.1 mg/kg in children) produces marked systemic anticholinergic toxicity.',
+      '>50–100 mcg/kg (>3 mg in adults) produces marked systemic anticholinergic toxicity.',
     overdoseEffects:
       'Classic central and peripheral antimuscarinic syndrome ("blind as a bat, mad as a hatter, red as a beet, hot as a hare, dry as a bone"): marked sinus tachycardia, hyperthermia, dry flushed skin, fixed dilated pupils (mydriasis), blurred vision, urinary retention, absent bowel sounds, agitation, visual hallucinations, delirium, and seizures.',
   },
   'atropine sulfate': {
     toxicThreshold:
-      '>3 mg in adults (>0.05–0.1 mg/kg in children) produces marked systemic anticholinergic toxicity.',
+      '>50–100 mcg/kg (>3 mg in adults) produces marked systemic anticholinergic toxicity.',
     overdoseEffects:
       'Classic central and peripheral antimuscarinic syndrome ("blind as a bat, mad as a hatter, red as a beet, hot as a hare, dry as a bone"): marked sinus tachycardia, hyperthermia, dry flushed skin, fixed dilated pupils (mydriasis), blurred vision, urinary retention, absent bowel sounds, agitation, visual hallucinations, delirium, and seizures.',
   },
@@ -218,7 +218,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   digoxin: {
     toxicThreshold:
-      'Acute ingestion >2–3 mg in adults (>0.05 mg/kg in children) or serum digoxin >2 ng/mL; chronic toxicity occurs at lower doses in renal failure or hypokalaemia.',
+      '>50 mcg/kg (>2,000–3,000 micrograms / 2–3 mg in adults) acute ingestion or serum digoxin >2 ng/mL; chronic toxicity occurs at lower doses in renal failure or hypokalaemia.',
     overdoseEffects:
       'Early severe anorexia, nausea, vomiting, abdominal pain, confusion, lethargy, and classic visual disturbances (blurred vision, yellow-green halos / xanthopsia). Cardiac manifestations include severe bradycardia, AV heart block, atrial tachycardia with block, frequent ventricular ectopics/bigeminy, ventricular tachycardia, and life-threatening hyperkalaemia.',
   },
@@ -236,7 +236,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   fentanyl: {
     toxicThreshold:
-      'Extremely potent (~100× morphine): >100–200 micrograms IV/IN in an opioid-naive adult, or ingestion/chewing/heating of transdermal fentanyl patches, is rapidly life-threatening.',
+      'Extremely potent (~100× morphine): >2–3 mcg/kg (>100–200 micrograms IV/IN in an opioid-naive adult), or ingestion/chewing/heating of transdermal fentanyl patches, is rapidly life-threatening.',
     overdoseEffects:
       'Rapid-onset severe opioid toxidrome: coma, pinpoint pupils (miosis), profound respiratory depression progressing rapidly to apnoea and cyanosis, bradycardia, hypotension, and uniquely "wooden chest syndrome" (acute skeletal muscle rigidity of the chest wall and jaw making bag-valve-mask ventilation difficult).',
   },
@@ -290,7 +290,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   'glyceryl trinitrate': {
     toxicThreshold:
-      'Repeated excessive sublingual sprays (>4–6 sprays in rapid succession) or accidental ingestion of GTN tablets/patches.',
+      'Repeated excessive sublingual sprays (>30–50 mcg/kg or >1,600–2,400 micrograms in rapid succession) or accidental ingestion of GTN tablets/patches.',
     overdoseEffects:
       'Profound systemic venodilation and arteriolar dilation causing severe hypotension, syncope, reflex sinus tachycardia (or paradoxical vagal bradycardia), throbbing pounding headache, facial flushing, dizziness, and in massive ingestions, methaemoglobinaemia (cyanosis with falsely low or plateaued SpO2 ~85% unresponsive to oxygen).',
   },
@@ -326,13 +326,13 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   ipratropium: {
     toxicThreshold:
-      'Extremely low systemic absorption via inhaler/nebuliser; acute overdose via inhalation (>5–10 mg) rarely causes severe systemic toxicity.',
+      'Extremely low systemic absorption via inhaler/nebuliser; acute overdose via inhalation (>100 mcg/kg or >5,000 micrograms) rarely causes severe systemic toxicity.',
     overdoseEffects:
       'Dry mouth, throat irritation, metallic taste, mild sinus tachycardia, palpitations, and—if nebuliser mist blows directly into the eyes—unilateral or bilateral fixed dilated pupil (mydriasis) and blurred vision or acute angle-closure glaucoma.',
   },
   'ipratropium bromide': {
     toxicThreshold:
-      'Extremely low systemic absorption via inhaler/nebuliser; acute overdose via inhalation (>5–10 mg) rarely causes severe systemic toxicity.',
+      'Extremely low systemic absorption via inhaler/nebuliser; acute overdose via inhalation (>100 mcg/kg or >5,000 micrograms) rarely causes severe systemic toxicity.',
     overdoseEffects:
       'Dry mouth, throat irritation, metallic taste, mild sinus tachycardia, palpitations, and—if nebuliser mist blows directly into the eyes—unilateral or bilateral fixed dilated pupil (mydriasis) and blurred vision or acute angle-closure glaucoma.',
   },
@@ -368,7 +368,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   levothyroxine: {
     toxicThreshold:
-      'Acute ingestions <2–5 mg (2,000–5,000 micrograms) are often benign; >5 mg in adults can cause delayed thyrotoxicosis (peaking 3–10 days post-ingestion as T4 converts to active T3).',
+      '>50–75 mcg/kg (>2,000–5,000 micrograms / 2–5 mg in adults) can cause delayed thyrotoxicosis (peaking 3–10 days post-ingestion as T4 converts to active T3).',
     overdoseEffects:
       'Often asymptomatic for the first 24–72 hours, followed by delayed sympathomimetic/thyrotoxic storm: persistent sinus tachycardia, atrial fibrillation, hypertension, widened pulse pressure, fever/hyperpyrexia, profuse sweating, fine tremor, severe agitation, anxiety, diarrhoea, and confusion.',
   },
@@ -440,7 +440,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   misoprostol: {
     toxicThreshold:
-      '>1.6–3 mg (1,600–3,000 micrograms) in adults; any dose in pregnancy causes potent uterine hyperstimulation.',
+      '>20–40 mcg/kg (>1,600–3,000 micrograms in adults); any dose in pregnancy causes potent uterine hyperstimulation.',
     overdoseEffects:
       'Severe cramping abdominal pain, profuse watery diarrhoea, nausea, vomiting, high fever/hyperpyrexia, shivering/rigors, sinus tachycardia, hypotension (or transient hypertension), tremor, agitation, and—in pregnant patients—tetanic uterine contractions, fetal bradycardia, uterine rupture, and severe vaginal haemorrhage.',
   },
@@ -464,7 +464,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   naloxone: {
     toxicThreshold:
-      'Wide safety margin in opioid-naive patients (up to 10 mg IV is tolerated); in opioid-dependent patients, boluses >400–800 micrograms IV precipitate acute severe opioid withdrawal.',
+      'In opioid-dependent patients, boluses >5–10 mcg/kg (>400–800 micrograms IV) precipitate acute severe opioid withdrawal (wide safety margin in opioid-naive patients).',
     overdoseEffects:
       'In opioid-dependent patients, excessive Naloxone triggers acute precipitated withdrawal: extreme agitation and combativeness, profuse sweating, piloerection, severe nausea and projectile vomiting (aspiration risk), diarrhoea, marked sinus tachycardia, severe hypertension, and rarely catecholamine-surge flash pulmonary oedema or ventricular arrhythmias.',
   },
@@ -614,7 +614,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   syntometrine: {
     toxicThreshold:
-      'More than 1–2 ampoules IM (or accidental IV injection, or administration to a patient with severe hypertension/pre-eclampsia).',
+      '>10 mcg/kg of the ergometrine component (more than 1–2 ampoules IM, accidental IV injection, or administration to a patient with severe hypertension/pre-eclampsia).',
     overdoseEffects:
       'Driven primarily by the Ergometrine component: severe systemic and coronary vasoconstriction causing acute hypertensive crisis (severe pounding headache, blurred vision, risk of stroke/seizures/eclampsia), coronary artery spasm (angina or myocardial infarction), bradycardia or tachycardia, intense nausea and vomiting, and tetanic uterine hypertonus.',
   },
@@ -626,7 +626,7 @@ export const PREGENERATED_TOXICITY_DETAILS: Record<string, GeminiToxicityDetails
   },
   tiotropium: {
     toxicThreshold:
-      'Very low systemic absorption via inhaler; acute inhalation of multiple capsules/puffs (>100–300 micrograms) causes mild antimuscarinic effects.',
+      'Very low systemic absorption via inhaler; acute inhalation of multiple capsules/puffs (>2–4 mcg/kg or >100–300 micrograms) causes mild antimuscarinic effects.',
     overdoseEffects:
       'Dry mouth, dry throat, mild sinus tachycardia, blurred vision, dilated pupils (especially if powder contacts the eyes), constipation, and difficulty passing urine in patients with prostatic hypertrophy.',
   },
