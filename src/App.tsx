@@ -4,18 +4,30 @@ import {
   AlertCircle,
   X,
   BookOpenCheck,
+  Skull,
 } from 'lucide-react';
-import { BnfMedicationItem, GeminiClinicalDetails } from './types/medication';
+import {
+  BnfMedicationItem,
+  GeminiClinicalDetails,
+  GeminiToxicityDetails,
+} from './types/medication';
 import { useDebounce } from './hooks/useDebounce';
 import { searchOpenPrescribingBnf } from './services/openPrescribingService';
 import {
   fetchMedicationClinicalDetails,
+  fetchMedicationToxicityDetails,
   getCachedClinicalDetails,
+  getCachedToxicityDetails,
   hasGeminiApiKey,
 } from './services/geminiClinicalService';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { Header } from './components/Header';
 import { SearchAndFilter } from './components/SearchAndFilter';
+import {
+  ToxCalculator,
+  ToxCalculatorValues,
+  computeToxDoseMetrics,
+} from './components/ToxCalculator';
 import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
 import { NoticeModal } from './components/NoticeModal';
 
@@ -25,6 +37,15 @@ export function App() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isCategoryMinimized, setIsCategoryMinimized] = useState(false);
   const [selectedCategoryDrug, setSelectedCategoryDrug] = useState<string | null>(null);
+
+  // Toxicity Mode state & Tox Calculator inputs
+  const [isToxicityMode, setIsToxicityMode] = useState(false);
+  const [toxCalculatorValues, setToxCalculatorValues] = useState<ToxCalculatorValues>({
+    dosePerPillMg: '',
+    numberOfPills: '',
+    patientWeightKg: '',
+    unit: 'mg',
+  });
 
   // First-time warning modals state
   const [hasSeenJrcalcWarning, setHasSeenJrcalcWarning] = useState(false);
@@ -43,16 +64,25 @@ export function App() {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   // Track whether the search was triggered by clicking a Quick Category drug
-  // so we can automatically expand and fetch Gemini clinical details for the top matching card
+  // so we can automatically expand and fetch Gemini details for the top matching card
   const autoExpandNextResultRef = useRef(false);
 
-  // Track which flashcards are selected/expanded and their Gemini clinical details state
+  // Track which flashcards are selected/expanded
   const [selectedCardKeys, setSelectedCardKeys] = useState<Record<string, boolean>>({});
+
+  // Standard Mode clinical details state
   const [clinicalDetailsByKey, setClinicalDetailsByKey] = useState<
     Record<string, GeminiClinicalDetails>
   >({});
   const [clinicalLoadingByKey, setClinicalLoadingByKey] = useState<Record<string, boolean>>({});
   const [clinicalErrorByKey, setClinicalErrorByKey] = useState<Record<string, string | null>>({});
+
+  // Toxicity Mode overdose details state
+  const [toxicityDetailsByKey, setToxicityDetailsByKey] = useState<
+    Record<string, GeminiToxicityDetails>
+  >({});
+  const [toxicityLoadingByKey, setToxicityLoadingByKey] = useState<Record<string, boolean>>({});
+  const [toxicityErrorByKey, setToxicityErrorByKey] = useState<Record<string, string | null>>({});
 
   const {
     isApiKeyConfigured: isTtsApiKeyConfigured,
@@ -70,7 +100,7 @@ export function App() {
   const loadClinicalDetailsForMedication = useCallback(async (item: BnfMedicationItem) => {
     const cardKey = `${item.id}::${item.name}`;
 
-    // If already stored in persistent localStorage cache, resolve immediately without loading spinner
+    // If already stored in pre-generated bundle or persistent localStorage cache, resolve immediately
     const cached = getCachedClinicalDetails(item.name);
     if (cached) {
       setClinicalDetailsByKey((prev) => ({ ...prev, [cardKey]: cached }));
@@ -95,6 +125,34 @@ export function App() {
     }
   }, []);
 
+  const loadToxicityDetailsForMedication = useCallback(async (item: BnfMedicationItem) => {
+    const cardKey = `${item.id}::${item.name}`;
+
+    // If already stored in persistent localStorage toxicity cache, resolve immediately
+    const cached = getCachedToxicityDetails(item.name);
+    if (cached) {
+      setToxicityDetailsByKey((prev) => ({ ...prev, [cardKey]: cached }));
+      setToxicityLoadingByKey((prev) => ({ ...prev, [cardKey]: false }));
+      setToxicityErrorByKey((prev) => ({ ...prev, [cardKey]: null }));
+      return;
+    }
+
+    setToxicityLoadingByKey((prev) => ({ ...prev, [cardKey]: true }));
+    setToxicityErrorByKey((prev) => ({ ...prev, [cardKey]: null }));
+
+    try {
+      const details = await fetchMedicationToxicityDetails(item.name);
+      setToxicityDetailsByKey((prev) => ({ ...prev, [cardKey]: details }));
+      setToxicityLoadingByKey((prev) => ({ ...prev, [cardKey]: false }));
+    } catch (error) {
+      console.error(`Error loading toxicity details for "${item.name}":`, error);
+      const message =
+        error instanceof Error ? error.message : 'Unable to generate overdose details.';
+      setToxicityLoadingByKey((prev) => ({ ...prev, [cardKey]: false }));
+      setToxicityErrorByKey((prev) => ({ ...prev, [cardKey]: message }));
+    }
+  }, []);
+
   const handleSelectMedication = useCallback(
     (item: BnfMedicationItem) => {
       const cardKey = getCardKey(item);
@@ -105,21 +163,62 @@ export function App() {
         [cardKey]: willBeSelected,
       }));
 
-      if (
-        willBeSelected &&
-        !clinicalDetailsByKey[cardKey] &&
-        !clinicalLoadingByKey[cardKey]
-      ) {
-        void loadClinicalDetailsForMedication(item);
+      if (willBeSelected) {
+        if (isToxicityMode) {
+          if (!toxicityDetailsByKey[cardKey] && !toxicityLoadingByKey[cardKey]) {
+            void loadToxicityDetailsForMedication(item);
+          }
+        } else {
+          if (!clinicalDetailsByKey[cardKey] && !clinicalLoadingByKey[cardKey]) {
+            void loadClinicalDetailsForMedication(item);
+          }
+        }
       }
     },
     [
       selectedCardKeys,
+      isToxicityMode,
       clinicalDetailsByKey,
       clinicalLoadingByKey,
+      toxicityDetailsByKey,
+      toxicityLoadingByKey,
       loadClinicalDetailsForMedication,
+      loadToxicityDetailsForMedication,
     ]
   );
+
+  // Requirement 4 (State Logic):
+  // If the user toggles Toxicity Mode on/off while one or more drugs are currently selected,
+  // automatically fetch the data for those selected drugs using the appropriate standard or tox prompt.
+  const handleToggleToxicityMode = useCallback(() => {
+    const nextToxMode = !isToxicityMode;
+    setIsToxicityMode(nextToxMode);
+
+    results.forEach((item) => {
+      const cardKey = getCardKey(item);
+      if (selectedCardKeys[cardKey]) {
+        if (nextToxMode) {
+          if (!toxicityDetailsByKey[cardKey] && !toxicityLoadingByKey[cardKey]) {
+            void loadToxicityDetailsForMedication(item);
+          }
+        } else {
+          if (!clinicalDetailsByKey[cardKey] && !clinicalLoadingByKey[cardKey]) {
+            void loadClinicalDetailsForMedication(item);
+          }
+        }
+      }
+    });
+  }, [
+    isToxicityMode,
+    results,
+    selectedCardKeys,
+    toxicityDetailsByKey,
+    toxicityLoadingByKey,
+    clinicalDetailsByKey,
+    clinicalLoadingByKey,
+    loadToxicityDetailsForMedication,
+    loadClinicalDetailsForMedication,
+  ]);
 
   // Triggers the first-time JRCALC+ / Clinical Disclaimer warning modal
   // whenever the user first interacts with ANY Quick Category or the search bar
@@ -201,6 +300,12 @@ export function App() {
     setSearchQuery(drugName);
   }, []);
 
+  // Keep a ref to current isToxicityMode so the search effect always uses the latest mode
+  const isToxicityModeRef = useRef(isToxicityMode);
+  useEffect(() => {
+    isToxicityModeRef.current = isToxicityMode;
+  }, [isToxicityMode]);
+
   // Fetch live UK BNF records from OpenPrescribing after 400ms debounce when input length > 2
   useEffect(() => {
     const trimmed = debouncedQuery.trim();
@@ -223,13 +328,17 @@ export function App() {
           setIsSearching(false);
 
           // If the user clicked a drug from Quick Categories, automatically
-          // select the first returned BNF card to trigger the Gemini clinical details fetch
+          // select the first returned BNF card and fetch the active mode's details
           if (autoExpandNextResultRef.current && items.length > 0) {
             autoExpandNextResultRef.current = false;
             const firstItem = items[0];
             const firstKey = getCardKey(firstItem);
             setSelectedCardKeys((prev) => ({ ...prev, [firstKey]: true }));
-            void loadClinicalDetailsForMedication(firstItem);
+            if (isToxicityModeRef.current) {
+              void loadToxicityDetailsForMedication(firstItem);
+            } else {
+              void loadClinicalDetailsForMedication(firstItem);
+            }
           }
         }
       })
@@ -252,13 +361,18 @@ export function App() {
     return () => {
       abortController.abort();
     };
-  }, [debouncedQuery, loadClinicalDetailsForMedication]);
+  }, [debouncedQuery, loadClinicalDetailsForMedication, loadToxicityDetailsForMedication]);
 
   const hasActiveQuery = debouncedQuery.trim().length > 2;
+  const toxCalculatedMetrics = computeToxDoseMetrics(toxCalculatorValues);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* First-Time JRCALC Core Emergency Clinical Disclaimer Modal */}
+    <div
+      className={`min-h-screen flex flex-col text-slate-900 transition-colors duration-200 ${
+        isToxicityMode ? 'bg-rose-50/40' : 'bg-slate-50'
+      }`}
+    >
+      {/* First-Time JRCALC Clinical Disclaimer Modal */}
       <NoticeModal
         isOpen={isJrcalcModalOpen}
         variant="clinical-warning"
@@ -284,6 +398,8 @@ export function App() {
         isGeminiApiKeyConfigured={hasGeminiApiKey()}
         speed={speed}
         onToggleSpeed={toggleSpeed}
+        isToxicityMode={isToxicityMode}
+        onToggleToxicityMode={handleToggleToxicityMode}
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 py-4 sm:px-6 sm:py-8">
@@ -354,7 +470,13 @@ export function App() {
           isSearching={isSearching}
           resultCount={results.length}
           hasActiveQuery={hasActiveQuery}
+          isToxicityMode={isToxicityMode}
         />
+
+        {/* Requirement 2: Tox Calculator Card displayed above clinical details when Toxicity Mode is active */}
+        {isToxicityMode && (
+          <ToxCalculator values={toxCalculatorValues} onChange={setToxCalculatorValues} />
+        )}
 
         {/* Loading Skeleton State while OpenPrescribing API Fetches */}
         {isSearching ? (
@@ -369,22 +491,53 @@ export function App() {
           </section>
         ) : !hasActiveQuery ? (
           /* Initial Prompt State before >2 chars are entered */
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 text-center max-w-xl mx-auto my-4 sm:my-6 shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-ambulance-green border border-emerald-200 flex items-center justify-center mx-auto mb-3.5">
-              <BookOpenCheck className="w-6 h-6" aria-hidden="true" />
+          <div
+            className={`bg-white rounded-2xl border p-6 sm:p-10 text-center max-w-xl mx-auto my-4 sm:my-6 shadow-sm ${
+              isToxicityMode ? 'border-rose-200' : 'border-slate-200'
+            }`}
+          >
+            <div
+              className={`w-12 h-12 rounded-2xl border flex items-center justify-center mx-auto mb-3.5 ${
+                isToxicityMode
+                  ? 'bg-rose-50 text-rose-600 border-rose-200'
+                  : 'bg-emerald-50 text-ambulance-green border-emerald-200'
+              }`}
+            >
+              {isToxicityMode ? (
+                <Skull className="w-6 h-6" aria-hidden="true" />
+              ) : (
+                <BookOpenCheck className="w-6 h-6" aria-hidden="true" />
+              )}
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-              Search the Live UK BNF Database
+              {isToxicityMode
+                ? 'Toxicity Mode: Search a Drug to Assess Overdose'
+                : 'Search the Live UK BNF Database'}
             </h2>
             <p className="text-sm sm:text-base text-slate-600 mt-1.5 leading-relaxed">
-              Tap one of the <strong>Quick Categories</strong> above to browse UK study
-              medications, or type at least <strong>3 characters</strong> in the search bar to load
-              flashcards and on-scene clinical notes.
+              {isToxicityMode ? (
+                <>
+                  Use the <strong>Overdose / Tox Dose Calculator</strong> above to calculate total
+                  mg and mg/kg ingested, then tap a <strong>Quick Category</strong> or search a
+                  drug to view its Toxbase/JRCALC toxic threshold, clinical presentation, and
+                  pre-hospital management.
+                </>
+              ) : (
+                <>
+                  Tap one of the <strong>Quick Categories</strong> above to browse UK study
+                  medications, or type at least <strong>3 characters</strong> in the search bar to
+                  load flashcards and on-scene clinical notes.
+                </>
+              )}
             </p>
           </div>
         ) : results.length === 0 ? (
           /* No Results State */
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-10 text-center max-w-lg mx-auto my-6 shadow-sm">
+          <div
+            className={`bg-white rounded-2xl border p-8 sm:p-10 text-center max-w-lg mx-auto my-6 shadow-sm ${
+              isToxicityMode ? 'border-rose-200' : 'border-slate-200'
+            }`}
+          >
             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-3">
               <SearchX className="w-6 h-6" aria-hidden="true" />
             </div>
@@ -397,7 +550,11 @@ export function App() {
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-ambulance-green text-white text-sm font-semibold hover:bg-emerald-800 transition-colors cursor-pointer"
+              className={`mt-4 inline-flex items-center px-4 py-2 rounded-xl text-white text-sm font-semibold transition-colors cursor-pointer ${
+                isToxicityMode
+                  ? 'bg-rose-600 hover:bg-rose-700'
+                  : 'bg-ambulance-green hover:bg-emerald-800'
+              }`}
             >
               Clear Search
             </button>
@@ -420,6 +577,18 @@ export function App() {
                   isClinicalLoading={Boolean(clinicalLoadingByKey[cardKey])}
                   clinicalError={clinicalErrorByKey[cardKey]}
                   onRetryClinical={loadClinicalDetailsForMedication}
+                  isToxicityMode={isToxicityMode}
+                  toxicityDetails={toxicityDetailsByKey[cardKey]}
+                  isToxicityLoading={Boolean(toxicityLoadingByKey[cardKey])}
+                  toxicityError={toxicityErrorByKey[cardKey]}
+                  onRetryToxicity={loadToxicityDetailsForMedication}
+                  toxCalculatedMetrics={toxCalculatedMetrics}
+                  onToggleToxUnit={() =>
+                    setToxCalculatorValues((prev) => ({
+                      ...prev,
+                      unit: prev.unit === 'mg' ? 'mcg' : 'mg',
+                    }))
+                  }
                   isAudioLoading={audioLoadingId === item.id}
                   isSpeaking={speakingId === item.id}
                   onListen={handleListenClick}
@@ -437,7 +606,9 @@ export function App() {
             href="https://openprescribing.net/api/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-ambulance-green hover:underline font-medium"
+            className={`hover:underline font-medium ${
+              isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+            }`}
           >
             OpenPrescribing BNF API
           </a>

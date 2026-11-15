@@ -12,8 +12,16 @@ import {
   ChevronDown,
   ChevronUp,
   Stethoscope,
+  Skull,
+  AlertTriangle,
+  Activity,
 } from 'lucide-react';
-import { BnfMedicationItem, GeminiClinicalDetails } from '../types/medication';
+import {
+  BnfMedicationItem,
+  GeminiClinicalDetails,
+  GeminiToxicityDetails,
+} from '../types/medication';
+import { formatMetricNumber, ToxDoseUnit } from './ToxCalculator';
 
 interface MedicationCardProps {
   medication: BnfMedicationItem;
@@ -23,6 +31,17 @@ interface MedicationCardProps {
   isClinicalLoading: boolean;
   clinicalError?: string | null;
   onRetryClinical: (medication: BnfMedicationItem) => void;
+  isToxicityMode?: boolean;
+  toxicityDetails?: GeminiToxicityDetails;
+  isToxicityLoading?: boolean;
+  toxicityError?: string | null;
+  onRetryToxicity?: (medication: BnfMedicationItem) => void;
+  toxCalculatedMetrics?: {
+    totalIngested: number | null;
+    ingestedDosePerKg: number | null;
+    unit: ToxDoseUnit;
+  };
+  onToggleToxUnit?: () => void;
   isAudioLoading: boolean;
   isSpeaking: boolean;
   onListen: (id: string, name: string) => void;
@@ -32,7 +51,7 @@ interface MedicationCardProps {
  * Formats a hyphenated phonetic string (e.g. "pa-ra-SEE-ta-mol") so uppercase
  * stressed syllables stand out clearly for pronunciation practice.
  */
-function renderPhoneticSyllables(phonetic: string): React.ReactNode {
+function renderPhoneticSyllables(phonetic: string, isToxicityMode = false): React.ReactNode {
   const words = phonetic.split(' ');
   return words.map((word, wordIdx) => {
     const syllables = word.split('-');
@@ -47,7 +66,9 @@ function renderPhoneticSyllables(phonetic: string): React.ReactNode {
               <span
                 className={
                   isStressed
-                    ? 'font-bold text-emerald-800 underline decoration-emerald-500/70 decoration-2 underline-offset-4'
+                    ? isToxicityMode
+                      ? 'font-bold text-rose-800 underline decoration-rose-500/70 decoration-2 underline-offset-4'
+                      : 'font-bold text-emerald-800 underline decoration-emerald-500/70 decoration-2 underline-offset-4'
                     : 'text-slate-700 font-medium'
                 }
               >
@@ -69,6 +90,13 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
   isClinicalLoading,
   clinicalError,
   onRetryClinical,
+  isToxicityMode = false,
+  toxicityDetails,
+  isToxicityLoading = false,
+  toxicityError,
+  onRetryToxicity,
+  toxCalculatedMetrics,
+  onToggleToxUnit,
   isAudioLoading,
   isSpeaking,
   onListen,
@@ -78,15 +106,25 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
       onClick={() => onSelect(medication)}
       className={`group bg-white rounded-2xl border transition-all duration-200 overflow-hidden cursor-pointer ${
         isSelected || isSpeaking || isAudioLoading
-          ? 'border-ambulance-green ring-2 ring-ambulance-green/30 shadow-md'
+          ? isToxicityMode
+            ? 'border-rose-600 ring-2 ring-rose-600/30 shadow-md'
+            : 'border-ambulance-green ring-2 ring-ambulance-green/30 shadow-md'
+          : isToxicityMode
+          ? 'border-rose-200/80 shadow-sm hover:shadow-md hover:border-rose-300'
           : 'border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300'
       }`}
     >
       <div className="p-5 sm:p-6">
-        {/* Top Row: Optional Entity Type & Clinical Details Action Badge */}
+        {/* Top Row: Optional Entity Type & Clinical/Tox Details Action Badge */}
         <div className="flex items-center justify-between gap-2 mb-2">
           {medication.type ? (
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span
+              className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border ${
+                isToxicityMode
+                  ? 'bg-rose-50 text-rose-800 border-rose-200'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              }`}
+            >
               {medication.type}
             </span>
           ) : (
@@ -99,10 +137,26 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
               e.stopPropagation();
               onSelect(medication);
             }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-ambulance-green hover:text-emerald-800 transition-colors cursor-pointer"
+            className={`inline-flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer ${
+              isToxicityMode
+                ? 'text-rose-600 hover:text-rose-800'
+                : 'text-ambulance-green hover:text-emerald-800'
+            }`}
           >
-            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{isSelected ? 'Hide Clinical Details' : 'View Clinical Details'}</span>
+            {isToxicityMode ? (
+              <Skull className="w-3.5 h-3.5" aria-hidden="true" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+            )}
+            <span>
+              {isSelected
+                ? isToxicityMode
+                  ? 'Hide Overdose Details'
+                  : 'Hide Clinical Details'
+                : isToxicityMode
+                ? 'View Overdose Details'
+                : 'View Clinical Details'}
+            </span>
             {isSelected ? (
               <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
             ) : (
@@ -144,9 +198,15 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
             }
             className={`shrink-0 inline-flex items-center justify-center gap-2 min-w-[112px] px-4 py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer select-none shadow-sm ${
               isAudioLoading
-                ? 'bg-emerald-800 text-emerald-50 ring-2 ring-emerald-500/40'
+                ? isToxicityMode
+                  ? 'bg-rose-800 text-rose-50 ring-2 ring-rose-500/40'
+                  : 'bg-emerald-800 text-emerald-50 ring-2 ring-emerald-500/40'
                 : isSpeaking
-                ? 'bg-emerald-700 text-white ring-4 ring-emerald-500/30 animate-pulse'
+                ? isToxicityMode
+                  ? 'bg-rose-700 text-white ring-4 ring-rose-500/30 animate-pulse'
+                  : 'bg-emerald-700 text-white ring-4 ring-emerald-500/30 animate-pulse'
+                : isToxicityMode
+                ? 'bg-rose-600 text-white hover:bg-rose-700 active:scale-[0.98]'
                 : 'bg-ambulance-green text-white hover:bg-emerald-800 active:scale-[0.98]'
             }`}
           >
@@ -169,121 +229,226 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
           </button>
         </div>
 
-        {/* Expanded Gemini Clinical Details Panel when Card is Selected */}
+        {/* Expanded Panel when Card is Selected */}
         {isSelected && (
           <div
             onClick={(e) => e.stopPropagation()}
             className="mt-4 pt-4 border-t border-slate-100 cursor-default"
           >
-            {isClinicalLoading ? (
-              /* Loading State on Flashcard while Gemini Generates Clinical Details */
-              <div
-                aria-live="polite"
-                aria-busy="true"
-                className="space-y-3 py-2 animate-pulse"
-              >
-                <div className="flex items-center gap-2 text-xs font-semibold text-ambulance-green">
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
-                  <span>Generating UK JRCALC &amp; BNF clinical details…</span>
-                </div>
-                <div className="h-8 w-48 bg-slate-100 rounded-xl" />
-                <div className="h-5 w-64 bg-slate-100 rounded-lg" />
-                <div className="h-16 w-full bg-slate-100 rounded-xl" />
-                <div className="space-y-2 pt-1">
-                  <div className="h-4 w-full bg-slate-100 rounded" />
-                  <div className="h-4 w-5/6 bg-slate-100 rounded" />
-                </div>
-              </div>
-            ) : clinicalError || !clinicalDetails ? (
-              /* Gentle Fallback Message if Gemini API Fails or Returns Invalid JSON */
-              <div
-                role="status"
-                className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
-                    <span className="font-medium">Clinical details unavailable</span>
+            {isToxicityMode ? (
+              /* ================= TOXICITY MODE DETAILS PANEL ================= */
+              isToxicityLoading ? (
+                <div
+                  aria-live="polite"
+                  aria-busy="true"
+                  className="space-y-3 py-2 animate-pulse"
+                >
+                  <div className="flex items-center gap-2 text-xs font-semibold text-rose-600">
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+                    <span>Generating UK Toxbase &amp; JRCALC overdose guidance…</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onRetryClinical(medication)}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-ambulance-green hover:underline cursor-pointer shrink-0"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Retry</span>
-                  </button>
+                  <div className="h-12 w-full bg-rose-50 rounded-xl" />
+                  <div className="h-16 w-full bg-slate-100 rounded-xl" />
+                  <div className="h-16 w-full bg-slate-100 rounded-xl" />
                 </div>
-                {clinicalError && (
-                  <p className="mt-1.5 text-xs text-slate-500 break-words">{clinicalError}</p>
-                )}
-              </div>
-            ) : (
-              /* Resolved Gemini Clinical Details: Phonetic Spelling, Class, On-Scene Context, and Indications */
-              <div className="space-y-4">
-                {/* Phonetic Spelling */}
-                <div>
-                  <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Phonetic Spelling
-                  </span>
-                  <div
-                    className="inline-flex flex-wrap items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200/80 font-mono text-sm sm:text-base tracking-wide"
-                    aria-label={`Phonetic pronunciation: ${clinicalDetails.phoneticSpelling}`}
-                  >
-                    <span className="text-slate-400 select-none mr-0.5">/</span>
-                    {renderPhoneticSyllables(clinicalDetails.phoneticSpelling)}
-                    <span className="text-slate-400 select-none ml-0.5">/</span>
-                  </div>
-                </div>
-
-                {/* Drug Class */}
-                <div className="flex items-center gap-2">
-                  <Pill className="w-4 h-4 text-nhs-blue shrink-0" aria-hidden="true" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Class:
-                  </span>
-                  <span className="text-sm font-semibold text-nhs-blue">
-                    {clinicalDetails.class}
-                  </span>
-                </div>
-
-                {/* Prominent Paramedic Pre-Hospital Overview: "On-Scene Context" */}
-                <div className="rounded-xl bg-emerald-50/70 border border-emerald-200/80 p-3.5 sm:p-4">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Stethoscope
-                      className="w-4 h-4 text-ambulance-green shrink-0"
-                      aria-hidden="true"
-                    />
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                      On-Scene Context
-                    </h3>
-                  </div>
-                  <p className="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
-                    {clinicalDetails.medicSummary}
-                  </p>
-                </div>
-
-                {/* Indications */}
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    Common Indications
-                  </h3>
-                  <ul className="space-y-1.5">
-                    {clinicalDetails.indications.map((indication, index) => (
-                      <li
-                        key={index}
-                        className="flex items-start gap-2 text-sm sm:text-[15px] text-slate-700 leading-snug"
+              ) : toxicityError || !toxicityDetails ? (
+                <div
+                  role="status"
+                  className="rounded-xl bg-rose-50/60 border border-rose-200 px-4 py-3 text-sm text-rose-900"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" aria-hidden="true" />
+                      <span className="font-medium">Overdose details unavailable</span>
+                    </div>
+                    {onRetryToxicity && (
+                      <button
+                        type="button"
+                        onClick={() => onRetryToxicity(medication)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:underline cursor-pointer shrink-0"
                       >
-                        <CheckCircle2
-                          className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                        <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>Retry</span>
+                      </button>
+                    )}
+                  </div>
+                  {toxicityError && (
+                    <p className="mt-1.5 text-xs text-rose-700 break-words">{toxicityError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* 1. Known Toxic Threshold (plus live comparison if user entered calculator values) */}
+                  <div className="rounded-xl bg-rose-50 border border-rose-200 p-3.5 sm:p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle
+                          className="w-4 h-4 text-rose-600 shrink-0"
                           aria-hidden="true"
                         />
-                        <span>{indication}</span>
-                      </li>
-                    ))}
-                  </ul>
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-rose-800">
+                          Known Toxic Threshold
+                        </h3>
+                      </div>
+
+                      {toxCalculatedMetrics &&
+                        (toxCalculatedMetrics.totalIngested !== null ||
+                          toxCalculatedMetrics.ingestedDosePerKg !== null) && (
+                          <button
+                            type="button"
+                            onClick={onToggleToxUnit}
+                            title="Click to switch between milligrams (mg) and micrograms (mcg)"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold font-mono transition-colors cursor-pointer"
+                          >
+                            <span>
+                              Calc:{' '}
+                              {toxCalculatedMetrics.totalIngested !== null
+                                ? `${formatMetricNumber(toxCalculatedMetrics.totalIngested)} ${toxCalculatedMetrics.unit}`
+                                : ''}
+                              {toxCalculatedMetrics.ingestedDosePerKg !== null
+                                ? ` (${formatMetricNumber(toxCalculatedMetrics.ingestedDosePerKg)} ${toxCalculatedMetrics.unit}/kg)`
+                                : ''}
+                            </span>
+                          </button>
+                        )}
+                    </div>
+                    <p className="text-sm sm:text-base font-bold text-rose-950 leading-snug">
+                      {toxicityDetails.toxicThreshold}
+                    </p>
+                  </div>
+
+                  {/* 2. Overdose Presentation & Vital Sign Changes */}
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Activity
+                        className="w-4 h-4 text-rose-600 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                        Overdose Presentation &amp; Vital Signs
+                      </h3>
+                    </div>
+                    <p className="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+                      {toxicityDetails.overdoseEffects}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )
+            ) : (
+              /* ================= STANDARD CLINICAL DETAILS PANEL ================= */
+              isClinicalLoading ? (
+                /* Loading State on Flashcard while Gemini Generates Clinical Details */
+                <div
+                  aria-live="polite"
+                  aria-busy="true"
+                  className="space-y-3 py-2 animate-pulse"
+                >
+                  <div className="flex items-center gap-2 text-xs font-semibold text-ambulance-green">
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+                    <span>Generating UK JRCALC &amp; BNF clinical details…</span>
+                  </div>
+                  <div className="h-8 w-48 bg-slate-100 rounded-xl" />
+                  <div className="h-5 w-64 bg-slate-100 rounded-lg" />
+                  <div className="h-16 w-full bg-slate-100 rounded-xl" />
+                  <div className="space-y-2 pt-1">
+                    <div className="h-4 w-full bg-slate-100 rounded" />
+                    <div className="h-4 w-5/6 bg-slate-100 rounded" />
+                  </div>
+                </div>
+              ) : clinicalError || !clinicalDetails ? (
+                /* Gentle Fallback Message if Gemini API Fails or Returns Invalid JSON */
+                <div
+                  role="status"
+                  className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle
+                        className="w-4 h-4 text-slate-400 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="font-medium">Clinical details unavailable</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onRetryClinical(medication)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-ambulance-green hover:underline cursor-pointer shrink-0"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Retry</span>
+                    </button>
+                  </div>
+                  {clinicalError && (
+                    <p className="mt-1.5 text-xs text-slate-500 break-words">{clinicalError}</p>
+                  )}
+                </div>
+              ) : (
+                /* Resolved Gemini Clinical Details: Phonetic Spelling, Class, On-Scene Context, and Indications */
+                <div className="space-y-4">
+                  {/* Phonetic Spelling */}
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      Phonetic Spelling
+                    </span>
+                    <div
+                      className="inline-flex flex-wrap items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200/80 font-mono text-sm sm:text-base tracking-wide"
+                      aria-label={`Phonetic pronunciation: ${clinicalDetails.phoneticSpelling}`}
+                    >
+                      <span className="text-slate-400 select-none mr-0.5">/</span>
+                      {renderPhoneticSyllables(clinicalDetails.phoneticSpelling, isToxicityMode)}
+                      <span className="text-slate-400 select-none ml-0.5">/</span>
+                    </div>
+                  </div>
+
+                  {/* Drug Class */}
+                  <div className="flex items-center gap-2">
+                    <Pill className="w-4 h-4 text-nhs-blue shrink-0" aria-hidden="true" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Class:
+                    </span>
+                    <span className="text-sm font-semibold text-nhs-blue">
+                      {clinicalDetails.class}
+                    </span>
+                  </div>
+
+                  {/* Prominent Paramedic Pre-Hospital Overview: "On-Scene Context" */}
+                  <div className="rounded-xl bg-emerald-50/70 border border-emerald-200/80 p-3.5 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Stethoscope
+                        className="w-4 h-4 text-ambulance-green shrink-0"
+                        aria-hidden="true"
+                      />
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                        On-Scene Context
+                      </h3>
+                    </div>
+                    <p className="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+                      {clinicalDetails.medicSummary}
+                    </p>
+                  </div>
+
+                  {/* Indications */}
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                      Common Indications
+                    </h3>
+                    <ul className="space-y-1.5">
+                      {clinicalDetails.indications.map((indication, index) => (
+                        <li
+                          key={index}
+                          className="flex items-start gap-2 text-sm sm:text-[15px] text-slate-700 leading-snug"
+                        >
+                          <CheckCircle2
+                            className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                            aria-hidden="true"
+                          />
+                          <span>{indication}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )
             )}
           </div>
         )}
