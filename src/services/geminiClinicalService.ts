@@ -2,13 +2,17 @@ import { GeminiClinicalDetails } from '../types/medication';
 
 /**
  * Active Gemini Flash model endpoints.
- * Note: `gemini-1.5-flash` and `gemini-2.0-flash` have been retired by Google and return HTTP 404.
- * `gemini-2.5-flash` and `gemini-flash-latest` are the active endpoints for Google AI Studio `AQ.` keys.
  */
 const GEMINI_ENDPOINTS = [
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
 ];
+
+/**
+ * Versioned localStorage key for persisting AI-generated clinical details across browser sessions
+ * so previously looked-up drugs load instantaneously without consuming Gemini API tokens.
+ */
+const CLINICAL_STORAGE_KEY = 'pharmaphonics_clinical_cache_v1';
 
 interface GeminiGenerateContentResponse {
   candidates?: Array<{
@@ -20,8 +24,67 @@ interface GeminiGenerateContentResponse {
   }>;
 }
 
-// In-memory session cache so re-selecting a drug card resolves immediately
+// In-memory cache hydrated from localStorage
 const clinicalDetailsCache = new Map<string, GeminiClinicalDetails>();
+
+function isValidClinicalDetails(value: unknown): value is GeminiClinicalDetails {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.phoneticSpelling === 'string' &&
+    record.phoneticSpelling.trim() !== '' &&
+    typeof record.class === 'string' &&
+    record.class.trim() !== '' &&
+    typeof record.medicSummary === 'string' &&
+    record.medicSummary.trim() !== '' &&
+    Array.isArray(record.indications) &&
+    record.indications.length > 0 &&
+    record.indications.every((item) => typeof item === 'string')
+  );
+}
+
+/**
+ * Loads all cached clinical details from localStorage into memory on startup.
+ */
+function hydrateCacheFromLocalStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  try {
+    const raw = window.localStorage.getItem(CLINICAL_STORAGE_KEY);
+    if (!raw) return;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (isValidClinicalDetails(value)) {
+        clinicalDetailsCache.set(key, value);
+      }
+    }
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not read localStorage cache:', err);
+  }
+}
+
+/**
+ * Persists the current clinicalDetailsCache map to localStorage.
+ */
+function saveCacheToLocalStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  try {
+    const serialized: Record<string, GeminiClinicalDetails> = {};
+    clinicalDetailsCache.forEach((value, key) => {
+      serialized[key] = value;
+    });
+    window.localStorage.setItem(CLINICAL_STORAGE_KEY, JSON.stringify(serialized));
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not write to localStorage cache:', err);
+  }
+}
+
+// Hydrate cache immediately when module loads
+hydrateCacheFromLocalStorage();
 
 /**
  * Checks whether `VITE_GEMINI_API_KEY` is configured in the Vite environment.
@@ -29,6 +92,16 @@ const clinicalDetailsCache = new Map<string, GeminiClinicalDetails>();
 export function hasGeminiApiKey(): boolean {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   return Boolean(apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here');
+}
+
+/**
+ * Synchronously checks if clinical details for a drug are already cached locally.
+ */
+export function getCachedClinicalDetails(
+  selectedDrugName: string
+): GeminiClinicalDetails | undefined {
+  const normalizedKey = selectedDrugName.trim().toLowerCase();
+  return clinicalDetailsCache.get(normalizedKey);
 }
 
 /**
@@ -80,7 +153,7 @@ function parseAndValidateClinicalJson(rawText: string): GeminiClinicalDetails {
 
 /**
  * Sends the generateContent request to a Gemini endpoint, supporting both `x-goog-api-key`
- * (recommended for Google AI Studio `AQ.` auth keys) and `?key=` query parameter.
+ * and `?key=` query parameter.
  */
 async function callGeminiEndpoint(
   endpoint: string,
@@ -104,7 +177,8 @@ async function callGeminiEndpoint(
 
 /**
  * Fetches UK Paramedic (JRCALC) & BNF clinical details (`phoneticSpelling`, `class`, `indications`, `medicSummary`)
- * for a selected medication from the Gemini API with strict `application/json` output.
+ * for a selected medication. Checks persistent `localStorage` first so previously looked-up
+ * medications resolve immediately without using Gemini API tokens.
  */
 export async function fetchMedicationClinicalDetails(
   selectedDrugName: string,
@@ -168,6 +242,7 @@ export async function fetchMedicationClinicalDetails(
 
     const clinicalDetails = parseAndValidateClinicalJson(rawText);
     clinicalDetailsCache.set(normalizedKey, clinicalDetails);
+    saveCacheToLocalStorage();
 
     return clinicalDetails;
   } catch (error) {

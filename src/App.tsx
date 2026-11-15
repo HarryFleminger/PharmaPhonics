@@ -10,6 +10,7 @@ import { useDebounce } from './hooks/useDebounce';
 import { searchOpenPrescribingBnf } from './services/openPrescribingService';
 import {
   fetchMedicationClinicalDetails,
+  getCachedClinicalDetails,
   hasGeminiApiKey,
 } from './services/geminiClinicalService';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
@@ -68,6 +69,15 @@ export function App() {
 
   const loadClinicalDetailsForMedication = useCallback(async (item: BnfMedicationItem) => {
     const cardKey = `${item.id}::${item.name}`;
+
+    // If already stored in persistent localStorage cache, resolve immediately without loading spinner
+    const cached = getCachedClinicalDetails(item.name);
+    if (cached) {
+      setClinicalDetailsByKey((prev) => ({ ...prev, [cardKey]: cached }));
+      setClinicalLoadingByKey((prev) => ({ ...prev, [cardKey]: false }));
+      setClinicalErrorByKey((prev) => ({ ...prev, [cardKey]: null }));
+      return;
+    }
 
     setClinicalLoadingByKey((prev) => ({ ...prev, [cardKey]: true }));
     setClinicalErrorByKey((prev) => ({ ...prev, [cardKey]: null }));
