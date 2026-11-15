@@ -1,4 +1,4 @@
-# 🩺 PharmaPhonics — UK Paramedic & NHS Community Medication Study App
+# 🩺 PharmaPhonics — UK Paramedic Medication App
 
 **PharmaPhonics** is a responsive React + TypeScript + Vite + Tailwind CSS study application built for UK paramedics, student paramedics, and pre-hospital clinicians (TEMT / AAP / Paramedic). It combines live **UK BNF nomenclature lookups**, **Google Gemini Clinical AI**, and **Google Cloud Text-to-Speech (British English Neural2 voice)** to help clinicians master UK medication pronunciations, drug classes, clinical indications, and on-scene primary survey considerations.
 
