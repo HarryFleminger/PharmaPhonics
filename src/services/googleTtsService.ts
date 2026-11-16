@@ -12,7 +12,7 @@ export const UK_LANGUAGE_CODE = 'en-GB';
  * Persistent localStorage key and max entry cap for caching synthesized MP3 audio
  * across browser sessions without exceeding browser localStorage quota (~5MB).
  */
-const TTS_AUDIO_STORAGE_KEY = 'pharmaphonics_tts_audio_cache_v1';
+const TTS_AUDIO_STORAGE_KEY = 'medspeak_tts_audio_cache_v1';
 const MAX_PERSISTED_AUDIO_ENTRIES = 45;
 
 export interface SynthesizeMedicationParams {

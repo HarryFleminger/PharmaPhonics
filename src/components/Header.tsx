@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-lg sm:text-2xl font-bold tracking-tight">
-                  PharmaPhonics
+                  MedSpeak
                 </h1>
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-semibold border shrink-0 ${

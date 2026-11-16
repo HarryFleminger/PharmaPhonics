@@ -14,8 +14,8 @@ const GEMINI_ENDPOINTS = [
  * Versioned localStorage keys for persisting AI-generated clinical and toxicity details
  * across browser sessions.
  */
-const CLINICAL_STORAGE_KEY = 'pharmaphonics_clinical_cache_v1';
-const TOXICITY_STORAGE_KEY = 'pharmaphonics_toxicity_cache_v1';
+const CLINICAL_STORAGE_KEY = 'medspeak_clinical_cache_v1';
+const TOXICITY_STORAGE_KEY = 'medspeak_toxicity_cache_v1';
 
 interface GeminiGenerateContentResponse {
   candidates?: Array<{

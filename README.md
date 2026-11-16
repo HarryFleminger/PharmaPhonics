@@ -1,6 +1,6 @@
-# 🩺 PharmaPhonics — UK Paramedic Medication App
+# 🩺 MedSpeak — UK Paramedic Medication App
 
-**PharmaPhonics** is a responsive React + TypeScript + Vite + Tailwind CSS study application built for UK paramedics, student paramedics, and pre-hospital clinicians (TEMT / AAP / Paramedic). It combines live **UK BNF nomenclature lookups**, **Google Gemini Clinical AI**, and **Google Cloud Text-to-Speech (British English Neural2 voice)** to help clinicians master UK medication pronunciations, drug classes, clinical indications, and on-scene primary survey considerations.
+**MedSpeak** is a responsive React + TypeScript + Vite + Tailwind CSS study application built for UK paramedics, student paramedics, and pre-hospital clinicians (TEMT / AAP / Paramedic). It combines live **UK BNF nomenclature lookups**, **Google Gemini Clinical AI**, and **Google Cloud Text-to-Speech (British English Neural2 voice)** to help clinicians master UK medication pronunciations, drug classes, clinical indications, and on-scene primary survey considerations.
 
 ---
 
@@ -51,7 +51,7 @@ Selecting any medication flashcard dynamically queries the Google Gemini API (`s
 
 ```bash
 git clone <your-repo-url>
-cd PharmaPhonics
+cd MedSpeak
 npm install
 ```
 
@@ -93,7 +93,7 @@ npm run preview
 ## 📂 Project Structure
 
 ```text
-PharmaPhonics/
+MedSpeak/
 ├── src/
 │   ├── components/
 │   │   ├── Header.tsx              # Sticky ambulance-green header, API status badges & speed toggle
@@ -123,4 +123,4 @@ PharmaPhonics/
 
 ## ⚠️ Clinical Disclaimer
 
-**PharmaPhonics** is an educational study tool designed to support medication nomenclature, pronunciation, and pharmacology revision. It is **not** a substitute for clinical judgement or official guidelines. Always consult the current **JRCALC Clinical Practice Guidelines**, **British National Formulary (BNF)**, and your local NHS Ambulance Trust PGDs/policies in clinical practice.
+**MedSpeak** is an educational study tool designed to support medication nomenclature, pronunciation, and pharmacology revision. It is **not** a substitute for clinical judgement or official guidelines. Always consult the current **JRCALC Clinical Practice Guidelines**, **British National Formulary (BNF)**, and your local NHS Ambulance Trust PGDs/policies in clinical practice.

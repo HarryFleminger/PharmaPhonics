@@ -631,7 +631,7 @@ export function App() {
 
       <footer className="border-t border-slate-200 bg-white py-4 px-4 sm:px-6 text-center text-xs text-slate-500">
         <p>
-          <strong>PharmaPhonics</strong> — Powered by{' '}
+          <strong>MedSpeak</strong> — Powered by{' '}
           <a
             href="https://openprescribing.net/api/"
             target="_blank"
