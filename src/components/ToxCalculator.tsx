@@ -137,9 +137,9 @@ export const ToxCalculator: React.FC<ToxCalculatorProps> = ({ values, onChange }
           <div className="min-w-0">
             <h2 className="text-sm sm:text-base font-bold tracking-tight flex flex-wrap items-center gap-2">
               <span>Overdose / Tox Dose Calculator</span>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-800/80 text-rose-100 border border-rose-400/30">
-                <AlertTriangle className="w-3 h-3" aria-hidden="true" />
-                Study Tool Only
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-800/80 text-rose-100 border border-rose-400/30">
+                <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span>Study Tool Only</span>
               </span>
             </h2>
           </div>
