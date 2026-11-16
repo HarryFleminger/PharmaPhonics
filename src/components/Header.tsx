@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-white/15 text-emerald-100 border-white/20'
                   }`}
                 >
-                  {isToxicityMode ? 'TOXICITY / OVERDOSE MODE' : 'UK BNF / JRCALC'}
+                  {isToxicityMode ? 'TOXICITY / OVERDOSE MODE' : 'UK BNF'}
                 </span>
               </div>
               <p

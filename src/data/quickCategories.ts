@@ -3,7 +3,7 @@
  * and UK "Starter Formulary" (Audi et al.) Top 100 systemic categories.
  */
 export const quickCategories: Record<string, string[]> = {
-  'JRCALC Core Emergency': [
+  'Core Emergency': [
     'Adenosine',
     'Adrenaline',
     'Alteplase',

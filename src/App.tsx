@@ -417,7 +417,7 @@ export function App() {
         isOpen={isVoiceModalOpen}
         variant="pronunciation-notice"
         title="Pronunciation Notice"
-        message="Please note that all pronunciations in this app are reasonable approximations for study, but are not inherently definitive or guaranteed to be correct in every clinical setting."
+        message="Please note that all pronunciations in this app are reasonable for study, but are not inherently definitive or guaranteed to be correct"
         confirmLabel="Got It, Play Audio"
         onConfirm={handleConfirmVoiceModal}
         onClose={handleCloseVoiceModal}
