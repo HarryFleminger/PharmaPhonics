@@ -12,6 +12,8 @@ import {
   Trash2,
   Stethoscope,
   Skull,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { extractMedicationsFromPrescriptionImage } from '../services/geminiClinicalService';
 
@@ -38,8 +40,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scannedMedications, setScannedMedications] = useState<string[]>([]);
-  const [patientProfileSummary, setPatientProfileSummary] = useState<string>('');
-  const [toxicityInteractionsSummary, setToxicityInteractionsSummary] = useState<string>('');
+  const [patientConditions, setPatientConditions] = useState<string[]>([]);
+  const [onSceneBullets, setOnSceneBullets] = useState<string[]>([]);
+  const [interactionBullets, setInteractionBullets] = useState<string[]>([]);
+  const [toxRedFlagBullets, setToxRedFlagBullets] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -78,8 +82,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             mimeType
           );
           setScannedMedications(scanResult.medications);
-          setPatientProfileSummary(scanResult.patientProfileSummary);
-          setToxicityInteractionsSummary(scanResult.toxicityInteractionsSummary);
+          setPatientConditions(scanResult.patientConditions);
+          setOnSceneBullets(scanResult.onSceneBullets);
+          setInteractionBullets(scanResult.interactionBullets);
+          setToxRedFlagBullets(scanResult.toxRedFlagBullets);
           setIsScanning(false);
 
           if (scanResult.medications.length > 0) {
@@ -147,8 +153,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     setImagePreviewUrl(null);
     setImageFileName(null);
     setScannedMedications([]);
-    setPatientProfileSummary('');
-    setToxicityInteractionsSummary('');
+    setPatientConditions([]);
+    setOnSceneBullets([]);
+    setInteractionBullets([]);
+    setToxRedFlagBullets([]);
     setScanError(null);
     setIsScanning(false);
   };
@@ -156,6 +164,9 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   if (!isOpen && !imagePreviewUrl && !isScanning) {
     return null;
   }
+
+  const hasStandardSummary = patientConditions.length > 0 || onSceneBullets.length > 0;
+  const hasToxicitySummary = interactionBullets.length > 0 || toxRedFlagBullets.length > 0;
 
   return (
     <div
@@ -288,7 +299,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
           </div>
         </div>
       ) : (
-        /* Uploaded Image Preview + Scanned Medications List + Holistic Summary Tile */
+        /* Uploaded Image Preview + Scanned Medications List + Streamlined Bullet Summary Tile */
         <div className="space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-xl border border-slate-200 p-2.5 sm:p-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -308,7 +319,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
                     }`}
                   >
                     <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" aria-hidden="true" />
-                    <span>Scanning medications &amp; clinical context with Gemini AI…</span>
+                    <span>Scanning medications &amp; clinical summary…</span>
                   </p>
                 ) : (
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -412,12 +423,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             </div>
           )}
 
-          {/* Holistic Prescription Summary Tile:
-              - In Standard Mode: Suspected Patient Conditions & On-Scene Context
-              - In Toxicity Mode: Polypharmacy Overdose & Drug Interactions Context */}
+          {/* Streamlined Bullet-Point Summary Tile */}
           {!isScanning &&
             scannedMedications.length > 0 &&
-            (isToxicityMode ? toxicityInteractionsSummary : patientProfileSummary) && (
+            (isToxicityMode ? hasToxicitySummary : hasStandardSummary) && (
               <div
                 className={`rounded-xl border p-3.5 sm:p-4 shadow-2xs transition-colors ${
                   isToxicityMode
@@ -425,31 +434,127 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
                     : 'bg-white border-emerald-300 ring-1 ring-emerald-200/70'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1.5">
-                  {isToxicityMode ? (
-                    <Skull className="w-4 h-4 text-rose-600 shrink-0" aria-hidden="true" />
-                  ) : (
-                    <Stethoscope
-                      className="w-4 h-4 text-ambulance-green shrink-0"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <h4
-                    className={`text-sm sm:text-base font-bold ${
-                      isToxicityMode ? 'text-rose-950' : 'text-slate-900'
-                    }`}
-                  >
-                    {isToxicityMode
-                      ? 'Prescription Drug Interactions & Polypharmacy Tox Context'
-                      : 'Likely Patient Conditions & Holistic On-Scene Context'}
-                  </h4>
-                </div>
+                {isToxicityMode ? (
+                  /* TOXICITY MODE: Two concise bullet sections */
+                  <div className="space-y-3.5">
+                    {interactionBullets.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Skull
+                            className="w-4 h-4 text-rose-600 shrink-0"
+                            aria-hidden="true"
+                          />
+                          <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-rose-800">
+                            Drug Interactions &amp; Synergies
+                          </h4>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {interactionBullets.map((point, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-sm text-slate-700 leading-snug"
+                            >
+                              <AlertTriangle
+                                className="w-4 h-4 text-rose-600 shrink-0 mt-0.5"
+                                aria-hidden="true"
+                              />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-                <p className="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
-                  {isToxicityMode ? toxicityInteractionsSummary : patientProfileSummary}
-                </p>
+                    {toxRedFlagBullets.length > 0 && (
+                      <div
+                        className={
+                          interactionBullets.length > 0
+                            ? 'pt-3 border-t border-rose-100'
+                            : ''
+                        }
+                      >
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                          Key Overdose Red Flags to Watch
+                        </h4>
+                        <ul className="space-y-1.5">
+                          {toxRedFlagBullets.map((point, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-sm text-slate-700 leading-snug"
+                            >
+                              <CheckCircle2
+                                className="w-4 h-4 text-rose-600 shrink-0 mt-0.5"
+                                aria-hidden="true"
+                              />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* STANDARD MODE: Two concise bullet sections */
+                  <div className="space-y-3.5">
+                    {patientConditions.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Stethoscope
+                            className="w-4 h-4 text-ambulance-green shrink-0"
+                            aria-hidden="true"
+                          />
+                          <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-900">
+                            Likely Patient Conditions
+                          </h4>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {patientConditions.map((condition, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-sm text-slate-700 leading-snug"
+                            >
+                              <CheckCircle2
+                                className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                                aria-hidden="true"
+                              />
+                              <span>{condition}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-                <p className="mt-2.5 pt-2 border-t border-slate-100 text-xs text-slate-400 text-center">
+                    {onSceneBullets.length > 0 && (
+                      <div
+                        className={
+                          patientConditions.length > 0
+                            ? 'pt-3 border-t border-emerald-100'
+                            : ''
+                        }
+                      >
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                          Key On-Scene Considerations
+                        </h4>
+                        <ul className="space-y-1.5">
+                          {onSceneBullets.map((point, idx) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-2 text-sm text-slate-700 leading-snug"
+                            >
+                              <CheckCircle2
+                                className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                                aria-hidden="true"
+                              />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400 text-center">
                   This content was generated by Gemini Ai which can make mistakes
                 </p>
               </div>

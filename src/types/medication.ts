@@ -39,23 +39,19 @@ export interface GeminiToxicityDetails {
 
 /**
  * Holistic analysis returned by Gemini Vision when scanning an uploaded prescription
- * or repeat medication list.
+ * or repeat medication list, structured as concise bullet points for quick reading.
  */
 export interface PrescriptionScanResult {
   /** Distinct UK generic/BNF medication names detected in the image */
   medications: string[];
-  /**
-   * Standard Mode: Plain-English summary of what medical conditions the patient likely
-   * suffers from given the combination of prescribed medications, plus generalised
-   * pre-hospital on-scene context for the ambulance crew.
-   */
-  patientProfileSummary: string;
-  /**
-   * Toxicity Mode: Pre-hospital toxicology & polypharmacy summary focusing on dangerous
-   * drug-drug interactions, synergistic overdose effects, and key clinical red flags
-   * across the prescribed medications.
-   */
-  toxicityInteractionsSummary: string;
+  /** Standard Mode: Brief bullet points of likely medical conditions / PMH */
+  patientConditions: string[];
+  /** Standard Mode: Brief pre-hospital on-scene considerations for the crew */
+  onSceneBullets: string[];
+  /** Toxicity Mode: Brief bullet points on dangerous drug-drug interactions / synergies */
+  interactionBullets: string[];
+  /** Toxicity Mode: Brief bullet points on key overdose & vital-sign red flags */
+  toxRedFlagBullets: string[];
 }
 
 export type SpeechSpeed = 1.0 | 0.75;

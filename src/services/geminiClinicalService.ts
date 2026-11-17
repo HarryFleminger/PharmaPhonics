@@ -415,12 +415,8 @@ export async function fetchMedicationToxicityDetails(
 
 /**
  * Analyzes an uploaded photo of a UK prescription, repeat medication slip, blister pack,
- * or medicine box using Gemini Vision (`inlineData`) and returns:
- * - `medications`: distinct UK medication names extracted from the image
- * - `patientProfileSummary`: what medical conditions the patient likely suffers from given
- *   their combined prescription list + generalised pre-hospital on-scene context
- * - `toxicityInteractionsSummary`: dangerous drug-drug interactions, synergistic overdose
- *   effects, and key pre-hospital toxicology considerations across the prescribed list
+ * or medicine box using Gemini Vision (`inlineData`) and returns streamlined bullet points
+ * for both Standard Mode and Toxicity Mode.
  */
 export async function extractMedicationsFromPrescriptionImage(
   base64Data: string,
@@ -435,7 +431,7 @@ export async function extractMedicationsFromPrescriptionImage(
   }
 
   const prompt =
-    "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Return ONLY a flat JSON object with exactly these three keys: 'medications' (array of strings: all distinct UK medication generic/BNF names visible in the image, e.g. ['Ramipril', 'Bisoprolol', 'Atorvastatin']), 'patientProfileSummary' (string: a plain-English, pre-hospital summary explaining what medical conditions or past medical history the patient likely suffers from given this combination of prescribed medications, plus generalised on-scene considerations for the ambulance crew assessing them—such as bleeding risks, blunted heart rate responses, postural hypotension, or glycaemic/respiratory considerations), and 'toxicityInteractionsSummary' (string: a plain-English pre-hospital toxicology and polypharmacy summary focusing on dangerous drug-drug interactions between these medications, synergistic mixed-overdose risks such as combined CNS/respiratory depression, Serotonin Syndrome, additive QTc prolongation, severe bradycardia/hypotension, or renal 'triple whammy' effects, and what vital sign red flags to watch for on scene). If no medications are visible, return {\"medications\": [], \"patientProfileSummary\": \"\", \"toxicityInteractionsSummary\": \"\"}.";
+    "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
 
   const requestBody = JSON.stringify({
     contents: [
@@ -497,28 +493,20 @@ export async function extractMedicationsFromPrescriptionImage(
   }
 
   const record = parsed as Record<string, unknown>;
-  const rawMedications = Array.isArray(record.medications) ? record.medications : [];
+  const toCleanStringArray = (val: unknown): string[] =>
+    Array.isArray(val)
+      ? val
+          .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+          .map((item) => item.trim())
+      : [];
 
-  const uniqueMeds = Array.from(
-    new Set(
-      rawMedications
-        .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
-        .map((item) => item.trim())
-    )
-  );
-
-  const patientProfileSummary =
-    typeof record.patientProfileSummary === 'string'
-      ? record.patientProfileSummary.trim()
-      : '';
-  const toxicityInteractionsSummary =
-    typeof record.toxicityInteractionsSummary === 'string'
-      ? record.toxicityInteractionsSummary.trim()
-      : '';
+  const uniqueMeds = Array.from(new Set(toCleanStringArray(record.medications)));
 
   return {
     medications: uniqueMeds,
-    patientProfileSummary,
-    toxicityInteractionsSummary,
+    patientConditions: toCleanStringArray(record.patientConditions),
+    onSceneBullets: toCleanStringArray(record.onSceneBullets),
+    interactionBullets: toCleanStringArray(record.interactionBullets),
+    toxRedFlagBullets: toCleanStringArray(record.toxRedFlagBullets),
   };
 }
