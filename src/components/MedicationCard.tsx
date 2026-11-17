@@ -15,6 +15,7 @@ import {
   Skull,
   AlertTriangle,
   Activity,
+  ExternalLink,
 } from 'lucide-react';
 import {
   BnfMedicationItem,
@@ -45,6 +46,20 @@ interface MedicationCardProps {
   isAudioLoading: boolean;
   isSpeaking: boolean;
   onListen: (id: string, name: string) => void;
+}
+
+/**
+ * Extracts a clean generic drug search term from a BNF nomenclature name
+ * (e.g. "Paracetamol 500mg tablets" -> "Paracetamol") for TOXBASE lookup.
+ */
+function getCleanToxbaseDrugName(rawName: string): string {
+  const withoutParens = rawName.replace(/\s*\([^)]*\)/g, '').trim();
+  // Strip dosage numbers and formulation suffixes if present (e.g. "500mg tablets")
+  const beforeDoseMatch = withoutParens.match(/^([A-Za-z][A-Za-z\s-]*?)(?:\s+\d|\s*$)/);
+  if (beforeDoseMatch && beforeDoseMatch[1].trim().length >= 3) {
+    return beforeDoseMatch[1].trim();
+  }
+  return withoutParens || rawName.trim();
 }
 
 /**
@@ -315,6 +330,32 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                     <p className="text-sm sm:text-base font-bold text-rose-950 leading-snug">
                       {toxicityDetails.toxicThreshold}
                     </p>
+
+                    <div className="mt-3 pt-2.5 border-t border-rose-200/80 flex items-center justify-between gap-2">
+                      <a
+                        href={`https://www.toxbase.org/?q=${encodeURIComponent(
+                          getCleanToxbaseDrugName(medication.name)
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          const cleanName = getCleanToxbaseDrugName(medication.name);
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            void navigator.clipboard.writeText(cleanName).catch(() => {});
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-rose-100/80 text-rose-700 border border-rose-300 text-xs sm:text-sm font-bold shadow-2xs transition-colors"
+                        title={`Open TOXBASE for ${getCleanToxbaseDrugName(
+                          medication.name
+                        )} (also copies drug name to clipboard)`}
+                      >
+                        <span>
+                          Look up &ldquo;{getCleanToxbaseDrugName(medication.name)}&rdquo; on
+                          TOXBASE
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                      </a>
+                    </div>
                   </div>
 
                   {/* 2. Overdose Presentation & Vital Sign Changes */}
