@@ -50,6 +50,16 @@ export function App() {
   });
 
   // First-time warning modals state
+  const [isNewFeatureModalOpen, setIsNewFeatureModalOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || !window.localStorage) return false;
+    try {
+      return window.localStorage.getItem('medspeak_seen_prescription_feature_v1') !== 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [highlightUploadButton, setHighlightUploadButton] = useState(false);
+
   const [hasSeenJrcalcWarning, setHasSeenJrcalcWarning] = useState(false);
   const [isJrcalcModalOpen, setIsJrcalcModalOpen] = useState(false);
 
@@ -243,6 +253,19 @@ export function App() {
     loadClinicalDetailsForMedication,
   ]);
 
+  const handleDismissNewFeatureModal = useCallback(() => {
+    setIsNewFeatureModalOpen(false);
+    try {
+      window.localStorage?.setItem('medspeak_seen_prescription_feature_v1', 'true');
+    } catch {
+      // Ignore storage errors
+    }
+    setHighlightUploadButton(true);
+    window.setTimeout(() => {
+      setHighlightUploadButton(false);
+    }, 3400);
+  }, []);
+
   // Triggers the first-time JRCALC+ / Clinical Disclaimer warning modal
   // whenever the user first interacts with ANY Quick Category or the search bar
   const triggerFirstTimeClinicalWarning = useCallback(() => {
@@ -403,6 +426,17 @@ export function App() {
         isToxicityMode ? 'bg-rose-50/40' : 'bg-slate-50'
       }`}
     >
+      {/* One-Time "New Feature" Prescription Upload Announcement Modal */}
+      <NoticeModal
+        isOpen={isNewFeatureModalOpen}
+        variant="new-feature"
+        title="Scan Prescriptions & Repeat Med Lists"
+        message="You can now upload a photo or screenshot of a prescription or repeat medication list to scan multiple drugs at once — complete with a holistic summary of likely patient conditions, on-scene considerations, and drug interaction risks."
+        confirmLabel="Got It"
+        onConfirm={handleDismissNewFeatureModal}
+        onClose={handleDismissNewFeatureModal}
+      />
+
       {/* First-Time JRCALC Clinical Disclaimer Modal */}
       <NoticeModal
         isOpen={isJrcalcModalOpen}
@@ -502,6 +536,7 @@ export function App() {
           resultCount={results.length}
           hasActiveQuery={hasActiveQuery}
           isToxicityMode={isToxicityMode}
+          highlightUploadButton={highlightUploadButton}
           onUploadActiveChange={(isActive) => {
             setIsToxCalculatorMinimized(isActive);
           }}

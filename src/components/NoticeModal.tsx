@@ -1,9 +1,9 @@
 import React from 'react';
-import { AlertTriangle, Volume2, X } from 'lucide-react';
+import { AlertTriangle, Volume2, Sparkles, X } from 'lucide-react';
 
 interface NoticeModalProps {
   isOpen: boolean;
-  variant: 'clinical-warning' | 'pronunciation-notice';
+  variant: 'clinical-warning' | 'pronunciation-notice' | 'new-feature';
   title: string;
   message: string;
   confirmLabel: string;
@@ -23,6 +23,7 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
   if (!isOpen) return null;
 
   const isWarning = variant === 'clinical-warning';
+  const isNewFeature = variant === 'new-feature';
 
   return (
     <div
@@ -41,33 +42,53 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
           className={`px-5 py-4 flex items-center justify-between gap-3 border-b ${
             isWarning
               ? 'bg-amber-50 border-amber-200 text-amber-950'
+              : isNewFeature
+              ? 'bg-ambulance-green border-emerald-800 text-white'
               : 'bg-emerald-50 border-emerald-200 text-emerald-950'
           }`}
         >
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div
               className={`p-2 rounded-xl flex items-center justify-center shrink-0 ${
                 isWarning
                   ? 'bg-amber-100 text-amber-700 border border-amber-300/80'
+                  : isNewFeature
+                  ? 'bg-white/15 text-nhs-warmYellow border border-white/25'
                   : 'bg-emerald-100 text-ambulance-green border border-emerald-300/80'
               }`}
             >
               {isWarning ? (
                 <AlertTriangle className="w-5 h-5" aria-hidden="true" />
+              ) : isNewFeature ? (
+                <Sparkles className="w-5 h-5" aria-hidden="true" />
               ) : (
                 <Volume2 className="w-5 h-5" aria-hidden="true" />
               )}
             </div>
-            <h2 id="notice-modal-title" className="text-base sm:text-lg font-bold tracking-tight">
-              {title}
-            </h2>
+            <div className="min-w-0">
+              {isNewFeature && (
+                <span className="inline-block px-2 py-0.5 mb-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-nhs-warmYellow text-slate-950">
+                  New Feature
+                </span>
+              )}
+              <h2
+                id="notice-modal-title"
+                className="text-base sm:text-lg font-bold tracking-tight"
+              >
+                {title}
+              </h2>
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose ?? onConfirm}
             aria-label="Close notice"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-black/5 transition-colors cursor-pointer"
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              isNewFeature
+                ? 'text-white/80 hover:text-white hover:bg-white/15'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-black/5'
+            }`}
           >
             <X className="w-4 h-4" />
           </button>

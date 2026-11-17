@@ -29,6 +29,7 @@ interface SearchAndFilterProps {
   hasActiveQuery: boolean;
   isToxicityMode?: boolean;
   onUploadActiveChange?: (isActive: boolean) => void;
+  highlightUploadButton?: boolean;
 }
 
 const categoryNames = Object.keys(quickCategories);
@@ -48,6 +49,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   hasActiveQuery,
   isToxicityMode = false,
   onUploadActiveChange,
+  highlightUploadButton = false,
 }) => {
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
   const [isQuickCategoriesMinimized, setIsQuickCategoriesMinimized] = useState(false);
@@ -128,6 +130,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             }}
             aria-expanded={isUploaderOpen}
             className={`inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm font-bold shrink-0 border transition-all cursor-pointer active:scale-[0.98] shadow-xs ${
+              highlightUploadButton ? 'animate-flash-upload' : ''
+            } ${
               isUploaderOpen
                 ? isToxicityMode
                   ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-600/25'
