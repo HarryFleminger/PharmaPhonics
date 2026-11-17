@@ -408,3 +408,98 @@ export async function fetchMedicationToxicityDetails(
     throw error;
   }
 }
+
+/**
+ * Analyzes an uploaded photo of a UK prescription, repeat medication slip, blister pack,
+ * or medicine box using Gemini Vision (`inlineData`) and returns the list of extracted
+ * medication names.
+ */
+export async function extractMedicationsFromPrescriptionImage(
+  base64Data: string,
+  mimeType: string,
+  signal?: AbortSignal
+): Promise<string[]> {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_gemini_api_key_here') {
+    throw new Error(
+      'VITE_GEMINI_API_KEY not loaded. Make sure .env.local is saved and restart `npm run dev`.'
+    );
+  }
+
+  const prompt =
+    "You are a UK Paramedic and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Extract all distinct UK medication names (preferring the generic UK BNF / rINN name where identifiable, e.g. 'Ramipril', 'Bisoprolol', 'Atorvastatin', 'Paracetamol'). Return ONLY a flat JSON object with the exact key 'medications' containing an array of strings. If no medications are visible, return {\"medications\": []}.";
+
+  const requestBody = JSON.stringify({
+    contents: [
+      {
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data,
+            },
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: 'application/json',
+    },
+  });
+
+  let lastResponse: Response | null = null;
+  let lastErrorBody = '';
+
+  for (const endpoint of GEMINI_ENDPOINTS) {
+    const response = await callGeminiEndpoint(endpoint, apiKey, requestBody, signal);
+    if (response.ok) {
+      lastResponse = response;
+      break;
+    }
+    lastResponse = response;
+    lastErrorBody = await response.text().catch(() => '');
+    if (response.status !== 404) {
+      break;
+    }
+  }
+
+  if (!lastResponse || !lastResponse.ok) {
+    const status = lastResponse?.status ?? 'Network Error';
+    throw new Error(
+      `Gemini Vision API HTTP ${status}: ${lastErrorBody || lastResponse?.statusText || 'Request failed'}`
+    );
+  }
+
+  const data = (await lastResponse.json()) as GeminiGenerateContentResponse;
+  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  if (!rawText) {
+    throw new Error('Empty response from Gemini Vision API.');
+  }
+
+  const cleanedText = rawText
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+
+  const parsed: unknown = JSON.parse(cleanedText);
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid JSON returned when scanning prescription image.');
+  }
+
+  const record = parsed as Record<string, unknown>;
+  if (!Array.isArray(record.medications)) {
+    return [];
+  }
+
+  const uniqueMeds = Array.from(
+    new Set(
+      record.medications
+        .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+        .map((item) => item.trim())
+    )
+  );
+
+  return uniqueMeds;
+}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Search,
   X,
@@ -9,8 +9,10 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  Camera,
 } from 'lucide-react';
 import { quickCategories } from '../data/quickCategories';
+import { PrescriptionUploader } from './PrescriptionUploader';
 
 interface SearchAndFilterProps {
   searchQuery: string;
@@ -45,64 +47,97 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   hasActiveQuery,
   isToxicityMode = false,
 }) => {
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
+
   const trimmedLength = searchQuery.trim().length;
   const activeCategoryDrugs = activeCategory ? quickCategories[activeCategory] ?? [] : [];
 
   return (
     <section
       aria-label="BNF medication search and Quick Categories"
+      onDragEnter={(e) => {
+        if (e.dataTransfer.types.includes('Files')) {
+          setIsUploaderOpen(true);
+        }
+      }}
       className={`bg-white rounded-2xl shadow-sm border p-3.5 sm:p-5 mb-5 space-y-4 transition-colors ${
         isToxicityMode ? 'border-rose-200' : 'border-slate-200'
       }`}
     >
-      {/* 1. Top of Page: Prominent Debounced Search Input (`text-base` = 16px prevents iOS/mobile auto-zoom) */}
+      {/* 1. Top of Page: Prominent Debounced Search Input + "Upload Prescription / Med List" Button */}
       <div>
-        <div className="relative">
-          {isSearching ? (
-            <Loader2
-              className={`w-5 h-5 animate-spin absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none ${
-                isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
-              }`}
-              aria-hidden="true"
-            />
-          ) : (
-            <Search
-              className={`w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none ${
-                isToxicityMode ? 'text-rose-400' : 'text-slate-400'
-              }`}
-              aria-hidden="true"
-            />
-          )}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          {/* Search Input (`text-base` = 16px prevents iOS/mobile auto-zoom) */}
+          <div className="relative flex-1">
+            {isSearching ? (
+              <Loader2
+                className={`w-5 h-5 animate-spin absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none ${
+                  isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+                }`}
+                aria-hidden="true"
+              />
+            ) : (
+              <Search
+                className={`w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none ${
+                  isToxicityMode ? 'text-rose-400' : 'text-slate-400'
+                }`}
+                aria-hidden="true"
+              />
+            )}
 
-          <input
-            type="search"
-            value={searchQuery}
-            onFocus={onSearchInteract}
-            onClick={onSearchInteract}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={
-              isToxicityMode
-                ? 'Search medication for overdose assessment (type 3+ chars, or pick a category)...'
-                : 'Search UK BNF database (type 3+ chars, or pick a category below)...'
-            }
-            aria-label="Search live UK BNF medications via OpenPrescribing API"
-            className={`w-full pl-11 pr-10 py-3 sm:py-3.5 text-base bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
-              isToxicityMode
-                ? 'border-rose-200 focus:ring-rose-600 focus:border-rose-600'
-                : 'border-slate-300 focus:ring-ambulance-green focus:border-ambulance-green'
+            <input
+              type="search"
+              value={searchQuery}
+              onFocus={onSearchInteract}
+              onClick={onSearchInteract}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={
+                isToxicityMode
+                  ? 'Search medication for overdose assessment (type 3+ chars, or pick a category)...'
+                  : 'Search UK BNF database (type 3+ chars, or pick a category below)...'
+              }
+              aria-label="Search live UK BNF medications via OpenPrescribing API"
+              className={`w-full pl-11 pr-10 py-3 sm:py-3.5 text-base bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                isToxicityMode
+                  ? 'border-rose-200 focus:ring-rose-600 focus:border-rose-600'
+                  : 'border-slate-300 focus:ring-ambulance-green focus:border-ambulance-green'
+              }`}
+            />
+
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                aria-label="Clear search query"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Prominent "Upload Prescription / Med List" Button */}
+          <button
+            type="button"
+            onClick={() => {
+              onSearchInteract?.();
+              setIsUploaderOpen((prev) => !prev);
+            }}
+            aria-expanded={isUploaderOpen}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm font-bold shrink-0 border transition-all cursor-pointer active:scale-[0.98] shadow-xs ${
+              isUploaderOpen
+                ? isToxicityMode
+                  ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-600/25'
+                  : 'bg-ambulance-green text-white border-ambulance-green ring-2 ring-ambulance-green/25'
+                : isToxicityMode
+                ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100/80 hover:border-rose-300'
+                : 'bg-emerald-50 text-ambulance-green border-emerald-200 hover:bg-emerald-100/80 hover:border-emerald-300'
             }`}
-          />
-
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange('')}
-              aria-label="Clear search query"
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+            title="Upload or take a photo of a prescription or repeat medication list"
+          >
+            <Camera className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>Upload Prescription / Med List</span>
+          </button>
         </div>
 
         {/* Search Status Summary */}
@@ -129,7 +164,9 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 </strong>
               </span>
             ) : (
-              <span>Search any UK drug above or open a Quick Category folder below</span>
+              <span>
+                Search any UK drug above, upload a prescription photo, or open a Quick Category below
+              </span>
             )}
           </span>
 
@@ -146,6 +183,16 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           )}
         </div>
       </div>
+
+      {/* Expandable Drag-and-Drop & Camera/Photo Prescription Uploader */}
+      <PrescriptionUploader
+        isOpen={isUploaderOpen}
+        onToggleOpen={() => setIsUploaderOpen((prev) => !prev)}
+        onSelectMedication={(drugName) => onSelectDrug(drugName)}
+        activeSearchQuery={searchQuery}
+        isToxicityMode={isToxicityMode}
+        onFirstInteract={onSearchInteract}
+      />
 
       {/* 2. Below Search Bar: Quick Categories (Styled as Folder Tabs / Rounded Pills) */}
       <div className="pt-3 border-t border-slate-100">
