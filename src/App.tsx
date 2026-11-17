@@ -41,6 +41,7 @@ export function App() {
 
   // Toxicity Mode state & Tox Calculator inputs
   const [isToxicityMode, setIsToxicityMode] = useState(false);
+  const [isToxCalculatorMinimized, setIsToxCalculatorMinimized] = useState(false);
   const [toxCalculatorValues, setToxCalculatorValues] = useState<ToxCalculatorValues>({
     dosePerPillMg: '',
     numberOfPills: '',
@@ -501,11 +502,19 @@ export function App() {
           resultCount={results.length}
           hasActiveQuery={hasActiveQuery}
           isToxicityMode={isToxicityMode}
+          onUploadActiveChange={(isActive) => {
+            setIsToxCalculatorMinimized(isActive);
+          }}
         />
 
         {/* Requirement 2: Tox Calculator Card displayed above clinical details when Toxicity Mode is active */}
         {isToxicityMode && (
-          <ToxCalculator values={toxCalculatorValues} onChange={setToxCalculatorValues} />
+          <ToxCalculator
+            values={toxCalculatorValues}
+            onChange={setToxCalculatorValues}
+            isMinimized={isToxCalculatorMinimized}
+            onToggleMinimized={() => setIsToxCalculatorMinimized((prev) => !prev)}
+          />
         )}
 
         {/* Loading Skeleton State while OpenPrescribing API Fetches */}

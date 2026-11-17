@@ -28,6 +28,7 @@ interface SearchAndFilterProps {
   resultCount: number;
   hasActiveQuery: boolean;
   isToxicityMode?: boolean;
+  onUploadActiveChange?: (isActive: boolean) => void;
 }
 
 const categoryNames = Object.keys(quickCategories);
@@ -46,8 +47,10 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   resultCount,
   hasActiveQuery,
   isToxicityMode = false,
+  onUploadActiveChange,
 }) => {
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
+  const [isQuickCategoriesMinimized, setIsQuickCategoriesMinimized] = useState(false);
 
   const trimmedLength = searchQuery.trim().length;
   const activeCategoryDrugs = activeCategory ? quickCategories[activeCategory] ?? [] : [];
@@ -192,11 +195,32 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         activeSearchQuery={searchQuery}
         isToxicityMode={isToxicityMode}
         onFirstInteract={onSearchInteract}
+        onUploadActiveChange={(isActive) => {
+          setIsQuickCategoriesMinimized(isActive);
+          if (isActive && activeCategory) {
+            onSelectCategory(null);
+          }
+          onUploadActiveChange?.(isActive);
+        }}
       />
 
-      {/* 2. Below Search Bar: Quick Categories (Styled as Folder Tabs / Rounded Pills) */}
+      {/* 2. Below Search Bar: Quick Categories (Collapsible Header + Folder Tabs) */}
       <div className="pt-3 border-t border-slate-100">
-        <div className="flex items-center justify-between gap-2 mb-2.5">
+        <div
+          onClick={() => setIsQuickCategoriesMinimized((prev) => !prev)}
+          role="button"
+          tabIndex={0}
+          aria-expanded={!isQuickCategoriesMinimized}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsQuickCategoriesMinimized((prev) => !prev);
+            }
+          }}
+          className={`flex items-center justify-between gap-2 cursor-pointer select-none rounded-lg px-1 py-0.5 hover:bg-slate-50 transition-colors ${
+            isQuickCategoriesMinimized ? '' : 'mb-2.5'
+          }`}
+        >
           <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
             <Folder
               className={`w-3.5 h-3.5 shrink-0 ${
@@ -205,68 +229,95 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
               aria-hidden="true"
             />
             <span>Quick Categories</span>
+            {isQuickCategoriesMinimized && (
+              <span className="text-[11px] font-medium normal-case text-slate-400">
+                (tap to open)
+              </span>
+            )}
           </span>
-          {activeCategory && (
-            <button
-              type="button"
-              onClick={() => onSelectCategory(null)}
-              className="text-xs font-semibold text-slate-400 hover:text-slate-700 cursor-pointer"
+
+          <div className="flex items-center gap-2">
+            {activeCategory && !isQuickCategoriesMinimized && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectCategory(null);
+                }}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                Close Category
+              </button>
+            )}
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border ${
+                isToxicityMode
+                  ? 'bg-rose-50 text-rose-600 border-rose-200'
+                  : 'bg-emerald-50 text-ambulance-green border-emerald-200'
+              }`}
             >
-              Close Category
-            </button>
-          )}
+              <span>{isQuickCategoriesMinimized ? 'Open' : 'Minimise'}</span>
+              {isQuickCategoriesMinimized ? (
+                <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+              ) : (
+                <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
+              )}
+            </span>
+          </div>
         </div>
 
-        <div
-          role="tablist"
-          aria-label="Quick Categories"
-          className="flex flex-wrap items-center gap-1.5 sm:gap-2"
-        >
-          {categoryNames.map((category) => {
-            const isSelected = activeCategory === category;
-            const count = quickCategories[category]?.length ?? 0;
+        {!isQuickCategoriesMinimized && (
+          <div
+            role="tablist"
+            aria-label="Quick Categories"
+            className="flex flex-wrap items-center gap-1.5 sm:gap-2"
+          >
+            {categoryNames.map((category) => {
+              const isSelected = activeCategory === category;
+              const count = quickCategories[category]?.length ?? 0;
 
-            return (
-              <button
-                key={category}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                onClick={() => onSelectCategory(category)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold shrink-0 transition-all cursor-pointer border ${
-                  isSelected
-                    ? isToxicityMode
-                      ? 'bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-600/25'
-                      : 'bg-ambulance-green text-white border-ambulance-green shadow-md ring-2 ring-ambulance-green/25'
-                    : isToxicityMode
-                    ? 'bg-slate-100/90 text-slate-700 border-slate-200/90 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-900'
-                    : 'bg-slate-100/90 text-slate-700 border-slate-200/90 hover:bg-slate-200/70 hover:text-slate-900'
-                }`}
-              >
-                {isSelected ? (
-                  <FolderOpen
-                    className={`w-3.5 h-3.5 shrink-0 ${
-                      isToxicityMode ? 'text-rose-200' : 'text-nhs-warmYellow'
-                    }`}
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Folder className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                )}
-                <span>{category}</span>
-                <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] sm:text-[11px] font-bold ${
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => onSelectCategory(category)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold shrink-0 transition-all cursor-pointer border ${
                     isSelected
-                      ? 'bg-black/25 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200/80'
+                      ? isToxicityMode
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-600/25'
+                        : 'bg-ambulance-green text-white border-ambulance-green shadow-md ring-2 ring-ambulance-green/25'
+                      : isToxicityMode
+                      ? 'bg-slate-100/90 text-slate-700 border-slate-200/90 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-900'
+                      : 'bg-slate-100/90 text-slate-700 border-slate-200/90 hover:bg-slate-200/70 hover:text-slate-900'
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  {isSelected ? (
+                    <FolderOpen
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        isToxicityMode ? 'text-rose-200' : 'text-nhs-warmYellow'
+                      }`}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Folder className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true" />
+                  )}
+                  <span>{category}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] sm:text-[11px] font-bold ${
+                      isSelected
+                        ? 'bg-black/25 text-white'
+                        : 'bg-white text-slate-600 border border-slate-200/80'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 3. Opened Category Medication Drawer: Visually Distinct Tinted Sub-Panel */}

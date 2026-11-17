@@ -1,5 +1,12 @@
 import React from 'react';
-import { Calculator, RotateCcw, AlertTriangle, ArrowLeftRight } from 'lucide-react';
+import {
+  Calculator,
+  RotateCcw,
+  AlertTriangle,
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 export type ToxDoseUnit = 'mg' | 'mcg';
 
@@ -13,6 +20,8 @@ export interface ToxCalculatorValues {
 interface ToxCalculatorProps {
   values: ToxCalculatorValues;
   onChange: (next: ToxCalculatorValues) => void;
+  isMinimized?: boolean;
+  onToggleMinimized?: () => void;
 }
 
 /**
@@ -89,7 +98,12 @@ export function formatMetricNumber(num: number, maxDecimals = 2): string {
   });
 }
 
-export const ToxCalculator: React.FC<ToxCalculatorProps> = ({ values, onChange }) => {
+export const ToxCalculator: React.FC<ToxCalculatorProps> = ({
+  values,
+  onChange,
+  isMinimized = false,
+  onToggleMinimized,
+}) => {
   const { totalIngested, ingestedDosePerKg, unit } = computeToxDoseMetrics(values);
   const unitLabel = unit === 'mcg' ? 'mcg (micrograms)' : 'mg (milligrams)';
   const hasAnyInput =
@@ -128,8 +142,22 @@ export const ToxCalculator: React.FC<ToxCalculatorProps> = ({ values, onChange }
       aria-label="Overdose Toxicity Calculator"
       className="bg-white rounded-2xl shadow-sm border-2 border-rose-200 overflow-hidden mb-5"
     >
-      {/* Calculator Header Bar */}
-      <div className="bg-rose-600 text-white px-4 py-3 sm:px-5 flex flex-wrap items-center justify-between gap-2">
+      {/* Calculator Header Bar (Tappable to expand/minimise) */}
+      <div
+        onClick={onToggleMinimized}
+        role={onToggleMinimized ? 'button' : undefined}
+        tabIndex={onToggleMinimized ? 0 : undefined}
+        aria-expanded={!isMinimized}
+        onKeyDown={(e) => {
+          if (onToggleMinimized && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onToggleMinimized();
+          }
+        }}
+        className={`bg-rose-600 text-white px-4 py-3 sm:px-5 flex flex-wrap items-center justify-between gap-2 select-none ${
+          onToggleMinimized ? 'cursor-pointer hover:bg-rose-600/95 transition-colors' : ''
+        }`}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1.5 rounded-lg bg-white/15 border border-white/20 shrink-0">
             <Calculator className="w-4 h-4 sm:w-5 sm:h-5 text-rose-100" aria-hidden="true" />
@@ -141,43 +169,79 @@ export const ToxCalculator: React.FC<ToxCalculatorProps> = ({ values, onChange }
                 <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
                 <span>Study Tool Only</span>
               </span>
+              {isMinimized && (totalIngested !== null || ingestedDosePerKg !== null) && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold font-mono bg-white text-rose-700">
+                  {totalIngested !== null ? `${formatMetricNumber(totalIngested)} ${unit}` : ''}
+                  {ingestedDosePerKg !== null
+                    ? ` (${formatMetricNumber(ingestedDosePerKg)} ${unit}/kg)`
+                    : ''}
+                </span>
+              )}
             </h2>
           </div>
         </div>
 
-        {/* Unit Switcher (mg <-> micrograms) & Reset Button */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleToggleUnit}
-            aria-label={`Switch dose units between milligrams and micrograms (currently ${unitLabel})`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-rose-700 hover:bg-rose-50 text-xs font-bold border border-white shadow-xs transition-all cursor-pointer active:scale-[0.98]"
-            title="Switch calculator and overdose readout between milligrams (mg) and micrograms (mcg)"
-          >
-            <ArrowLeftRight className="w-3.5 h-3.5 text-rose-600 shrink-0" aria-hidden="true" />
-            <span>
-              Unit: <strong className="underline">{unit === 'mg' ? 'mg' : 'mcg (µg)'}</strong>
-            </span>
-            <span className="text-rose-400 font-normal">
-              → {unit === 'mg' ? 'mcg' : 'mg'}
-            </span>
-          </button>
+        {/* Unit Switcher (mg <-> micrograms), Reset Button & Collapse/Expand Toggle */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-2 shrink-0"
+        >
+          {!isMinimized && (
+            <>
+              <button
+                type="button"
+                onClick={handleToggleUnit}
+                aria-label={`Switch dose units between milligrams and micrograms (currently ${unitLabel})`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-rose-700 hover:bg-rose-50 text-xs font-bold border border-white shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+                title="Switch calculator and overdose readout between milligrams (mg) and micrograms (mcg)"
+              >
+                <ArrowLeftRight
+                  className="w-3.5 h-3.5 text-rose-600 shrink-0"
+                  aria-hidden="true"
+                />
+                <span>
+                  Unit:{' '}
+                  <strong className="underline">{unit === 'mg' ? 'mg' : 'mcg (µg)'}</strong>
+                </span>
+                <span className="text-rose-400 font-normal">
+                  → {unit === 'mg' ? 'mcg' : 'mg'}
+                </span>
+              </button>
 
-          {hasAnyInput && (
+              {hasAnyInput && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-semibold text-white border border-white/20 transition-colors cursor-pointer shrink-0"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Reset</span>
+                </button>
+              )}
+            </>
+          )}
+
+          {onToggleMinimized && (
             <button
               type="button"
-              onClick={handleReset}
+              onClick={onToggleMinimized}
+              aria-label={isMinimized ? 'Expand Overdose Calculator' : 'Minimise Overdose Calculator'}
               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-semibold text-white border border-white/20 transition-colors cursor-pointer shrink-0"
             >
-              <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Reset</span>
+              <span>{isMinimized ? 'Open' : 'Minimise'}</span>
+              {isMinimized ? (
+                <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+              ) : (
+                <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
+              )}
             </button>
           )}
         </div>
       </div>
 
-      {/* Inputs & Live Calculated Outputs */}
-      <div className="p-4 sm:p-5 space-y-4">
+      {/* Inputs & Live Calculated Outputs (Hidden when Minimized) */}
+      {!isMinimized && (
+        <div className="p-4 sm:p-5 space-y-4">
         {/* Three Number Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {/* 1. Dose per pill (mg or mcg) */}
@@ -307,9 +371,10 @@ export const ToxCalculator: React.FC<ToxCalculatorProps> = ({ values, onChange }
                 </span>
               )}
             </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 };

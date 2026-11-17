@@ -24,6 +24,7 @@ interface PrescriptionUploaderProps {
   activeSearchQuery: string;
   isToxicityMode?: boolean;
   onFirstInteract?: () => void;
+  onUploadActiveChange?: (isActive: boolean) => void;
 }
 
 export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
@@ -33,6 +34,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   activeSearchQuery,
   isToxicityMode = false,
   onFirstInteract,
+  onUploadActiveChange,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -60,6 +62,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
       setScanError(null);
       setImageFileName(file.name);
       setIsScanning(true);
+      onUploadActiveChange?.(true);
 
       const reader = new FileReader();
       reader.onload = async () => {
@@ -112,7 +115,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
 
       reader.readAsDataURL(file);
     },
-    [onFirstInteract, onSelectMedication]
+    [onFirstInteract, onSelectMedication, onUploadActiveChange]
   );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,6 +162,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     setToxRedFlagBullets([]);
     setScanError(null);
     setIsScanning(false);
+    onUploadActiveChange?.(false);
   };
 
   if (!isOpen && !imagePreviewUrl && !isScanning) {
