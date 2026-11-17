@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Sparkles,
   Trash2,
+  Stethoscope,
+  Skull,
 } from 'lucide-react';
 import { extractMedicationsFromPrescriptionImage } from '../services/geminiClinicalService';
 
@@ -36,6 +38,8 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scannedMedications, setScannedMedications] = useState<string[]>([]);
+  const [patientProfileSummary, setPatientProfileSummary] = useState<string>('');
+  const [toxicityInteractionsSummary, setToxicityInteractionsSummary] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -69,12 +73,17 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         const base64Data = base64Match[2];
 
         try {
-          const extracted = await extractMedicationsFromPrescriptionImage(base64Data, mimeType);
-          setScannedMedications(extracted);
+          const scanResult = await extractMedicationsFromPrescriptionImage(
+            base64Data,
+            mimeType
+          );
+          setScannedMedications(scanResult.medications);
+          setPatientProfileSummary(scanResult.patientProfileSummary);
+          setToxicityInteractionsSummary(scanResult.toxicityInteractionsSummary);
           setIsScanning(false);
 
-          if (extracted.length > 0) {
-            onSelectMedication(extracted[0]);
+          if (scanResult.medications.length > 0) {
+            onSelectMedication(scanResult.medications[0]);
           } else {
             setScanError(
               'No clearly readable medication names were detected. Try a clearer photo or search above.'
@@ -138,6 +147,8 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     setImagePreviewUrl(null);
     setImageFileName(null);
     setScannedMedications([]);
+    setPatientProfileSummary('');
+    setToxicityInteractionsSummary('');
     setScanError(null);
     setIsScanning(false);
   };
@@ -277,8 +288,8 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
           </div>
         </div>
       ) : (
-        /* Uploaded Image Preview + Scanned Medications List */
-        <div className="space-y-3">
+        /* Uploaded Image Preview + Scanned Medications List + Holistic Summary Tile */
+        <div className="space-y-3.5">
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-xl border border-slate-200 p-2.5 sm:p-3">
             <div className="flex items-center gap-3 min-w-0">
               <img
@@ -297,7 +308,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
                     }`}
                   >
                     <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" aria-hidden="true" />
-                    <span>Scanning medications with Gemini Vision AI…</span>
+                    <span>Scanning medications &amp; clinical context with Gemini AI…</span>
                   </p>
                 ) : (
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -400,6 +411,49 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               </div>
             </div>
           )}
+
+          {/* Holistic Prescription Summary Tile:
+              - In Standard Mode: Suspected Patient Conditions & On-Scene Context
+              - In Toxicity Mode: Polypharmacy Overdose & Drug Interactions Context */}
+          {!isScanning &&
+            scannedMedications.length > 0 &&
+            (isToxicityMode ? toxicityInteractionsSummary : patientProfileSummary) && (
+              <div
+                className={`rounded-xl border p-3.5 sm:p-4 shadow-2xs transition-colors ${
+                  isToxicityMode
+                    ? 'bg-white border-rose-300 ring-1 ring-rose-200/70'
+                    : 'bg-white border-emerald-300 ring-1 ring-emerald-200/70'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  {isToxicityMode ? (
+                    <Skull className="w-4 h-4 text-rose-600 shrink-0" aria-hidden="true" />
+                  ) : (
+                    <Stethoscope
+                      className="w-4 h-4 text-ambulance-green shrink-0"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <h4
+                    className={`text-sm sm:text-base font-bold ${
+                      isToxicityMode ? 'text-rose-950' : 'text-slate-900'
+                    }`}
+                  >
+                    {isToxicityMode
+                      ? 'Prescription Drug Interactions & Polypharmacy Tox Context'
+                      : 'Likely Patient Conditions & Holistic On-Scene Context'}
+                  </h4>
+                </div>
+
+                <p className="text-sm sm:text-[15px] text-slate-700 leading-relaxed">
+                  {isToxicityMode ? toxicityInteractionsSummary : patientProfileSummary}
+                </p>
+
+                <p className="mt-2.5 pt-2 border-t border-slate-100 text-xs text-slate-400 text-center">
+                  This content was generated by Gemini Ai which can make mistakes
+                </p>
+              </div>
+            )}
         </div>
       )}
     </div>

@@ -37,4 +37,25 @@ export interface GeminiToxicityDetails {
   toxicThreshold: string;
 }
 
+/**
+ * Holistic analysis returned by Gemini Vision when scanning an uploaded prescription
+ * or repeat medication list.
+ */
+export interface PrescriptionScanResult {
+  /** Distinct UK generic/BNF medication names detected in the image */
+  medications: string[];
+  /**
+   * Standard Mode: Plain-English summary of what medical conditions the patient likely
+   * suffers from given the combination of prescribed medications, plus generalised
+   * pre-hospital on-scene context for the ambulance crew.
+   */
+  patientProfileSummary: string;
+  /**
+   * Toxicity Mode: Pre-hospital toxicology & polypharmacy summary focusing on dangerous
+   * drug-drug interactions, synergistic overdose effects, and key clinical red flags
+   * across the prescribed medications.
+   */
+  toxicityInteractionsSummary: string;
+}
+
 export type SpeechSpeed = 1.0 | 0.75;
