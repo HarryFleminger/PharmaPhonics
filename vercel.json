@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/openprescribing/:path*",
+      "destination": "https://openprescribing.net/:path*"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

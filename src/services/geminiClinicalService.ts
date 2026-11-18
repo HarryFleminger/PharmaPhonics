@@ -5,21 +5,29 @@ import {
 } from '../types/medication';
 import { findPregeneratedClinicalDetails } from '../data/pregeneratedClinicalDetails';
 import { findPregeneratedToxicityDetails } from '../data/pregeneratedToxicityDetails';
+import { enforceRateLimit } from './rateLimitService';
+import { setServerTtsConfigured } from './googleTtsService';
 
 /**
- * Active Gemini Flash model endpoints.
+ * Backend proxy endpoints (`server.js`) that attach `GEMINI_API_KEY` on the server
+ * and enforce `gemini-2.5-flash` + `maxOutputTokens: 450` without exposing any key to the browser.
  */
-const GEMINI_ENDPOINTS = [
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
-];
+const GEMINI_PROXY_ENDPOINT = '/api/gemini';
+const HEALTH_PROXY_ENDPOINT = '/api/health';
 
 /**
- * Versioned localStorage keys for persisting AI-generated clinical and toxicity details
- * across browser sessions.
+ * Hard ceiling on output tokens per Gemini response to prevent runaway generation.
+ */
+const MAX_GEMINI_OUTPUT_TOKENS = 450;
+
+/**
+ * Versioned localStorage keys for persisting AI-generated clinical, toxicity, and prescription
+ * scan results across browser sessions.
  */
 const CLINICAL_STORAGE_KEY = 'medspeak_clinical_cache_v1';
 const TOXICITY_STORAGE_KEY = 'medspeak_toxicity_cache_v1';
+const PRESCRIPTION_SCAN_STORAGE_KEY = 'medspeak_prescription_scan_cache_v1';
+const MAX_PERSISTED_PRESCRIPTION_SCANS = 25;
 
 interface GeminiGenerateContentResponse {
   candidates?: Array<{
@@ -29,11 +37,55 @@ interface GeminiGenerateContentResponse {
       }>;
     };
   }>;
+  error?: string | { message?: string };
+}
+
+interface HealthCheckResponse {
+  geminiConfigured?: boolean;
+  ttsConfigured?: boolean;
 }
 
 // In-memory caches hydrated from localStorage
 const clinicalDetailsCache = new Map<string, GeminiClinicalDetails>();
 const toxicityDetailsCache = new Map<string, GeminiToxicityDetails>();
+const prescriptionScanCache = new Map<string, PrescriptionScanResult>();
+
+// In-flight request deduplicators so concurrent requests for the same drug/image share one Promise
+const inFlightClinicalRequests = new Map<string, Promise<GeminiClinicalDetails>>();
+const inFlightToxicityRequests = new Map<string, Promise<GeminiToxicityDetails>>();
+const inFlightVisionRequests = new Map<string, Promise<PrescriptionScanResult>>();
+
+let serverGeminiConfigured = true;
+
+/**
+ * Queries `GET /api/health` on the backend server to check whether `GEMINI_API_KEY`
+ * and `GOOGLE_TTS_API_KEY` are configured on the server without exposing any keys.
+ */
+export async function fetchServerHealthStatus(): Promise<{
+  geminiConfigured: boolean;
+  ttsConfigured: boolean;
+}> {
+  try {
+    const res = await fetch(HEALTH_PROXY_ENDPOINT, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      const data = (await res.json()) as HealthCheckResponse;
+      const geminiOk = Boolean(data.geminiConfigured);
+      const ttsOk = Boolean(data.ttsConfigured);
+      serverGeminiConfigured = geminiOk;
+      setServerTtsConfigured(ttsOk);
+      return { geminiConfigured: geminiOk, ttsConfigured: ttsOk };
+    }
+  } catch {
+    // Keep default status if health check cannot reach server
+  }
+  return {
+    geminiConfigured: serverGeminiConfigured,
+    ttsConfigured: true,
+  };
+}
 
 function isValidClinicalDetails(value: unknown): value is GeminiClinicalDetails {
   if (!value || typeof value !== 'object') return false;
@@ -62,8 +114,44 @@ function isValidToxicityDetails(value: unknown): value is GeminiToxicityDetails 
   );
 }
 
+function isValidPrescriptionScanResult(value: unknown): value is PrescriptionScanResult {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  const isStringArray = (arr: unknown): arr is string[] =>
+    Array.isArray(arr) && arr.every((item) => typeof item === 'string');
+
+  return (
+    isStringArray(record.medications) &&
+    isStringArray(record.patientConditions) &&
+    isStringArray(record.onSceneBullets) &&
+    isStringArray(record.interactionBullets) &&
+    isStringArray(record.toxRedFlagBullets)
+  );
+}
+
 /**
- * Loads all cached clinical and toxicity details from localStorage into memory on startup.
+ * Computes a fast, deterministic FNV-1a fingerprint over a base64 image string
+ * so re-uploading the same photo resolves from `localStorage` with 0 tokens.
+ */
+export function computeImageFingerprint(base64Data: string): string {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x811c9dc5;
+  const len = base64Data.length;
+  const step = Math.max(1, Math.floor(len / 4096));
+
+  for (let i = 0; i < len; i += step) {
+    const code = base64Data.charCodeAt(i);
+    h1 ^= code;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 ^= code ^ (i & 0xff);
+    h2 = Math.imul(h2, 0x01000193);
+  }
+
+  return `${len.toString(36)}_${(h1 >>> 0).toString(16)}_${(h2 >>> 0).toString(16)}`;
+}
+
+/**
+ * Loads all cached clinical, toxicity, and prescription scan details from localStorage into memory on startup.
  */
 function hydrateCachesFromLocalStorage(): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -98,6 +186,22 @@ function hydrateCachesFromLocalStorage(): void {
     }
   } catch (err) {
     console.warn('[GeminiClinicalService] Could not read toxicity localStorage cache:', err);
+  }
+
+  try {
+    const rawScans = window.localStorage.getItem(PRESCRIPTION_SCAN_STORAGE_KEY);
+    if (rawScans) {
+      const parsed: unknown = JSON.parse(rawScans);
+      if (parsed && typeof parsed === 'object') {
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+          if (isValidPrescriptionScanResult(value)) {
+            prescriptionScanCache.set(key, value);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not read prescription scan cache:', err);
   }
 }
 
@@ -135,15 +239,33 @@ function saveToxicityCacheToLocalStorage(): void {
   }
 }
 
+/**
+ * Persists the current prescriptionScanCache map to localStorage (capped at 25 entries).
+ */
+function savePrescriptionScanCacheToLocalStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  try {
+    const entries = Array.from(prescriptionScanCache.entries()).slice(
+      -MAX_PERSISTED_PRESCRIPTION_SCANS
+    );
+    window.localStorage.setItem(
+      PRESCRIPTION_SCAN_STORAGE_KEY,
+      JSON.stringify(Object.fromEntries(entries))
+    );
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not write prescription scan cache:', err);
+  }
+}
+
 // Hydrate caches immediately when module loads
 hydrateCachesFromLocalStorage();
 
 /**
- * Checks whether `VITE_GEMINI_API_KEY` is configured in the Vite environment.
+ * Returns whether the backend server reported `GEMINI_API_KEY` as configured.
  */
 export function hasGeminiApiKey(): boolean {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  return Boolean(apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here');
+  return serverGeminiConfigured;
 }
 
 /**
@@ -256,7 +378,9 @@ function parseAndValidateToxicityJson(rawText: string): GeminiToxicityDetails {
     typeof record.toxicThreshold === 'string' ? record.toxicThreshold.trim() : '';
 
   if (!overdoseEffects || !toxicThreshold) {
-    throw new Error('Gemini toxicity response missing required fields (overdoseEffects, toxicThreshold).');
+    throw new Error(
+      'Gemini toxicity response missing required fields (overdoseEffects, toxicThreshold).'
+    );
   }
 
   return {
@@ -266,75 +390,48 @@ function parseAndValidateToxicityJson(rawText: string): GeminiToxicityDetails {
 }
 
 /**
- * Sends the generateContent request to a Gemini endpoint, supporting both `x-goog-api-key`
- * and `?key=` query parameter.
+ * Sends a Gemini `contents` payload to the backend proxy (`POST /api/gemini`), which attaches
+ * `GEMINI_API_KEY` on the server, locks the model to `gemini-2.5-flash`, and enforces
+ * `maxOutputTokens: 450`.
  */
-async function callGeminiEndpoint(
-  endpoint: string,
-  apiKey: string,
-  requestBody: string,
+async function callServerGeminiProxy(
+  contents: unknown[],
   signal?: AbortSignal
-): Promise<Response> {
-  const trimmedKey = apiKey.trim();
-  const encodedKey = encodeURIComponent(trimmedKey);
+): Promise<string> {
+  const requestBody = JSON.stringify({
+    contents,
+    generationConfig: {
+      responseMimeType: 'application/json',
+      maxOutputTokens: MAX_GEMINI_OUTPUT_TOKENS,
+    },
+  });
 
-  return fetch(`${endpoint}?key=${encodedKey}`, {
+  const response = await fetch(GEMINI_PROXY_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': trimmedKey,
     },
     signal,
     body: requestBody,
   });
-}
 
-/**
- * Executes a prompt against the configured Gemini Flash endpoints and returns the raw text response.
- */
-async function executeGeminiPrompt(prompt: string, signal?: AbortSignal): Promise<string> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_gemini_api_key_here') {
-    throw new Error(
-      'VITE_GEMINI_API_KEY not loaded. Make sure .env.local is saved and restart `npm run dev`.'
-    );
-  }
-
-  const requestBody = JSON.stringify({
-    contents: [
-      {
-        parts: [{ text: prompt }],
-      },
-    ],
-    generationConfig: {
-      responseMimeType: 'application/json',
-    },
-  });
-
-  let lastResponse: Response | null = null;
-  let lastErrorBody = '';
-
-  for (const endpoint of GEMINI_ENDPOINTS) {
-    const response = await callGeminiEndpoint(endpoint, apiKey, requestBody, signal);
-    if (response.ok) {
-      lastResponse = response;
-      break;
+  if (!response.ok) {
+    let errMessage = response.statusText || 'Request failed';
+    try {
+      const errJson = (await response.json()) as GeminiGenerateContentResponse;
+      if (typeof errJson.error === 'string') {
+        errMessage = errJson.error;
+      } else if (errJson.error?.message) {
+        errMessage = errJson.error.message;
+      }
+    } catch {
+      const errText = await response.text().catch(() => '');
+      if (errText) errMessage = errText;
     }
-    lastResponse = response;
-    lastErrorBody = await response.text().catch(() => '');
-    if (response.status !== 404) {
-      break;
-    }
+    throw new Error(errMessage);
   }
 
-  if (!lastResponse || !lastResponse.ok) {
-    const status = lastResponse?.status ?? 'Network Error';
-    throw new Error(
-      `Gemini API HTTP ${status}: ${lastErrorBody || lastResponse?.statusText || 'Request failed'}`
-    );
-  }
-
-  const data = (await lastResponse.json()) as GeminiGenerateContentResponse;
+  const data = (await response.json()) as GeminiGenerateContentResponse;
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
   if (!rawText) {
@@ -346,10 +443,10 @@ async function executeGeminiPrompt(prompt: string, signal?: AbortSignal): Promis
 
 /**
  * Resolves UK Paramedic (JRCALC) & BNF clinical details (`phoneticSpelling`, `class`, `indications`, `medicSummary`):
- * 1. Returns pre-generated details immediately if the drug belongs to any Quick Category (0 tokens used).
- * 2. Returns cached details from `localStorage` if previously looked up (0 tokens used).
- * 3. Calls the live Gemini API only for custom searched drugs not in the Quick Categories,
- *    then persists the response to `localStorage`.
+ * 1. Returns pre-generated details immediately if the drug belongs to any Quick Category (0 tokens, bypasses limiter).
+ * 2. Returns cached details from `localStorage` if previously looked up (0 tokens, bypasses limiter).
+ * 3. Deduplicates concurrent in-flight requests for the same drug.
+ * 4. Enforces client-side rate limit (5/min, 35/day) and calls `POST /api/gemini`.
  */
 export async function fetchMedicationClinicalDetails(
   selectedDrugName: string,
@@ -362,27 +459,48 @@ export async function fetchMedicationClinicalDetails(
 
   const normalizedKey = selectedDrugName.trim().toLowerCase();
 
+  const existingInFlight = inFlightClinicalRequests.get(normalizedKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  // Enforce sliding-window rate limit before sending a live request
+  enforceRateLimit('gemini_text');
+
+  const requestPromise = (async () => {
+    try {
+      const prompt = buildClinicalPrompt(selectedDrugName);
+      const rawText = await callServerGeminiProxy([{ parts: [{ text: prompt }] }], signal);
+      const clinicalDetails = parseAndValidateClinicalJson(rawText);
+
+      clinicalDetailsCache.set(normalizedKey, clinicalDetails);
+      saveClinicalCacheToLocalStorage();
+
+      return clinicalDetails;
+    } catch (error) {
+      console.error(
+        `[GeminiClinicalService] Failed to fetch or parse clinical details for "${selectedDrugName}":`,
+        error
+      );
+      throw error;
+    }
+  })();
+
+  inFlightClinicalRequests.set(normalizedKey, requestPromise);
+
   try {
-    const prompt = buildClinicalPrompt(selectedDrugName);
-    const rawText = await executeGeminiPrompt(prompt, signal);
-    const clinicalDetails = parseAndValidateClinicalJson(rawText);
-
-    clinicalDetailsCache.set(normalizedKey, clinicalDetails);
-    saveClinicalCacheToLocalStorage();
-
-    return clinicalDetails;
-  } catch (error) {
-    console.error(
-      `[GeminiClinicalService] Failed to fetch or parse clinical details for "${selectedDrugName}":`,
-      error
-    );
-    throw error;
+    return await requestPromise;
+  } finally {
+    inFlightClinicalRequests.delete(normalizedKey);
   }
 }
 
 /**
- * Resolves UK Paramedic Toxbase/JRCALC overdose details (`overdoseEffects`, `toxicThreshold`, `management`)
- * using the Toxicity Mode system prompt and caches the result in `localStorage`.
+ * Resolves UK Paramedic Toxbase/JRCALC overdose details (`overdoseEffects`, `toxicThreshold`):
+ * 1. Returns pre-generated details immediately if the drug belongs to any Quick Category (0 tokens, bypasses limiter).
+ * 2. Returns cached details from `localStorage` if previously looked up (0 tokens, bypasses limiter).
+ * 3. Deduplicates concurrent in-flight requests for the same drug.
+ * 4. Enforces client-side rate limit (5/min, 35/day) and calls `POST /api/gemini`.
  */
 export async function fetchMedicationToxicityDetails(
   selectedDrugName: string,
@@ -395,118 +513,131 @@ export async function fetchMedicationToxicityDetails(
 
   const normalizedKey = selectedDrugName.trim().toLowerCase();
 
+  const existingInFlight = inFlightToxicityRequests.get(normalizedKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  // Enforce sliding-window rate limit before sending a live request
+  enforceRateLimit('gemini_text');
+
+  const requestPromise = (async () => {
+    try {
+      const prompt = buildToxicityPrompt(selectedDrugName);
+      const rawText = await callServerGeminiProxy([{ parts: [{ text: prompt }] }], signal);
+      const toxicityDetails = parseAndValidateToxicityJson(rawText);
+
+      toxicityDetailsCache.set(normalizedKey, toxicityDetails);
+      saveToxicityCacheToLocalStorage();
+
+      return toxicityDetails;
+    } catch (error) {
+      console.error(
+        `[GeminiClinicalService] Failed to fetch or parse toxicity details for "${selectedDrugName}":`,
+        error
+      );
+      throw error;
+    }
+  })();
+
+  inFlightToxicityRequests.set(normalizedKey, requestPromise);
+
   try {
-    const prompt = buildToxicityPrompt(selectedDrugName);
-    const rawText = await executeGeminiPrompt(prompt, signal);
-    const toxicityDetails = parseAndValidateToxicityJson(rawText);
-
-    toxicityDetailsCache.set(normalizedKey, toxicityDetails);
-    saveToxicityCacheToLocalStorage();
-
-    return toxicityDetails;
-  } catch (error) {
-    console.error(
-      `[GeminiClinicalService] Failed to fetch or parse toxicity details for "${selectedDrugName}":`,
-      error
-    );
-    throw error;
+    return await requestPromise;
+  } finally {
+    inFlightToxicityRequests.delete(normalizedKey);
   }
 }
 
 /**
- * Analyzes an uploaded photo of a UK prescription, repeat medication slip, blister pack,
- * or medicine box using Gemini Vision (`inlineData`) and returns streamlined bullet points
+ * Analyzes a compressed photo of a UK prescription, repeat medication slip, blister pack,
+ * or medicine box using `POST /api/gemini` (`inlineData`) and returns streamlined bullet points
  * for both Standard Mode and Toxicity Mode.
+ * - Deduplicates & caches results by image fingerprint in `localStorage` (`medspeak_prescription_scan_cache_v1`).
+ * - Enforces `gemini_vision` rate limits (max 2/min, 10/day, 10s cooldown) on uncached scans.
  */
 export async function extractMedicationsFromPrescriptionImage(
   base64Data: string,
   mimeType: string,
   signal?: AbortSignal
 ): Promise<PrescriptionScanResult> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_gemini_api_key_here') {
-    throw new Error(
-      'VITE_GEMINI_API_KEY not loaded. Make sure .env.local is saved and restart `npm run dev`.'
-    );
+  const fingerprint = computeImageFingerprint(base64Data);
+
+  const cachedResult = prescriptionScanCache.get(fingerprint);
+  if (cachedResult) {
+    return cachedResult;
   }
 
-  const prompt =
-    "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
+  const existingInFlight = inFlightVisionRequests.get(fingerprint);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
 
-  const requestBody = JSON.stringify({
-    contents: [
-      {
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType,
-              data: base64Data,
+  // Enforce Gemini Vision rate limit (2/min, 10/day, 10s cooldown) before sending live image payload
+  enforceRateLimit('gemini_vision');
+
+  const requestPromise = (async () => {
+    const prompt =
+      "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
+
+    const rawText = await callServerGeminiProxy(
+      [
+        {
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
             },
-          },
-        ],
-      },
-    ],
-    generationConfig: {
-      responseMimeType: 'application/json',
-    },
-  });
-
-  let lastResponse: Response | null = null;
-  let lastErrorBody = '';
-
-  for (const endpoint of GEMINI_ENDPOINTS) {
-    const response = await callGeminiEndpoint(endpoint, apiKey, requestBody, signal);
-    if (response.ok) {
-      lastResponse = response;
-      break;
-    }
-    lastResponse = response;
-    lastErrorBody = await response.text().catch(() => '');
-    if (response.status !== 404) {
-      break;
-    }
-  }
-
-  if (!lastResponse || !lastResponse.ok) {
-    const status = lastResponse?.status ?? 'Network Error';
-    throw new Error(
-      `Gemini Vision API HTTP ${status}: ${lastErrorBody || lastResponse?.statusText || 'Request failed'}`
+          ],
+        },
+      ],
+      signal
     );
+
+    const cleanedText = rawText
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
+
+    const parsed: unknown = JSON.parse(cleanedText);
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Invalid JSON returned when scanning prescription image.');
+    }
+
+    const record = parsed as Record<string, unknown>;
+    const toCleanStringArray = (val: unknown): string[] =>
+      Array.isArray(val)
+        ? val
+            .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+            .map((item) => item.trim())
+        : [];
+
+    const uniqueMeds = Array.from(new Set(toCleanStringArray(record.medications)));
+
+    const scanResult: PrescriptionScanResult = {
+      medications: uniqueMeds,
+      patientConditions: toCleanStringArray(record.patientConditions),
+      onSceneBullets: toCleanStringArray(record.onSceneBullets),
+      interactionBullets: toCleanStringArray(record.interactionBullets),
+      toxRedFlagBullets: toCleanStringArray(record.toxRedFlagBullets),
+    };
+
+    if (uniqueMeds.length > 0) {
+      prescriptionScanCache.set(fingerprint, scanResult);
+      savePrescriptionScanCacheToLocalStorage();
+    }
+
+    return scanResult;
+  })();
+
+  inFlightVisionRequests.set(fingerprint, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightVisionRequests.delete(fingerprint);
   }
-
-  const data = (await lastResponse.json()) as GeminiGenerateContentResponse;
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!rawText) {
-    throw new Error('Empty response from Gemini Vision API.');
-  }
-
-  const cleanedText = rawText
-    .replace(/```json/gi, '')
-    .replace(/```/g, '')
-    .trim();
-
-  const parsed: unknown = JSON.parse(cleanedText);
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('Invalid JSON returned when scanning prescription image.');
-  }
-
-  const record = parsed as Record<string, unknown>;
-  const toCleanStringArray = (val: unknown): string[] =>
-    Array.isArray(val)
-      ? val
-          .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
-          .map((item) => item.trim())
-      : [];
-
-  const uniqueMeds = Array.from(new Set(toCleanStringArray(record.medications)));
-
-  return {
-    medications: uniqueMeds,
-    patientConditions: toCleanStringArray(record.patientConditions),
-    onSceneBullets: toCleanStringArray(record.onSceneBullets),
-    interactionBullets: toCleanStringArray(record.interactionBullets),
-    toxRedFlagBullets: toCleanStringArray(record.toxRedFlagBullets),
-  };
 }

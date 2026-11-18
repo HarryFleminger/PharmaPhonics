@@ -110,8 +110,8 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               title={
                 isTtsApiKeyConfigured
-                  ? 'VITE_GOOGLE_TTS_API_KEY configured'
-                  : 'VITE_GOOGLE_TTS_API_KEY missing in .env.local'
+                  ? 'GOOGLE_TTS_API_KEY configured on server'
+                  : 'GOOGLE_TTS_API_KEY missing in server environment'
               }
             />
           </div>
@@ -136,8 +136,8 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               title={
                 isGeminiApiKeyConfigured
-                  ? 'VITE_GEMINI_API_KEY configured'
-                  : 'VITE_GEMINI_API_KEY missing in .env.local'
+                  ? 'GEMINI_API_KEY configured on server'
+                  : 'GEMINI_API_KEY missing in server environment'
               }
             />
           </div>

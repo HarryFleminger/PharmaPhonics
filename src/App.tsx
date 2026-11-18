@@ -16,9 +16,9 @@ import { searchOpenPrescribingBnf } from './services/openPrescribingService';
 import {
   fetchMedicationClinicalDetails,
   fetchMedicationToxicityDetails,
+  fetchServerHealthStatus,
   getCachedClinicalDetails,
   getCachedToxicityDetails,
-  hasGeminiApiKey,
 } from './services/geminiClinicalService';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { Header } from './components/Header';
@@ -96,8 +96,19 @@ export function App() {
   const [toxicityLoadingByKey, setToxicityLoadingByKey] = useState<Record<string, boolean>>({});
   const [toxicityErrorByKey, setToxicityErrorByKey] = useState<Record<string, string | null>>({});
 
+  // Server API key status (populated via GET /api/health without exposing keys to the browser)
+  const [serverHealth, setServerHealth] = useState({
+    geminiConfigured: true,
+    ttsConfigured: true,
+  });
+
+  useEffect(() => {
+    void fetchServerHealthStatus().then((status) => {
+      setServerHealth(status);
+    });
+  }, []);
+
   const {
-    isApiKeyConfigured: isTtsApiKeyConfigured,
     loadingId: audioLoadingId,
     speakingId,
     error: ttsError,
@@ -459,8 +470,8 @@ export function App() {
       />
 
       <Header
-        isTtsApiKeyConfigured={isTtsApiKeyConfigured}
-        isGeminiApiKeyConfigured={hasGeminiApiKey()}
+        isTtsApiKeyConfigured={serverHealth.ttsConfigured}
+        isGeminiApiKeyConfigured={serverHealth.geminiConfigured}
         speed={speed}
         onToggleSpeed={toggleSpeed}
         isToxicityMode={isToxicityMode}

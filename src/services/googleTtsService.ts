@@ -1,6 +1,11 @@
 import { SpeechSpeed } from '../types/medication';
+import { enforceRateLimit } from './rateLimitService';
 
-const GOOGLE_TTS_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
+/**
+ * Backend proxy endpoint (`server.js`) that attaches the server-side `GOOGLE_TTS_API_KEY`
+ * without ever exposing any key to the browser bundle.
+ */
+const TTS_PROXY_ENDPOINT = '/api/tts';
 
 /**
  * Hardcoded premium British English Neural2 voice per UK clinical pronunciation requirements.
@@ -23,19 +28,29 @@ export interface SynthesizeMedicationParams {
 }
 
 interface GoogleTtsResponse {
-  audioContent: string;
-}
-
-interface GoogleTtsErrorResponse {
-  error?: {
-    code?: number;
-    message?: string;
-    status?: string;
-  };
+  audioContent?: string;
+  error?:
+    | string
+    | {
+        code?: number;
+        message?: string;
+        status?: string;
+      };
 }
 
 // In-memory cache hydrated from localStorage
 const audioCache = new Map<string, string>();
+const inFlightTtsRequests = new Map<string, Promise<string>>();
+
+let serverTtsConfigured = true;
+
+export function setServerTtsConfigured(configured: boolean): void {
+  serverTtsConfigured = configured;
+}
+
+export function hasGoogleTtsApiKey(): boolean {
+  return serverTtsConfigured;
+}
 
 function hydrateAudioCacheFromLocalStorage(): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -81,17 +96,9 @@ function saveAudioCacheToLocalStorage(): void {
 hydrateAudioCacheFromLocalStorage();
 
 /**
- * Checks whether `VITE_GOOGLE_TTS_API_KEY` is configured in the Vite environment.
- */
-export function hasGoogleTtsApiKey(): boolean {
-  const apiKey = import.meta.env.VITE_GOOGLE_TTS_API_KEY;
-  return Boolean(apiKey && apiKey.trim() !== '' && apiKey !== 'your_google_cloud_tts_api_key_here');
-}
-
-/**
- * Calls the Google Cloud Text-to-Speech REST API (`https://texttospeech.googleapis.com/v1/text:synthesize`)
- * using `en-GB-Neural2-B` and returns a playable `data:audio/mp3;base64,...` URL.
- * Checks persistent `localStorage` first to avoid redundant API calls.
+ * Calls the backend TTS proxy (`POST /api/tts`), which forwards British English (`en-GB-Neural2-B`)
+ * synthesis requests to Google Cloud Text-to-Speech using the server-side `GOOGLE_TTS_API_KEY`.
+ * Checks persistent `localStorage` first so cached playback uses 0 API calls.
  */
 export async function synthesizeMedicationSpeech({
   name,
@@ -108,56 +115,60 @@ export async function synthesizeMedicationSpeech({
     return cachedAudioSrc;
   }
 
-  const apiKey = import.meta.env.VITE_GOOGLE_TTS_API_KEY;
-
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_google_cloud_tts_api_key_here') {
-    throw new Error(
-      'Missing Google Cloud TTS API key. Please set VITE_GOOGLE_TTS_API_KEY in your .env.local file.'
-    );
+  const existingInFlight = inFlightTtsRequests.get(cacheKey);
+  if (existingInFlight) {
+    return existingInFlight;
   }
 
-  const response = await fetch(`${GOOGLE_TTS_ENDPOINT}?key=${encodeURIComponent(apiKey.trim())}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    signal,
-    body: JSON.stringify({
-      input: inputPayload,
-      voice: {
-        languageCode: UK_LANGUAGE_CODE,
-        name: UK_NEURAL_VOICE_NAME,
+  // Enforce client-side rate limit (8/min, 50/day) before making a live TTS synthesis call
+  enforceRateLimit('google_tts');
+
+  const requestPromise = (async () => {
+    const response = await fetch(TTS_PROXY_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      audioConfig: {
-        audioEncoding: 'MP3',
+      signal,
+      body: JSON.stringify({
+        input: inputPayload,
         speakingRate,
-        pitch: 0.0,
-      },
-    }),
-  });
+      }),
+    });
 
-  if (!response.ok) {
-    let errorDetails = `HTTP ${response.status}`;
-    try {
-      const errJson = (await response.json()) as GoogleTtsErrorResponse;
-      if (errJson.error?.message) {
-        errorDetails = errJson.error.message;
+    if (!response.ok) {
+      let errorDetails = `HTTP ${response.status}`;
+      try {
+        const errJson = (await response.json()) as GoogleTtsResponse;
+        if (typeof errJson.error === 'string') {
+          errorDetails = errJson.error;
+        } else if (errJson.error?.message) {
+          errorDetails = errJson.error.message;
+        }
+      } catch {
+        // Fallback to status text if response body is not JSON
       }
-    } catch {
-      // Fallback to status text if response body is not JSON
+      throw new Error(`Voice synthesis request failed: ${errorDetails}`);
     }
-    throw new Error(`Google Cloud TTS request failed: ${errorDetails}`);
+
+    const data = (await response.json()) as GoogleTtsResponse;
+
+    if (!data.audioContent) {
+      throw new Error('Google Cloud TTS returned an empty audioContent payload.');
+    }
+
+    const audioDataUrl = `data:audio/mp3;base64,${data.audioContent}`;
+    audioCache.set(cacheKey, audioDataUrl);
+    saveAudioCacheToLocalStorage();
+
+    return audioDataUrl;
+  })();
+
+  inFlightTtsRequests.set(cacheKey, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightTtsRequests.delete(cacheKey);
   }
-
-  const data = (await response.json()) as GoogleTtsResponse;
-
-  if (!data.audioContent) {
-    throw new Error('Google Cloud TTS returned an empty audioContent payload.');
-  }
-
-  const audioDataUrl = `data:audio/mp3;base64,${data.audioContent}`;
-  audioCache.set(cacheKey, audioDataUrl);
-  saveAudioCacheToLocalStorage();
-
-  return audioDataUrl;
 }
