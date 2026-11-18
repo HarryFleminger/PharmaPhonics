@@ -122,8 +122,8 @@ function isOriginAllowed(req) {
   const referer = req.headers.referer || '';
   const host = req.headers.host || '';
 
-  // Same-origin browser requests without an Origin header or matching Host are permitted
-  if (!origin && !referer) return true;
+  // Reject direct script/curl requests that provide neither Origin nor Referer
+  if (!origin && !referer) return false;
 
   const checkUrl = (rawUrl) => {
     if (!rawUrl) return true;
@@ -327,8 +327,51 @@ export async function handleApiRequest(req, res) {
       return true;
     }
 
-    if (!parsedBody || !Array.isArray(parsedBody.contents)) {
-      sendJson(res, 400, { error: 'Missing required `contents` array in Gemini request.' });
+    let contents;
+    try {
+      const mode = parsedBody?.mode;
+      if (mode === 'clinical' || mode === 'toxicity') {
+        const rawDrugName =
+          typeof parsedBody.drugName === 'string' ? parsedBody.drugName.trim() : '';
+        if (!rawDrugName || rawDrugName.length > 120) {
+          throw new Error('Missing or invalid `drugName` (max 120 chars).');
+        }
+        const sanitized = rawDrugName.replace(/[\r\n"'`\\]/g, ' ').trim();
+        const prompt =
+          mode === 'clinical'
+            ? `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${sanitized}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string), 'class' (string), 'indications' (array of brief strings), and 'medicSummary' (string: a plain-English, pre-hospital summary explaining why a patient is typically prescribed this medication and what an ambulance crew needs to be aware of on scene, such as bleeding risks, masked heart rates, or postural hypotension—highly relevant to a paramedic's primary survey and assessment, while strictly avoiding overly dense academic jargon). No markdown, no extra text.`
+            : `You are a UK Paramedic and Toxbase/JRCALC expert. Provide pre-hospital overdose information for '${sanitized}'. Return ONLY flat JSON with exactly these keys: 'overdoseEffects' (string: plain-English summary of how the overdose presents clinically and vital sign changes) and 'toxicThreshold' (string: known toxic dose limit, e.g., '>75mg/kg' or specific mg amount).`;
+        contents = [{ parts: [{ text: prompt }] }];
+      } else if (mode === 'prescription') {
+        const base64Data =
+          typeof parsedBody.base64Data === 'string' ? parsedBody.base64Data.trim() : '';
+        const mimeType =
+          typeof parsedBody.mimeType === 'string' ? parsedBody.mimeType.trim() : '';
+        if (!base64Data || !mimeType.startsWith('image/')) {
+          throw new Error('Missing valid `base64Data` or `image/*` `mimeType`.');
+        }
+        const visionPrompt =
+          "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
+        contents = [
+          {
+            parts: [
+              { text: visionPrompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: base64Data,
+                },
+              },
+            ],
+          },
+        ];
+      } else {
+        throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', or 'prescription'.");
+      }
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : 'Invalid request parameters.',
+      });
       return true;
     }
 
@@ -350,7 +393,7 @@ export async function handleApiRequest(req, res) {
             };
 
         const upstreamPayload = JSON.stringify({
-          contents: parsedBody.contents,
+          contents,
           generationConfig,
         });
 

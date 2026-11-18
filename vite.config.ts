@@ -6,6 +6,61 @@ const GEMINI_ENDPOINTS = [
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
 ];
 const GOOGLE_TTS_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
+const MAX_DRUG_NAME_LENGTH = 120;
+
+interface LocalGeminiPayload {
+  mode?: 'clinical' | 'toxicity' | 'prescription';
+  drugName?: string;
+  base64Data?: string;
+  mimeType?: string;
+}
+
+function buildLockedContents(body: LocalGeminiPayload): unknown[] {
+  const mode = body.mode;
+
+  if (mode === 'clinical' || mode === 'toxicity') {
+    const rawDrugName = typeof body.drugName === 'string' ? body.drugName.trim() : '';
+    if (!rawDrugName) {
+      throw new Error('Missing required `drugName` string.');
+    }
+    if (rawDrugName.length > MAX_DRUG_NAME_LENGTH) {
+      throw new Error(`drugName exceeds maximum length of ${MAX_DRUG_NAME_LENGTH} characters.`);
+    }
+    const sanitized = rawDrugName.replace(/[\r\n"'`\\]/g, ' ').trim();
+    const prompt =
+      mode === 'clinical'
+        ? `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${sanitized}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string), 'class' (string), 'indications' (array of brief strings), and 'medicSummary' (string: a plain-English, pre-hospital summary explaining why a patient is typically prescribed this medication and what an ambulance crew needs to be aware of on scene, such as bleeding risks, masked heart rates, or postural hypotension—highly relevant to a paramedic's primary survey and assessment, while strictly avoiding overly dense academic jargon). No markdown, no extra text.`
+        : `You are a UK Paramedic and Toxbase/JRCALC expert. Provide pre-hospital overdose information for '${sanitized}'. Return ONLY flat JSON with exactly these keys: 'overdoseEffects' (string: plain-English summary of how the overdose presents clinically and vital sign changes) and 'toxicThreshold' (string: known toxic dose limit, e.g., '>75mg/kg' or specific mg amount).`;
+
+    return [{ parts: [{ text: prompt }] }];
+  }
+
+  if (mode === 'prescription') {
+    const base64Data = typeof body.base64Data === 'string' ? body.base64Data.trim() : '';
+    const mimeType = typeof body.mimeType === 'string' ? body.mimeType.trim() : '';
+    if (!base64Data || !mimeType.startsWith('image/')) {
+      throw new Error('Missing valid `base64Data` or `image/*` `mimeType` for prescription scan.');
+    }
+    const visionPrompt =
+      "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
+
+    return [
+      {
+        parts: [
+          { text: visionPrompt },
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data,
+            },
+          },
+        ],
+      },
+    ];
+  }
+
+  throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', or 'prescription'.");
+}
 
 /**
  * Local Vite dev-server middleware that mirrors the Vercel Serverless Functions
@@ -60,7 +115,8 @@ function localServerlessApiPlugin(env: Record<string, string>): Plugin {
           req.on('end', () => {
             void (async () => {
               try {
-                const parsed = JSON.parse(rawBody) as { contents?: unknown[] };
+                const parsed = JSON.parse(rawBody) as LocalGeminiPayload;
+                const contents = buildLockedContents(parsed);
 
                 let lastStatus = 502;
                 let lastText = '';
@@ -79,7 +135,7 @@ function localServerlessApiPlugin(env: Record<string, string>): Plugin {
                       };
 
                   const upstreamPayload = JSON.stringify({
-                    contents: parsed.contents ?? [],
+                    contents,
                     generationConfig,
                   });
 

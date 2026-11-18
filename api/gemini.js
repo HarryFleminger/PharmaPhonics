@@ -1,10 +1,13 @@
 /**
  * Vercel Serverless Function: `POST /api/gemini`
  * - Keeps `GEMINI_API_KEY` strictly on the server (never exposed in the browser bundle).
- * - Validates request method (`POST`), payload size (< 2 MB), and `Origin` / `Referer`.
+ * - Requires a valid `Origin` or `Referer` header (`medspeak.co.uk`, `*.vercel.app`, `localhost`);
+ *   rejects requests with missing origin/referer headers.
+ * - Rejects arbitrary prompts: only accepts structured `{ mode: 'clinical' | 'toxicity', drugName }`
+ *   (with `drugName` capped at 120 characters) or `{ mode: 'prescription', base64Data, mimeType }`
+ *   and builds the locked UK Paramedic pharmacology prompt on the server.
  * - Enforces an in-memory per-IP rate limit (max 8 requests/min) and daily circuit breaker (150/day).
- * - Hardcodes upstream model to `gemini-2.5-flash` (with 404 fallback to `gemini-flash-latest`)
- *   and `maxOutputTokens: 450`.
+ * - Hardcodes upstream model to `gemini-2.5-flash` (with `thinkingBudget: 0` and `maxOutputTokens: 1500`).
  */
 
 const GEMINI_UPSTREAM_ENDPOINTS = [
@@ -14,6 +17,7 @@ const GEMINI_UPSTREAM_ENDPOINTS = [
 
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2 MB
 const MAX_OUTPUT_TOKENS = 1500;
+const MAX_DRUG_NAME_LENGTH = 120;
 const ONE_MINUTE_MS = 60_000;
 const ONE_DAY_MS = 86_400_000;
 const MAX_PER_MINUTE_PER_IP = 8;
@@ -41,10 +45,11 @@ function isOriginAllowed(req) {
   const referer = req.headers?.referer || '';
   const host = req.headers?.host || '';
 
-  if (!origin && !referer) return true;
+  // Reject direct script/curl requests that provide neither Origin nor Referer
+  if (!origin && !referer) return false;
 
   const isAllowedUrl = (rawUrl) => {
-    if (!rawUrl) return true;
+    if (!rawUrl) return false;
     try {
       const parsed = new URL(rawUrl);
       const hostname = parsed.hostname.toLowerCase();
@@ -93,6 +98,75 @@ function checkRateLimit(ip) {
   ipTimestamps.set(ip, existing);
   globalDailyTimestamps.push(now);
   return { allowed: true };
+}
+
+/**
+ * Server-locked prompt templates so clients cannot send arbitrary free-form prompts.
+ */
+function buildClinicalPrompt(drugName) {
+  return `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${drugName}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string), 'class' (string), 'indications' (array of brief strings), and 'medicSummary' (string: a plain-English, pre-hospital summary explaining why a patient is typically prescribed this medication and what an ambulance crew needs to be aware of on scene, such as bleeding risks, masked heart rates, or postural hypotension—highly relevant to a paramedic's primary survey and assessment, while strictly avoiding overly dense academic jargon). No markdown, no extra text.`;
+}
+
+function buildToxicityPrompt(drugName) {
+  return `You are a UK Paramedic and Toxbase/JRCALC expert. Provide pre-hospital overdose information for '${drugName}'. Return ONLY flat JSON with exactly these keys: 'overdoseEffects' (string: plain-English summary of how the overdose presents clinically and vital sign changes) and 'toxicThreshold' (string: known toxic dose limit, e.g., '>75mg/kg' or specific mg amount).`;
+}
+
+function buildPrescriptionVisionPrompt() {
+  return "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
+}
+
+/**
+ * Validates the incoming structured request body and returns the locked Gemini `contents` array.
+ */
+function buildLockedContentsFromBody(body) {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Invalid JSON request payload.');
+  }
+
+  const mode = body.mode;
+
+  if (mode === 'clinical' || mode === 'toxicity') {
+    const rawDrugName = typeof body.drugName === 'string' ? body.drugName.trim() : '';
+    if (!rawDrugName) {
+      throw new Error('Missing required `drugName` string.');
+    }
+    if (rawDrugName.length > MAX_DRUG_NAME_LENGTH) {
+      throw new Error(`drugName exceeds maximum length of ${MAX_DRUG_NAME_LENGTH} characters.`);
+    }
+    // Strip control characters or quotes that could attempt prompt injection
+    const sanitizedDrugName = rawDrugName.replace(/[\r\n"'`\\]/g, ' ').trim();
+    const prompt =
+      mode === 'clinical'
+        ? buildClinicalPrompt(sanitizedDrugName)
+        : buildToxicityPrompt(sanitizedDrugName);
+
+    return [{ parts: [{ text: prompt }] }];
+  }
+
+  if (mode === 'prescription') {
+    const base64Data = typeof body.base64Data === 'string' ? body.base64Data.trim() : '';
+    const mimeType = typeof body.mimeType === 'string' ? body.mimeType.trim() : '';
+
+    if (!base64Data || !mimeType.startsWith('image/')) {
+      throw new Error('Missing valid `base64Data` or `image/*` `mimeType` for prescription scan.');
+    }
+
+    return [
+      {
+        parts: [
+          { text: buildPrescriptionVisionPrompt() },
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data,
+            },
+          },
+        ],
+      },
+    ];
+  }
+
+  throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', or 'prescription'.");
 }
 
 async function parseJsonBody(req) {
@@ -189,8 +263,13 @@ export default async function handler(req, res) {
     });
   }
 
-  if (!body || !Array.isArray(body.contents)) {
-    return sendJson(res, 400, { error: 'Missing required `contents` array in Gemini request.' });
+  let contents;
+  try {
+    contents = buildLockedContentsFromBody(body);
+  } catch (err) {
+    return sendJson(res, 400, {
+      error: err instanceof Error ? err.message : 'Invalid request parameters.',
+    });
   }
 
   try {
@@ -211,7 +290,7 @@ export default async function handler(req, res) {
           };
 
       const upstreamPayload = JSON.stringify({
-        contents: body.contents,
+        contents,
         generationConfig,
       });
 

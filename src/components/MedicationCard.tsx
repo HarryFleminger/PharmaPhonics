@@ -260,7 +260,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                 >
                   <div className="flex items-center gap-2 text-xs font-semibold text-rose-600">
                     <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
-                    <span>Generating UK Toxbase &amp; JRCALC overdose guidance…</span>
+                    <span>Generating UK overdose &amp; toxicity guidance…</span>
                   </div>
                   <div className="h-12 w-full bg-rose-50 rounded-xl" />
                   <div className="h-16 w-full bg-slate-100 rounded-xl" />
@@ -391,7 +391,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                 >
                   <div className="flex items-center gap-2 text-xs font-semibold text-ambulance-green">
                     <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
-                    <span>Generating UK JRCALC &amp; BNF clinical details…</span>
+                    <span>Generating UK BNF clinical details…</span>
                   </div>
                   <div className="h-8 w-48 bg-slate-100 rounded-xl" />
                   <div className="h-5 w-64 bg-slate-100 rounded-lg" />

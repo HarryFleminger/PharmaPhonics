@@ -16,9 +16,9 @@ const GEMINI_PROXY_ENDPOINT = '/api/gemini';
 const HEALTH_PROXY_ENDPOINT = '/api/health';
 
 /**
- * Hard ceiling on output tokens per Gemini response to prevent runaway generation.
+ * Hard ceiling on drug name length sent to `/api/gemini`.
  */
-const MAX_GEMINI_OUTPUT_TOKENS = 1500;
+const MAX_DRUG_NAME_LENGTH = 120;
 
 /**
  * Versioned localStorage keys for persisting AI-generated clinical, toxicity, and prescription
@@ -389,30 +389,33 @@ function parseAndValidateToxicityJson(rawText: string): GeminiToxicityDetails {
   };
 }
 
+type GeminiProxyPayload =
+  | {
+      mode: 'clinical' | 'toxicity';
+      drugName: string;
+    }
+  | {
+      mode: 'prescription';
+      base64Data: string;
+      mimeType: string;
+    };
+
 /**
- * Sends a Gemini `contents` payload to the backend proxy (`POST /api/gemini`), which attaches
- * `GEMINI_API_KEY` on the server, locks the model to `gemini-2.5-flash`, and enforces
- * `maxOutputTokens: 450`.
+ * Sends a structured request (`{ mode: 'clinical' | 'toxicity', drugName }` or
+ * `{ mode: 'prescription', base64Data, mimeType }`) to the backend proxy (`POST /api/gemini`),
+ * which builds the locked pharmacology prompt on the server and attaches `GEMINI_API_KEY`.
  */
 async function callServerGeminiProxy(
-  contents: unknown[],
+  payload: GeminiProxyPayload,
   signal?: AbortSignal
 ): Promise<string> {
-  const requestBody = JSON.stringify({
-    contents,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      maxOutputTokens: MAX_GEMINI_OUTPUT_TOKENS,
-    },
-  });
-
   const response = await fetch(GEMINI_PROXY_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     signal,
-    body: requestBody,
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -469,8 +472,14 @@ export async function fetchMedicationClinicalDetails(
 
   const requestPromise = (async () => {
     try {
-      const prompt = buildClinicalPrompt(selectedDrugName);
-      const rawText = await callServerGeminiProxy([{ parts: [{ text: prompt }] }], signal);
+      const trimmedDrugName = selectedDrugName.trim().slice(0, MAX_DRUG_NAME_LENGTH);
+      const rawText = await callServerGeminiProxy(
+        {
+          mode: 'clinical',
+          drugName: trimmedDrugName,
+        },
+        signal
+      );
       const clinicalDetails = parseAndValidateClinicalJson(rawText);
 
       clinicalDetailsCache.set(normalizedKey, clinicalDetails);
@@ -523,8 +532,14 @@ export async function fetchMedicationToxicityDetails(
 
   const requestPromise = (async () => {
     try {
-      const prompt = buildToxicityPrompt(selectedDrugName);
-      const rawText = await callServerGeminiProxy([{ parts: [{ text: prompt }] }], signal);
+      const trimmedDrugName = selectedDrugName.trim().slice(0, MAX_DRUG_NAME_LENGTH);
+      const rawText = await callServerGeminiProxy(
+        {
+          mode: 'toxicity',
+          drugName: trimmedDrugName,
+        },
+        signal
+      );
       const toxicityDetails = parseAndValidateToxicityJson(rawText);
 
       toxicityDetailsCache.set(normalizedKey, toxicityDetails);
@@ -577,23 +592,12 @@ export async function extractMedicationsFromPrescriptionImage(
   enforceRateLimit('gemini_vision');
 
   const requestPromise = (async () => {
-    const prompt =
-      "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
-
     const rawText = await callServerGeminiProxy(
-      [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType,
-                data: base64Data,
-              },
-            },
-          ],
-        },
-      ],
+      {
+        mode: 'prescription',
+        base64Data,
+        mimeType,
+      },
       signal
     );
 

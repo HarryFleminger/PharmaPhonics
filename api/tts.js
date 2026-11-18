@@ -38,10 +38,11 @@ function isOriginAllowed(req) {
   const referer = req.headers?.referer || '';
   const host = req.headers?.host || '';
 
-  if (!origin && !referer) return true;
+  // Reject direct script/curl requests that provide neither Origin nor Referer
+  if (!origin && !referer) return false;
 
   const isAllowedUrl = (rawUrl) => {
-    if (!rawUrl) return true;
+    if (!rawUrl) return false;
     try {
       const parsed = new URL(rawUrl);
       const hostname = parsed.hostname.toLowerCase();
@@ -175,6 +176,11 @@ export default async function handler(req, res) {
   const input = body?.input;
   if (!input || (typeof input.text !== 'string' && typeof input.ssml !== 'string')) {
     return sendJson(res, 400, { error: 'Missing required `input.text` or `input.ssml` field.' });
+  }
+
+  const rawTextLength = (input.text || input.ssml || '').length;
+  if (rawTextLength > 240) {
+    return sendJson(res, 400, { error: 'Drug name exceeds maximum length of 240 characters.' });
   }
 
   const rawRate = Number(body?.speakingRate);

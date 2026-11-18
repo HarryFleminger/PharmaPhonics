@@ -119,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Gemini AI Clinical Pharmacology Status Badge */}
           <div
             className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15"
-            title="Powered by Google Gemini API for JRCALC & BNF Clinical Details"
+            title="Powered by Google Gemini API for UK BNF Clinical Details"
           >
             <Sparkles
               className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${

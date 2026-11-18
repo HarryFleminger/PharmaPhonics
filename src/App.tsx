@@ -604,8 +604,7 @@ export function App() {
                 <>
                   Use the <strong>Overdose / Tox Dose Calculator</strong> above to calculate total
                   mg and mg/kg ingested, then tap a <strong>Quick Category</strong> or search a
-                  drug to view its Toxbase/JRCALC toxic threshold, clinical presentation, and
-                  pre-hospital management.
+                  drug to view its known toxic threshold and overdose clinical presentation.
                 </>
               ) : (
                 <>
