@@ -1,23 +1,20 @@
 import React from 'react';
-import { Volume2, Gauge, Stethoscope, Sparkles, Skull } from 'lucide-react';
-import { SpeechSpeed } from '../types/medication';
+import { Volume2, Stethoscope, Sparkles, Skull, HelpCircle } from 'lucide-react';
 
 interface HeaderProps {
   isTtsApiKeyConfigured: boolean;
   isGeminiApiKeyConfigured: boolean;
-  speed: SpeechSpeed;
-  onToggleSpeed: () => void;
   isToxicityMode: boolean;
   onToggleToxicityMode: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   isTtsApiKeyConfigured,
   isGeminiApiKeyConfigured,
-  speed,
-  onToggleSpeed,
   isToxicityMode,
   onToggleToxicityMode,
+  onOpenGuide,
 }) => {
   return (
     <header
@@ -142,21 +139,23 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
 
-          {/* Speech Rate Toggle */}
-          <button
-            type="button"
-            onClick={onToggleSpeed}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg font-medium bg-white/10 hover:bg-white/20 active:bg-white/25 border border-white/20 transition-colors cursor-pointer"
-            title="Toggle between normal clinical speed (1.0x) and slow phonetic study speed (0.75x)"
-          >
-            <Gauge
-              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
-                isToxicityMode ? 'text-rose-200' : 'text-nhs-warmYellow'
-              }`}
-              aria-hidden="true"
-            />
-            <span>{speed === 1.0 ? '1.0x Normal' : '0.75x Slow'}</span>
-          </button>
+          {/* Reopen Welcome / Guide Page Button */}
+          {onOpenGuide && (
+            <button
+              type="button"
+              onClick={onOpenGuide}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg font-medium bg-white/10 hover:bg-white/20 active:bg-white/25 border border-white/20 transition-colors cursor-pointer"
+              title="Open MedSpeak Welcome Guide & Feature Overview"
+            >
+              <HelpCircle
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${
+                  isToxicityMode ? 'text-rose-200' : 'text-nhs-warmYellow'
+                }`}
+                aria-hidden="true"
+              />
+              <span>Guide</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
