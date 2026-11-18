@@ -76,7 +76,7 @@ const GEMINI_UPSTREAM_ENDPOINTS = [
 ];
 const GOOGLE_TTS_UPSTREAM_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2 MB hard cap
-const MAX_GEMINI_OUTPUT_TOKENS = 450;
+const MAX_GEMINI_OUTPUT_TOKENS = 1500;
 
 // Server-side sliding-window & daily circuit-breaker limits
 const ONE_MINUTE_MS = 60_000;
@@ -332,20 +332,28 @@ export async function handleApiRequest(req, res) {
       return true;
     }
 
-    // Strictly lock generationConfig on the server (`maxOutputTokens: 450`, JSON output)
-    const upstreamPayload = JSON.stringify({
-      contents: parsedBody.contents,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: MAX_GEMINI_OUTPUT_TOKENS,
-      },
-    });
-
     try {
       let lastRes = null;
       let lastText = '';
 
       for (const endpoint of GEMINI_UPSTREAM_ENDPOINTS) {
+        const isGemini25 = endpoint.includes('gemini-2.5-flash');
+        const generationConfig = isGemini25
+          ? {
+              responseMimeType: 'application/json',
+              maxOutputTokens: MAX_GEMINI_OUTPUT_TOKENS,
+              thinkingConfig: { thinkingBudget: 0 },
+            }
+          : {
+              responseMimeType: 'application/json',
+              maxOutputTokens: MAX_GEMINI_OUTPUT_TOKENS,
+            };
+
+        const upstreamPayload = JSON.stringify({
+          contents: parsedBody.contents,
+          generationConfig,
+        });
+
         const encodedKey = encodeURIComponent(geminiKey);
         const upstreamRes = await fetch(`${endpoint}?key=${encodedKey}`, {
           method: 'POST',
@@ -359,7 +367,7 @@ export async function handleApiRequest(req, res) {
         lastRes = upstreamRes;
         lastText = await upstreamRes.text();
 
-        if (upstreamRes.ok || upstreamRes.status !== 404) {
+        if (upstreamRes.ok) {
           break;
         }
       }

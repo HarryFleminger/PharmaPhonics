@@ -13,7 +13,7 @@ const GEMINI_UPSTREAM_ENDPOINTS = [
 ];
 
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2 MB
-const MAX_OUTPUT_TOKENS = 450;
+const MAX_OUTPUT_TOKENS = 1500;
 const ONE_MINUTE_MS = 60_000;
 const ONE_DAY_MS = 86_400_000;
 const MAX_PER_MINUTE_PER_IP = 8;
@@ -193,19 +193,28 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: 'Missing required `contents` array in Gemini request.' });
   }
 
-  const upstreamPayload = JSON.stringify({
-    contents: body.contents,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-    },
-  });
-
   try {
     let lastStatus = 502;
     let lastJson = { error: 'Upstream Gemini request failed.' };
 
     for (const endpoint of GEMINI_UPSTREAM_ENDPOINTS) {
+      const isGemini25 = endpoint.includes('gemini-2.5-flash');
+      const generationConfig = isGemini25
+        ? {
+            responseMimeType: 'application/json',
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+            thinkingConfig: { thinkingBudget: 0 },
+          }
+        : {
+            responseMimeType: 'application/json',
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+          };
+
+      const upstreamPayload = JSON.stringify({
+        contents: body.contents,
+        generationConfig,
+      });
+
       const upstreamRes = await fetch(`${endpoint}?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST',
         headers: {
@@ -223,7 +232,7 @@ export default async function handler(req, res) {
         lastJson = { error: text || upstreamRes.statusText };
       }
 
-      if (upstreamRes.ok || upstreamRes.status !== 404) {
+      if (upstreamRes.ok) {
         break;
       }
     }

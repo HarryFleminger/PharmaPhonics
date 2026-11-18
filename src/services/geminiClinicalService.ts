@@ -18,7 +18,7 @@ const HEALTH_PROXY_ENDPOINT = '/api/health';
 /**
  * Hard ceiling on output tokens per Gemini response to prevent runaway generation.
  */
-const MAX_GEMINI_OUTPUT_TOKENS = 450;
+const MAX_GEMINI_OUTPUT_TOKENS = 1500;
 
 /**
  * Versioned localStorage keys for persisting AI-generated clinical, toxicity, and prescription

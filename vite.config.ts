@@ -61,18 +61,28 @@ function localServerlessApiPlugin(env: Record<string, string>): Plugin {
             void (async () => {
               try {
                 const parsed = JSON.parse(rawBody) as { contents?: unknown[] };
-                const upstreamPayload = JSON.stringify({
-                  contents: parsed.contents ?? [],
-                  generationConfig: {
-                    responseMimeType: 'application/json',
-                    maxOutputTokens: 450,
-                  },
-                });
 
                 let lastStatus = 502;
                 let lastText = '';
 
                 for (const endpoint of GEMINI_ENDPOINTS) {
+                  const isGemini25 = endpoint.includes('gemini-2.5-flash');
+                  const generationConfig = isGemini25
+                    ? {
+                        responseMimeType: 'application/json',
+                        maxOutputTokens: 1500,
+                        thinkingConfig: { thinkingBudget: 0 },
+                      }
+                    : {
+                        responseMimeType: 'application/json',
+                        maxOutputTokens: 1500,
+                      };
+
+                  const upstreamPayload = JSON.stringify({
+                    contents: parsed.contents ?? [],
+                    generationConfig,
+                  });
+
                   const upstreamRes = await fetch(
                     `${endpoint}?key=${encodeURIComponent(geminiKey)}`,
                     {
@@ -86,7 +96,7 @@ function localServerlessApiPlugin(env: Record<string, string>): Plugin {
                   );
                   lastStatus = upstreamRes.status;
                   lastText = await upstreamRes.text();
-                  if (upstreamRes.ok || upstreamRes.status !== 404) {
+                  if (upstreamRes.ok) {
                     break;
                   }
                 }
