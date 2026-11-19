@@ -52,7 +52,10 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   highlightUploadButton = false,
 }) => {
   const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const [isQuickCategoriesMinimized, setIsQuickCategoriesMinimized] = useState(false);
+  const [isQuickCategoriesMinimized, setIsQuickCategoriesMinimized] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
 
   const trimmedLength = searchQuery.trim().length;
   const activeCategoryDrugs = activeCategory ? quickCategories[activeCategory] ?? [] : [];
@@ -200,7 +203,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         isToxicityMode={isToxicityMode}
         onFirstInteract={onSearchInteract}
         onUploadActiveChange={(isActive) => {
-          setIsQuickCategoriesMinimized(isActive);
+          const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
+          setIsQuickCategoriesMinimized(isActive || isMobileScreen);
           if (isActive && activeCategory) {
             onSelectCategory(null);
           }

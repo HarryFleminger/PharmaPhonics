@@ -5,21 +5,15 @@ import {
   Skull,
   Camera,
   Volume2,
-  AlertTriangle,
-  ArrowRight,
+  ArrowLeft,
   CheckCircle2,
-  Sparkles,
 } from 'lucide-react';
 
 interface WelcomePageProps {
-  isReturningUser: boolean;
-  onContinue: () => void;
+  onClose: () => void;
 }
 
-export const WelcomePage: React.FC<WelcomePageProps> = ({
-  isReturningUser,
-  onContinue,
-}) => {
+export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       {/* Top Hero Banner */}
@@ -38,16 +32,14 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
               </div>
             </div>
 
-            {isReturningUser && (
-              <button
-                type="button"
-                onClick={onContinue}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-xs sm:text-sm font-semibold text-white border border-white/25 transition-colors cursor-pointer"
-              >
-                <span>Back to MedSpeak</span>
-                <ArrowRight className="w-4 h-4" aria-hidden="true" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-ambulance-green hover:bg-emerald-50 text-xs sm:text-sm font-bold shadow-xs transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              <span>Back to MedSpeak</span>
+            </button>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
@@ -55,13 +47,13 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
           </h1>
           <p className="mt-2.5 text-sm sm:text-base text-emerald-100/95 max-w-3xl leading-relaxed">
             Built for UK paramedics, EMTs, and student clinicians to quickly revise UK BNF
-            medications, pre-hospital on-scene context, overdose toxicity thresholds, holistic
-            prescription lists, and British English drug pronunciations.
+            medications, pre-hospital on-scene context, overdose toxicity thresholds, British
+            English drug pronunciations, and holistic prescription lists.
           </p>
         </div>
       </header>
 
-      {/* Main Feature Cards & Clinical Disclaimer */}
+      {/* Main Feature Cards */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-6">
         {/* Section Heading */}
         <div className="flex items-center justify-between">
@@ -70,7 +62,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
           </h2>
         </div>
 
-        {/* 4 Visual Feature Cards in Exact Order */}
+        {/* 4 Visual Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {/* 1. Quick Categories & On-Scene Context */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
@@ -168,7 +160,55 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
             </div>
           </div>
 
-          {/* 3. Prescription Photo Scanner & Holistic Reviews */}
+          {/* 3. British English Pronunciation */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-nhs-blue flex items-center justify-center shrink-0">
+                  <Volume2 className="w-5 h-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-nhs-blue">
+                    3. Handover Confidence
+                  </span>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+                    🇬🇧 British English Pronunciation
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                Build confidence pronouncing complex UK generic drug names during hospital
+                pre-alerts and clinical handovers.
+              </p>
+
+              <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="w-4 h-4 text-nhs-blue shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <strong>UK Neural Voice Audio:</strong> Tap <strong>Listen</strong> on any
+                    medication card to hear a clear British English voice synthesis.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="w-4 h-4 text-nhs-blue shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <strong>Phonetic Breakdowns:</strong> Every clinical flashcard highlights
+                    stressed syllables (e.g. <code>/a-mee-OH-da-rone/</code>) for quick visual
+                    reading.
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* 4. Prescription Photo Scanner & Holistic Reviews (New Feature — Last Tile) */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-3 mb-3">
@@ -178,7 +218,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-ambulance-green">
-                      3. Multi-Drug Vision AI
+                      4. Multi-Drug Vision AI
                     </span>
                     <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold uppercase bg-nhs-warmYellow text-slate-950">
                       New
@@ -221,106 +261,19 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
               </ul>
             </div>
           </div>
-
-          {/* 4. British English Pronunciation */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-nhs-blue flex items-center justify-center shrink-0">
-                  <Volume2 className="w-5 h-5" aria-hidden="true" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-nhs-blue">
-                    4. Handover Confidence
-                  </span>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-                    🇬🇧 British English Pronunciation
-                  </h3>
-                </div>
-              </div>
-
-              <p className="text-sm text-slate-600 leading-relaxed mb-3">
-                Build confidence pronouncing complex UK generic drug names during hospital
-                pre-alerts and clinical handovers.
-              </p>
-
-              <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2
-                    className="w-4 h-4 text-nhs-blue shrink-0 mt-0.5"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    <strong>UK Neural Voice Audio:</strong> Tap <strong>Listen</strong> on any
-                    medication card to hear a clear British English voice synthesis.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2
-                    className="w-4 h-4 text-nhs-blue shrink-0 mt-0.5"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    <strong>Phonetic Breakdowns:</strong> Every clinical flashcard highlights
-                    stressed syllables (e.g. <code>/a-mee-OH-da-rone/</code>) for quick visual
-                    reading.
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </div>
         </div>
 
-        {/* Integrated Clinical Disclaimer & Launch CTA Card */}
-        <section
-          aria-label="Clinical Disclaimer and Launch"
-          className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-5 sm:p-6 shadow-sm"
-        >
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
-            </div>
-
-            <div className="space-y-2 flex-1 min-w-0">
-              <h2 className="text-base sm:text-lg font-extrabold text-amber-950">
-                Important Clinical &amp; Study Disclaimer
-              </h2>
-              <p className="text-xs sm:text-sm text-amber-950/90 leading-relaxed">
-                <strong>For educational and study purposes only.</strong> Practitioners must always
-                check <strong>JRCALC+</strong> (or local NHS Trust clinical guidelines), the{' '}
-                <strong>BNF</strong>, and <strong>TOXBASE</strong> for operational use on the road.
-                Never make clinical decisions based on the information in this app.
-              </p>
-              <p className="text-xs text-amber-900/80 leading-relaxed flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-700" aria-hidden="true" />
-                <span>
-                  Clinical summaries are generated by Gemini AI (which can make mistakes), and voice
-                  pronunciations are reasonable approximations for study.
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <span className="text-xs text-amber-900/80 font-medium">
-              You can reopen this guide anytime via the <strong>Guide</strong> button in the top
-              bar.
-            </span>
-
-            <button
-              type="button"
-              onClick={onContinue}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-ambulance-green hover:bg-emerald-800 text-white font-bold text-sm sm:text-base shadow-md transition-all cursor-pointer active:scale-[0.99] shrink-0"
-            >
-              <span>
-                {isReturningUser
-                  ? 'Back to MedSpeak'
-                  : 'I Understand (Study Use Only) — Open MedSpeak'}
-              </span>
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" aria-hidden="true" />
-            </button>
-          </div>
-        </section>
+        {/* Bottom Return Button */}
+        <div className="pt-2 flex justify-center">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-ambulance-green hover:bg-emerald-800 text-white font-bold text-sm sm:text-base shadow-sm transition-all cursor-pointer active:scale-[0.99]"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" aria-hidden="true" />
+            <span>Back to MedSpeak</span>
+          </button>
+        </div>
       </main>
     </div>
   );

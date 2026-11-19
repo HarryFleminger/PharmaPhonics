@@ -5,6 +5,9 @@ import {
   X,
   BookOpenCheck,
   Skull,
+  Search,
+  Camera,
+  FolderOpen,
 } from 'lucide-react';
 import {
   BnfMedicationItem,
@@ -33,7 +36,6 @@ import { MedicationCard, MedicationCardSkeleton } from './components/MedicationC
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
 
-const WELCOME_STORAGE_KEY = 'medspeak_seen_welcome_v1';
 const PRESCRIPTION_FEATURE_STORAGE_KEY = 'medspeak_seen_prescription_feature_v1';
 
 export function App() {
@@ -53,51 +55,28 @@ export function App() {
     unit: 'mg',
   });
 
-  // First-time Welcome / Guide page & warning modals state
-  const [hasCompletedWelcome, setHasCompletedWelcome] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('welcome') === '1') return false;
-      return window.localStorage?.getItem(WELCOME_STORAGE_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const [isWelcomeOpen, setIsWelcomeOpen] = useState<boolean>(() => {
+  // On-demand Guide page & first-time warning modals state
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     try {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('welcome') === '1') return true;
-      return window.localStorage?.getItem(WELCOME_STORAGE_KEY) !== 'true';
+      return params.get('welcome') === '1';
     } catch {
-      return true;
+      return false;
     }
   });
 
   const [isNewFeatureModalOpen, setIsNewFeatureModalOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined' || !window.localStorage) return false;
     try {
-      // Only show the standalone "New Feature" modal to returning users who already saw Welcome
-      // before the Prescription Scanner feature was added
-      const seenWelcome = window.localStorage.getItem(WELCOME_STORAGE_KEY) === 'true';
-      const seenFeature = window.localStorage.getItem(PRESCRIPTION_FEATURE_STORAGE_KEY) === 'true';
-      return seenWelcome && !seenFeature;
+      return window.localStorage.getItem(PRESCRIPTION_FEATURE_STORAGE_KEY) !== 'true';
     } catch {
       return false;
     }
   });
   const [highlightUploadButton, setHighlightUploadButton] = useState(false);
 
-  const [hasSeenJrcalcWarning, setHasSeenJrcalcWarning] = useState<boolean>(() => {
-    if (typeof window === 'undefined' || !window.localStorage) return false;
-    try {
-      return window.localStorage.getItem(WELCOME_STORAGE_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [hasSeenJrcalcWarning, setHasSeenJrcalcWarning] = useState(false);
   const [isJrcalcModalOpen, setIsJrcalcModalOpen] = useState(false);
 
   const [hasSeenVoiceNotice, setHasSeenVoiceNotice] = useState(false);
@@ -299,28 +278,6 @@ export function App() {
     loadClinicalDetailsForMedication,
   ]);
 
-  const handleCompleteWelcome = useCallback(() => {
-    const wasFirstTime = !hasCompletedWelcome;
-    setIsWelcomeOpen(false);
-    setHasCompletedWelcome(true);
-    setHasSeenJrcalcWarning(true);
-    setIsNewFeatureModalOpen(false);
-
-    try {
-      window.localStorage?.setItem(WELCOME_STORAGE_KEY, 'true');
-      window.localStorage?.setItem(PRESCRIPTION_FEATURE_STORAGE_KEY, 'true');
-    } catch {
-      // Ignore storage errors
-    }
-
-    if (wasFirstTime) {
-      setHighlightUploadButton(true);
-      window.setTimeout(() => {
-        setHighlightUploadButton(false);
-      }, 3400);
-    }
-  }, [hasCompletedWelcome]);
-
   const handleDismissNewFeatureModal = useCallback(() => {
     setIsNewFeatureModalOpen(false);
     try {
@@ -488,13 +445,8 @@ export function App() {
   const hasActiveQuery = debouncedQuery.trim().length > 2;
   const toxCalculatedMetrics = computeToxDoseMetrics(toxCalculatorValues);
 
-  if (isWelcomeOpen) {
-    return (
-      <WelcomePage
-        isReturningUser={hasCompletedWelcome}
-        onContinue={handleCompleteWelcome}
-      />
-    );
+  if (isGuideOpen) {
+    return <WelcomePage onClose={() => setIsGuideOpen(false)} />;
   }
 
   return (
@@ -540,7 +492,7 @@ export function App() {
         isGeminiApiKeyConfigured={serverHealth.geminiConfigured}
         isToxicityMode={isToxicityMode}
         onToggleToxicityMode={handleToggleToxicityMode}
-        onOpenGuide={() => setIsWelcomeOpen(true)}
+        onOpenGuide={() => setIsGuideOpen(true)}
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 py-4 sm:px-6 sm:py-8">
@@ -642,43 +594,90 @@ export function App() {
         ) : !hasActiveQuery ? (
           /* Initial Prompt State before >2 chars are entered */
           <div
-            className={`bg-white rounded-2xl border p-6 sm:p-10 text-center max-w-xl mx-auto my-4 sm:my-6 shadow-sm ${
+            className={`bg-white rounded-2xl border p-6 sm:p-8 max-w-2xl mx-auto my-4 sm:my-6 shadow-sm ${
               isToxicityMode ? 'border-rose-200' : 'border-slate-200'
             }`}
           >
-            <div
-              className={`w-12 h-12 rounded-2xl border flex items-center justify-center mx-auto mb-3.5 ${
-                isToxicityMode
-                  ? 'bg-rose-50 text-rose-600 border-rose-200'
-                  : 'bg-emerald-50 text-ambulance-green border-emerald-200'
-              }`}
-            >
-              {isToxicityMode ? (
-                <Skull className="w-6 h-6" aria-hidden="true" />
-              ) : (
-                <BookOpenCheck className="w-6 h-6" aria-hidden="true" />
-              )}
+            <div className="flex flex-col items-center text-center mb-5">
+              <div
+                className={`w-12 h-12 rounded-2xl border flex items-center justify-center mb-3 ${
+                  isToxicityMode
+                    ? 'bg-rose-50 text-rose-600 border-rose-200'
+                    : 'bg-emerald-50 text-ambulance-green border-emerald-200'
+                }`}
+              >
+                {isToxicityMode ? (
+                  <Skull className="w-6 h-6" aria-hidden="true" />
+                ) : (
+                  <BookOpenCheck className="w-6 h-6" aria-hidden="true" />
+                )}
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                {isToxicityMode
+                  ? 'Toxicity Mode: Assess Overdose Doses & Effects'
+                  : 'How to Use MedSpeak'}
+              </h2>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-              {isToxicityMode
-                ? 'Toxicity Mode: Search a Drug to Assess Overdose'
-                : 'Search the Live UK BNF Database'}
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 mt-1.5 leading-relaxed">
-              {isToxicityMode ? (
-                <>
-                  Use the <strong>Overdose / Tox Dose Calculator</strong> above to calculate total
-                  mg and mg/kg ingested, then tap a <strong>Quick Category</strong> or search a
-                  drug to view its known toxic threshold and overdose clinical presentation.
-                </>
-              ) : (
-                <>
-                  Tap one of the <strong>Quick Categories</strong> above to browse UK study
-                  medications, or type at least <strong>3 characters</strong> in the search bar to
-                  load flashcards and on-scene clinical notes.
-                </>
-              )}
-            </p>
+
+            <ul className="space-y-2.5 text-left max-w-lg mx-auto">
+              <li className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div
+                  className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                    isToxicityMode
+                      ? 'bg-rose-100 text-rose-600'
+                      : 'bg-emerald-100 text-ambulance-green'
+                  }`}
+                >
+                  <Search className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                  <strong className="text-slate-900">Search</strong> — look up any UK drug for
+                  essential on-scene context, indications, and pronunciation.
+                </span>
+              </li>
+
+              <li className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div
+                  className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                    isToxicityMode
+                      ? 'bg-rose-100 text-rose-600'
+                      : 'bg-emerald-100 text-ambulance-green'
+                  }`}
+                >
+                  <Camera className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                  <strong className="text-slate-900">Upload</strong> — snap or upload a photo of a
+                  patient’s medication list for an instant holistic overview.
+                </span>
+              </li>
+
+              <li className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div
+                  className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                    isToxicityMode
+                      ? 'bg-rose-100 text-rose-600'
+                      : 'bg-emerald-100 text-ambulance-green'
+                  }`}
+                >
+                  <FolderOpen className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                  <strong className="text-slate-900">Quick Categories</strong> — tap any category
+                  above to browse commonly encountered emergency and community drugs.
+                </span>
+              </li>
+
+              <li className="flex items-start gap-3 p-3 rounded-xl bg-rose-50/70 border border-rose-200/80">
+                <div className="p-1.5 rounded-lg bg-rose-100 text-rose-600 shrink-0 mt-0.5">
+                  <Skull className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                  <strong className="text-rose-900">Toxicity Mode</strong> — switch on Toxicity
+                  Mode at the top to calculate ingested doses and view toxic thresholds and effects.
+                </span>
+              </li>
+            </ul>
           </div>
         ) : results.length === 0 ? (
           /* No Results State */
@@ -767,7 +766,7 @@ export function App() {
           <span aria-hidden="true">·</span>
           <button
             type="button"
-            onClick={() => setIsWelcomeOpen(true)}
+            onClick={() => setIsGuideOpen(true)}
             className={`hover:underline font-semibold cursor-pointer ${
               isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
             }`}
