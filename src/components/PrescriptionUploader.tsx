@@ -311,7 +311,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         <div
           role="tablist"
           aria-label="Prescription input mode"
-          className="inline-flex items-center p-1 rounded-xl bg-white border border-slate-200 shadow-2xs"
+          className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-slate-100/90 border border-slate-200 shadow-2xs"
         >
           <button
             type="button"
@@ -321,12 +321,14 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               setActiveTab('photo');
               setScanError(null);
             }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'photo'
                 ? isToxicityMode
-                  ? 'bg-rose-600 text-white shadow-2xs'
-                  : 'bg-ambulance-green text-white shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'bg-ambulance-green text-white shadow-sm'
+                : isToxicityMode
+                ? 'bg-white text-slate-700 border border-slate-200/80 hover:border-rose-300 hover:text-rose-700 shadow-2xs'
+                : 'bg-white text-slate-700 border border-slate-200/80 hover:border-emerald-300 hover:text-ambulance-green shadow-2xs'
             }`}
           >
             <Camera className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
@@ -341,16 +343,21 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               setActiveTab('paste');
               setScanError(null);
             }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeTab === 'paste'
                 ? isToxicityMode
-                  ? 'bg-rose-600 text-white shadow-2xs'
-                  : 'bg-ambulance-green text-white shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'bg-ambulance-green text-white shadow-sm'
+                : isToxicityMode
+                ? 'bg-white text-rose-700 border border-rose-200 hover:border-rose-400 hover:bg-rose-50/70 shadow-2xs'
+                : 'bg-white text-ambulance-green border border-emerald-200 hover:border-ambulance-green hover:bg-emerald-50/70 shadow-2xs'
             }`}
           >
             <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             <span>Paste Med List</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-nhs-warmYellow text-slate-950">
+              New
+            </span>
           </button>
         </div>
 
