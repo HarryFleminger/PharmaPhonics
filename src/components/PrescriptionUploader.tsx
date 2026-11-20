@@ -14,11 +14,18 @@ import {
   Skull,
   CheckCircle2,
   AlertTriangle,
+  FileText,
+  ShieldCheck,
 } from 'lucide-react';
-import { extractMedicationsFromPrescriptionImage } from '../services/geminiClinicalService';
+import {
+  extractMedicationsFromPrescriptionImage,
+  extractMedicationsFromPastedText,
+} from '../services/geminiClinicalService';
 
 const MAX_IMAGE_DIMENSION_PX = 1024;
 const JPEG_COMPRESSION_QUALITY = 0.75;
+
+type UploaderTab = 'photo' | 'paste';
 
 /**
  * Downscales and compresses an uploaded or camera image on the client using an HTML5 `<canvas>`
@@ -38,7 +45,6 @@ function compressImageFileToDataUrl(file: File): Promise<string> {
 
       const img = new Image();
       img.onerror = () => {
-        // Fallback to raw Data URL if the browser cannot decode into an HTMLImageElement
         resolve(rawDataUrl);
       };
       img.onload = () => {
@@ -64,7 +70,6 @@ function compressImageFileToDataUrl(file: File): Promise<string> {
             return;
           }
 
-          // Fill white background before drawing in case of transparent PNGs converted to JPEG
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -102,6 +107,9 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   onFirstInteract,
   onUploadActiveChange,
 }) => {
+  const [activeTab, setActiveTab] = useState<UploaderTab>('photo');
+  const [pastedText, setPastedText] = useState('');
+
   const [isDragging, setIsDragging] = useState(false);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState<string | null>(null);
@@ -125,6 +133,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         return;
       }
 
+      setActiveTab('photo');
       setScanError(null);
       setImageFileName(file.name);
       setIsScanning(true);
@@ -176,12 +185,51 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     [onFirstInteract, onSelectMedication, onUploadActiveChange]
   );
 
+  const handleExtractPastedText = useCallback(() => {
+    const trimmed = pastedText.trim();
+    if (!trimmed) {
+      setScanError('Please paste a medication list or clinical summary first.');
+      return;
+    }
+
+    onFirstInteract?.();
+    setScanError(null);
+    setIsScanning(true);
+    onUploadActiveChange?.(true);
+
+    void (async () => {
+      try {
+        const scanResult = await extractMedicationsFromPastedText(trimmed);
+        setScannedMedications(scanResult.medications);
+        setPatientConditions(scanResult.patientConditions);
+        setOnSceneBullets(scanResult.onSceneBullets);
+        setInteractionBullets(scanResult.interactionBullets);
+        setToxRedFlagBullets(scanResult.toxRedFlagBullets);
+        setIsScanning(false);
+
+        if (scanResult.medications.length > 0) {
+          onSelectMedication(scanResult.medications[0]);
+        } else {
+          setScanError(
+            'No UK medication names were detected in the pasted text. Check the text or search above.'
+          );
+        }
+      } catch (err) {
+        setIsScanning(false);
+        setScanError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to extract medications from pasted text.'
+        );
+      }
+    })();
+  }, [pastedText, onFirstInteract, onSelectMedication, onUploadActiveChange]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       processImageFile(file);
     }
-    // Reset input value so re-uploading the same file triggers onChange
     e.target.value = '';
   };
 
@@ -210,9 +258,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     }
   };
 
-  const handleClearImage = () => {
+  const handleClearAll = () => {
     setImagePreviewUrl(null);
     setImageFileName(null);
+    setPastedText('');
     setScannedMedications([]);
     setPatientConditions([]);
     setOnSceneBullets([]);
@@ -223,7 +272,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     onUploadActiveChange?.(false);
   };
 
-  if (!isOpen && !imagePreviewUrl && !isScanning) {
+  if (!isOpen && !imagePreviewUrl && !isScanning && scannedMedications.length === 0) {
     return null;
   }
 
@@ -257,22 +306,52 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         aria-label="Take photo of prescription or medication list with camera"
       />
 
-      {/* Top Header of Uploader Drawer */}
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Camera
-            className={`w-4 h-4 shrink-0 ${
-              isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
-            }`}
-            aria-hidden="true"
-          />
-          <h3
-            className={`text-xs sm:text-sm font-bold truncate ${
-              isToxicityMode ? 'text-rose-950' : 'text-emerald-950'
+      {/* Top Header + Two-Tab Switcher ("Upload Photo" vs "Paste Med List") */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
+        <div
+          role="tablist"
+          aria-label="Prescription input mode"
+          className="inline-flex items-center p-1 rounded-xl bg-white border border-slate-200 shadow-2xs"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'photo'}
+            onClick={() => {
+              setActiveTab('photo');
+              setScanError(null);
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'photo'
+                ? isToxicityMode
+                  ? 'bg-rose-600 text-white shadow-2xs'
+                  : 'bg-ambulance-green text-white shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Scan Prescription / Repeat Med List (Gemini Vision AI)
-          </h3>
+            <Camera className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>Upload Photo</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'paste'}
+            onClick={() => {
+              setActiveTab('paste');
+              setScanError(null);
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'paste'
+                ? isToxicityMode
+                  ? 'bg-rose-600 text-white shadow-2xs'
+                  : 'bg-ambulance-green text-white shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>Paste Med List</span>
+          </button>
         </div>
 
         <button
@@ -285,84 +364,84 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         </button>
       </div>
 
-      {/* Drag-and-Drop Zone / Camera & Photo Picker */}
-      {!imagePreviewUrl ? (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              fileInputRef.current?.click();
-            }
-          }}
-          className={`border-2 border-dashed rounded-xl p-5 sm:p-6 text-center transition-all cursor-pointer ${
-            isDragging
-              ? isToxicityMode
-                ? 'border-rose-600 bg-rose-100/60 scale-[0.99]'
-                : 'border-ambulance-green bg-emerald-100/60 scale-[0.99]'
-              : isToxicityMode
-              ? 'border-rose-300 bg-white/90 hover:border-rose-500 hover:bg-white'
-              : 'border-emerald-300 bg-white/90 hover:border-ambulance-green hover:bg-white'
-          }`}
-        >
+      {/* TAB 1: UPLOAD PHOTO (Drag-and-Drop / Camera & Photo Picker) */}
+      {activeTab === 'photo' ? (
+        !imagePreviewUrl ? (
           <div
-            className={`w-10 h-10 rounded-full mx-auto mb-2.5 flex items-center justify-center ${
-              isToxicityMode
-                ? 'bg-rose-100 text-rose-600'
-                : 'bg-emerald-100 text-ambulance-green'
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            className={`border-2 border-dashed rounded-xl p-5 sm:p-6 text-center transition-all cursor-pointer ${
+              isDragging
+                ? isToxicityMode
+                  ? 'border-rose-600 bg-rose-100/60 scale-[0.99]'
+                  : 'border-ambulance-green bg-emerald-100/60 scale-[0.99]'
+                : isToxicityMode
+                ? 'border-rose-300 bg-white/90 hover:border-rose-500 hover:bg-white'
+                : 'border-emerald-300 bg-white/90 hover:border-ambulance-green hover:bg-white'
             }`}
           >
-            <Upload className="w-5 h-5" aria-hidden="true" />
-          </div>
-
-          <p className="text-xs sm:text-sm font-bold text-slate-800">
-            Drag &amp; drop a prescription or medication list photo here
-          </p>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Supports repeat prescriptions, discharge letters, blister packs, or medicine boxes
-          </p>
-
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="mt-3.5 flex flex-wrap items-center justify-center gap-2"
-          >
-            {/* Mobile Camera Button */}
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-xs transition-all cursor-pointer active:scale-[0.98] ${
+            <div
+              className={`w-10 h-10 rounded-full mx-auto mb-2.5 flex items-center justify-center ${
                 isToxicityMode
-                  ? 'bg-rose-600 hover:bg-rose-700'
-                  : 'bg-ambulance-green hover:bg-emerald-800'
+                  ? 'bg-rose-100 text-rose-600'
+                  : 'bg-emerald-100 text-ambulance-green'
               }`}
             >
-              <Camera className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>Take Photo</span>
-            </button>
+              <Upload className="w-5 h-5" aria-hidden="true" />
+            </div>
 
-            {/* Photo Library / File Picker Button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border shadow-2xs transition-all cursor-pointer active:scale-[0.98] ${
-                isToxicityMode
-                  ? 'border-rose-300 text-rose-700 hover:bg-rose-50'
-                  : 'border-emerald-300 text-ambulance-green hover:bg-emerald-50'
-              }`}
+            <p className="text-xs sm:text-sm font-bold text-slate-800">
+              Drag &amp; drop a prescription or medication list photo here
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Supports repeat prescriptions, discharge letters, blister packs, or medicine boxes
+            </p>
+
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="mt-3.5 flex flex-wrap items-center justify-center gap-2"
             >
-              <ImageIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>Choose Photo / File</span>
-            </button>
+              {/* Mobile Camera Button */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-xs transition-all cursor-pointer active:scale-[0.98] ${
+                  isToxicityMode
+                    ? 'bg-rose-600 hover:bg-rose-700'
+                    : 'bg-ambulance-green hover:bg-emerald-800'
+                }`}
+              >
+                <Camera className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Take Photo</span>
+              </button>
+
+              {/* Photo Library / File Picker Button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border shadow-2xs transition-all cursor-pointer active:scale-[0.98] ${
+                  isToxicityMode
+                    ? 'border-rose-300 text-rose-700 hover:bg-rose-50'
+                    : 'border-emerald-300 text-ambulance-green hover:bg-emerald-50'
+                }`}
+              >
+                <ImageIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Choose Photo / File</span>
+              </button>
+            </div>
           </div>
-        </div>
-      ) : (
-        /* Uploaded Image Preview + Scanned Medications List + Streamlined Bullet Summary Tile */
-        <div className="space-y-3.5">
+        ) : (
+          /* Uploaded Image Preview Bar */
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-xl border border-slate-200 p-2.5 sm:p-3">
             <div className="flex items-center gap-3 min-w-0">
               <img
@@ -406,7 +485,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               </button>
               <button
                 type="button"
-                onClick={handleClearImage}
+                onClick={handleClearAll}
                 aria-label="Remove uploaded prescription image"
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-xs font-semibold text-red-700 transition-colors cursor-pointer"
               >
@@ -415,7 +494,81 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               </button>
             </div>
           </div>
+        )
+      ) : (
+        /* TAB 2: PASTE MED LIST */
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-3.5 space-y-2.5">
+          <textarea
+            value={pastedText}
+            onChange={(e) => setPastedText(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            placeholder="Paste messy text from a repeat prescription table, discharge summary, GP record, or clinical letter (e.g. 'Ramipril 5mg OD, Eliquis 5mg BD, Bisoprolol 2.5mg')..."
+            aria-label="Paste medication list text"
+            className={`w-full p-3 text-base bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all resize-y ${
+              isToxicityMode
+                ? 'border-rose-200 focus:ring-rose-600 focus:border-rose-600'
+                : 'border-slate-300 focus:ring-ambulance-green focus:border-ambulance-green'
+            }`}
+          />
 
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500">
+              <ShieldCheck
+                className={`w-3.5 h-3.5 shrink-0 ${
+                  isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+                }`}
+                aria-hidden="true"
+              />
+              <span>
+                NHS numbers, DOBs, postcodes &amp; phone numbers are automatically scrubbed in your
+                browser
+              </span>
+            </span>
+
+            <div className="flex items-center gap-2 ml-auto">
+              {(pastedText.trim() !== '' || scannedMedications.length > 0) && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  disabled={isScanning}
+                  className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Clear</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleExtractPastedText}
+                disabled={isScanning || !pastedText.trim()}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white shadow-xs transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isToxicityMode
+                    ? 'bg-rose-600 hover:bg-rose-700'
+                    : 'bg-ambulance-green hover:bg-emerald-800'
+                }`}
+              >
+                {isScanning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+                    <span>Extracting…</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>Extract Medications</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shared Output Area: Scan Error, Extracted Medication Pills & Holistic Bullet Summary */}
+      {(scanError || scannedMedications.length > 0) && (
+        <div className="mt-3.5 space-y-3.5">
           {/* Scan Error Message */}
           {scanError && (
             <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs sm:text-sm text-amber-900">

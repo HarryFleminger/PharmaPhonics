@@ -77,6 +77,7 @@ const GEMINI_UPSTREAM_ENDPOINTS = [
 const GOOGLE_TTS_UPSTREAM_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2 MB hard cap
 const MAX_GEMINI_OUTPUT_TOKENS = 1500;
+const MAX_MULTI_DRUG_OUTPUT_TOKENS = 2048;
 
 // Server-side sliding-window & daily circuit-breaker limits
 const ONE_MINUTE_MS = 60_000;
@@ -365,8 +366,16 @@ export async function handleApiRequest(req, res) {
             ],
           },
         ];
+      } else if (mode === 'medlist') {
+        const rawText = typeof parsedBody.text === 'string' ? parsedBody.text.trim() : '';
+        if (!rawText) {
+          throw new Error('Missing required `text` string for medication list extraction.');
+        }
+        const cappedText = rawText.slice(0, 4000);
+        const medListPrompt = `You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine the following pasted text from a prescription table, repeat medication list, discharge summary, or clinical letter. Extract all distinct UK medications mentioned, converting UK brand names (such as Eliquis, Xarelto, MST Continus, Zomorph, Ventolin, Clenil, Epilim, Plavix, Brilique) to their generic UK BNF / rINN name where identifiable (e.g. 'Apixaban', 'Rivaroxaban', 'Morphine Sulfate', 'Salbutamol'). Keep all summary points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names found), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are found, return empty arrays for all keys.\n\nPASTED MEDICATION TEXT:\n${cappedText}`;
+        contents = [{ parts: [{ text: medListPrompt }] }];
       } else {
-        throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', or 'prescription'.");
+        throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', 'prescription', or 'medlist'.");
       }
     } catch (err) {
       sendJson(res, 400, {
@@ -378,19 +387,18 @@ export async function handleApiRequest(req, res) {
     try {
       let lastRes = null;
       let lastText = '';
+      const isMultiDrugMode =
+        parsedBody?.mode === 'medlist' || parsedBody?.mode === 'prescription';
+      const maxOutputTokens = isMultiDrugMode
+        ? MAX_MULTI_DRUG_OUTPUT_TOKENS
+        : MAX_GEMINI_OUTPUT_TOKENS;
 
       for (const endpoint of GEMINI_UPSTREAM_ENDPOINTS) {
-        const isGemini25 = endpoint.includes('gemini-2.5-flash');
-        const generationConfig = isGemini25
-          ? {
-              responseMimeType: 'application/json',
-              maxOutputTokens: MAX_GEMINI_OUTPUT_TOKENS,
-              thinkingConfig: { thinkingBudget: 0 },
-            }
-          : {
-              responseMimeType: 'application/json',
-              maxOutputTokens: MAX_GEMINI_OUTPUT_TOKENS,
-            };
+        const generationConfig = {
+          responseMimeType: 'application/json',
+          maxOutputTokens,
+          thinkingConfig: { thinkingBudget: 0 },
+        };
 
         const upstreamPayload = JSON.stringify({
           contents,

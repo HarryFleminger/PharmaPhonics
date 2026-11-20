@@ -398,6 +398,10 @@ type GeminiProxyPayload =
       mode: 'prescription';
       base64Data: string;
       mimeType: string;
+    }
+  | {
+      mode: 'medlist';
+      text: string;
     };
 
 /**
@@ -609,6 +613,122 @@ export async function extractMedicationsFromPrescriptionImage(
     const parsed: unknown = JSON.parse(cleanedText);
     if (!parsed || typeof parsed !== 'object') {
       throw new Error('Invalid JSON returned when scanning prescription image.');
+    }
+
+    const record = parsed as Record<string, unknown>;
+    const toCleanStringArray = (val: unknown): string[] =>
+      Array.isArray(val)
+        ? val
+            .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+            .map((item) => item.trim())
+        : [];
+
+    const uniqueMeds = Array.from(new Set(toCleanStringArray(record.medications)));
+
+    const scanResult: PrescriptionScanResult = {
+      medications: uniqueMeds,
+      patientConditions: toCleanStringArray(record.patientConditions),
+      onSceneBullets: toCleanStringArray(record.onSceneBullets),
+      interactionBullets: toCleanStringArray(record.interactionBullets),
+      toxRedFlagBullets: toCleanStringArray(record.toxRedFlagBullets),
+    };
+
+    if (uniqueMeds.length > 0) {
+      prescriptionScanCache.set(fingerprint, scanResult);
+      savePrescriptionScanCacheToLocalStorage();
+    }
+
+    return scanResult;
+  })();
+
+  inFlightVisionRequests.set(fingerprint, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightVisionRequests.delete(fingerprint);
+  }
+}
+
+const MAX_PASTED_MEDLIST_CHARS = 4000;
+
+/**
+ * Client-side privacy scrubber that removes potential patient identifiers (NHS numbers,
+ * dates of birth, UK postcodes, phone numbers, email addresses, and patient name headers)
+ * locally in the browser before any pasted text is sent to `/api/gemini`.
+ */
+export function scrubMedicationListText(rawText: string): string {
+  return (
+    rawText
+      // 1. Email addresses
+      .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED]')
+      // 2. 10-digit UK NHS numbers (e.g. "123 456 7890", "123-456-7890", or "1234567890")
+      .replace(/\b\d{3}[\s-]?\d{3}[\s-]?\d{4}\b/g, '[REDACTED]')
+      // 3. Calendar dates / DOBs (e.g. "12/04/1958", "12-04-58", "1958-04-12", "12.04.1958")
+      .replace(/\b\d{1,4}[/.-]\d{1,2}[/.-]\d{2,4}\b/g, '[REDACTED]')
+      // 4. UK Postcodes (e.g. "SW1A 1AA", "EC1A 1BB", "M1 1AE")
+      .replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s+\d[A-Z]{2}\b/gi, '[REDACTED]')
+      // 5. UK & international phone numbers (e.g. "+44 7...", "07...", "01...", "02...")
+      .replace(/\b(?:\+44\s?7\d{3}|\(?07\d{3}\)?|\(?0[12]\d{2,3}\)?)\s?\d{3}\s?\d{3,4}\b/g, '[REDACTED]')
+      // 6. Explicit patient name / NHS number / DOB / Address header lines
+      .replace(
+        /^\s*(?:patient\s*name|name|nhs\s*(?:no|number)|dob|date\s*of\s*birth|address|hospital\s*(?:no|number))\s*:.*$/gim,
+        '[REDACTED]'
+      )
+      .trim()
+      .slice(0, MAX_PASTED_MEDLIST_CHARS)
+  );
+}
+
+/**
+ * Scrubs PII locally from a pasted prescription table, discharge summary, or clinical letter,
+ * then extracts all distinct UK generic/BNF medications and generates the holistic
+ * Standard & Toxicity Mode bulleted summary via `POST /api/gemini` (`mode: 'medlist'`).
+ * - Caches results in `localStorage` (`medspeak_prescription_scan_cache_v1`) by text fingerprint.
+ * - Enforces `gemini_text` rate limit (5/min, 35/day) and in-flight deduplication.
+ */
+export async function extractMedicationsFromPastedText(
+  rawText: string,
+  signal?: AbortSignal
+): Promise<PrescriptionScanResult> {
+  const scrubbedText = scrubMedicationListText(rawText);
+  if (!scrubbedText) {
+    throw new Error('Please paste at least one medication name.');
+  }
+
+  const normalizedForHash = scrubbedText.toLowerCase().replace(/\s+/g, ' ').trim();
+  const fingerprint = `text_${computeImageFingerprint(normalizedForHash)}`;
+
+  const cachedResult = prescriptionScanCache.get(fingerprint);
+  if (cachedResult) {
+    return cachedResult;
+  }
+
+  const existingInFlight = inFlightVisionRequests.get(fingerprint);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  // Enforce client-side text rate limit (5/min, 35/day)
+  enforceRateLimit('gemini_text');
+
+  const requestPromise = (async () => {
+    const responseText = await callServerGeminiProxy(
+      {
+        mode: 'medlist',
+        text: scrubbedText,
+      },
+      signal
+    );
+
+    const cleanedText = responseText
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
+
+    const parsed: unknown = JSON.parse(cleanedText);
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('Invalid JSON returned when analyzing pasted medication list.');
     }
 
     const record = parsed as Record<string, unknown>;

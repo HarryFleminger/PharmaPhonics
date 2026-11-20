@@ -7,12 +7,14 @@ const GEMINI_ENDPOINTS = [
 ];
 const GOOGLE_TTS_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 const MAX_DRUG_NAME_LENGTH = 120;
+const MAX_MEDLIST_TEXT_LENGTH = 4000;
 
 interface LocalGeminiPayload {
-  mode?: 'clinical' | 'toxicity' | 'prescription';
+  mode?: 'clinical' | 'toxicity' | 'prescription' | 'medlist';
   drugName?: string;
   base64Data?: string;
   mimeType?: string;
+  text?: string;
 }
 
 function buildLockedContents(body: LocalGeminiPayload): unknown[] {
@@ -59,7 +61,18 @@ function buildLockedContents(body: LocalGeminiPayload): unknown[] {
     ];
   }
 
-  throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', or 'prescription'.");
+  if (mode === 'medlist') {
+    const rawText = typeof body.text === 'string' ? body.text.trim() : '';
+    if (!rawText) {
+      throw new Error('Missing required `text` string for medication list extraction.');
+    }
+    const cappedText = rawText.slice(0, MAX_MEDLIST_TEXT_LENGTH);
+    const medListPrompt = `You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine the following pasted text from a prescription table, repeat medication list, discharge summary, or clinical letter. Extract all distinct UK medications mentioned, converting UK brand names (such as Eliquis, Xarelto, MST Continus, Zomorph, Ventolin, Clenil, Epilim, Plavix, Brilique) to their generic UK BNF / rINN name where identifiable (e.g. 'Apixaban', 'Rivaroxaban', 'Morphine Sulfate', 'Salbutamol'). Keep all summary points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names found), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are found, return empty arrays for all keys.\n\nPASTED MEDICATION TEXT:\n${cappedText}`;
+
+    return [{ parts: [{ text: medListPrompt }] }];
+  }
+
+  throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', 'prescription', or 'medlist'.");
 }
 
 /**
@@ -117,22 +130,19 @@ function localServerlessApiPlugin(env: Record<string, string>): Plugin {
               try {
                 const parsed = JSON.parse(rawBody) as LocalGeminiPayload;
                 const contents = buildLockedContents(parsed);
+                const isMultiDrugMode =
+                  parsed.mode === 'medlist' || parsed.mode === 'prescription';
+                const maxOutputTokens = isMultiDrugMode ? 2048 : 1500;
 
                 let lastStatus = 502;
                 let lastText = '';
 
                 for (const endpoint of GEMINI_ENDPOINTS) {
-                  const isGemini25 = endpoint.includes('gemini-2.5-flash');
-                  const generationConfig = isGemini25
-                    ? {
-                        responseMimeType: 'application/json',
-                        maxOutputTokens: 1500,
-                        thinkingConfig: { thinkingBudget: 0 },
-                      }
-                    : {
-                        responseMimeType: 'application/json',
-                        maxOutputTokens: 1500,
-                      };
+                  const generationConfig = {
+                    responseMimeType: 'application/json',
+                    maxOutputTokens,
+                    thinkingConfig: { thinkingBudget: 0 },
+                  };
 
                   const upstreamPayload = JSON.stringify({
                     contents,
