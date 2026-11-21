@@ -1,0 +1,37 @@
+name: Monthly UK BNF Dataset Update
+
+on:
+  schedule:
+    # Runs at 04:00 UTC on the 1st of every month
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-bnf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch latest NHSBSA UK BNF drugs
+        run: npm run update-bnf
+
+      - name: Commit and push if new BNF drugs were added
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ -n "$(git status --porcelain src/data/bnfNomenclature.ts)" ]]; then
+            git add src/data/bnfNomenclature.ts
+            git commit -m "chore(bnf): monthly NHSBSA UK BNF nomenclature update"
+            git push
+          else
+            echo "No new BNF entries to commit."
+          fi

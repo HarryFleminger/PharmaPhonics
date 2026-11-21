@@ -8,6 +8,7 @@ import {
   Search,
   Camera,
   FolderOpen,
+  Sparkles,
 } from 'lucide-react';
 import {
   BnfMedicationItem,
@@ -371,6 +372,35 @@ export function App() {
     setSearchQuery(drugName);
   }, []);
 
+  // Allows looking up a brand-new or unlisted medication directly via Gemini AI
+  // even if it is not yet in the local UK BNF index
+  const handleLookupCustomDrugWithAi = useCallback(() => {
+    const raw = debouncedQuery.trim();
+    if (!raw) return;
+
+    const formattedName = raw.charAt(0).toUpperCase() + raw.slice(1);
+    const customItem: BnfMedicationItem = {
+      id: 'CUSTOM-LOOKUP',
+      name: formattedName,
+      type: 'AI Direct Lookup',
+    };
+    const cardKey = getCardKey(customItem);
+
+    setResults([customItem]);
+    setSelectedCardKeys((prev) => ({ ...prev, [cardKey]: true }));
+
+    if (isToxicityMode) {
+      void loadToxicityDetailsForMedication(customItem);
+    } else {
+      void loadClinicalDetailsForMedication(customItem);
+    }
+  }, [
+    debouncedQuery,
+    isToxicityMode,
+    loadClinicalDetailsForMedication,
+    loadToxicityDetailsForMedication,
+  ]);
+
   // Keep a ref to current isToxicityMode so the search effect always uses the latest mode
   const isToxicityModeRef = useRef(isToxicityMode);
   useEffect(() => {
@@ -680,7 +710,7 @@ export function App() {
             </ul>
           </div>
         ) : results.length === 0 ? (
-          /* No Results State */
+          /* No Local BNF Match State — Offer 1-Tap Direct Gemini AI Lookup */
           <div
             className={`bg-white rounded-2xl border p-8 sm:p-10 text-center max-w-lg mx-auto my-6 shadow-sm ${
               isToxicityMode ? 'border-rose-200' : 'border-slate-200'
@@ -690,22 +720,35 @@ export function App() {
               <SearchX className="w-6 h-6" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-bold text-slate-900">
-              No BNF entries found for &ldquo;{debouncedQuery.trim()}&rdquo;
+              No local BNF entry found for &ldquo;{debouncedQuery.trim()}&rdquo;
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
-              Check your spelling or select a drug from the Quick Categories above.
+            <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+              If this is a new medication or a brand name, you can generate its{' '}
+              {isToxicityMode ? 'overdose & toxicity' : 'clinical & phonetic'} flashcard directly
+              with Gemini AI, or check your spelling.
             </p>
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className={`mt-4 inline-flex items-center px-4 py-2 rounded-xl text-white text-sm font-semibold transition-colors cursor-pointer ${
-                isToxicityMode
-                  ? 'bg-rose-600 hover:bg-rose-700'
-                  : 'bg-ambulance-green hover:bg-emerald-800'
-              }`}
-            >
-              Clear Search
-            </button>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleLookupCustomDrugWithAi}
+                className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-bold shadow-xs transition-all cursor-pointer active:scale-[0.98] ${
+                  isToxicityMode
+                    ? 'bg-rose-600 hover:bg-rose-700'
+                    : 'bg-ambulance-green hover:bg-emerald-800'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Look up &ldquo;{debouncedQuery.trim()}&rdquo; with Gemini AI</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="inline-flex items-center px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors cursor-pointer"
+              >
+                Clear Search
+              </button>
+            </div>
           </div>
         ) : (
           /* Responsive Flashcard Grid */
