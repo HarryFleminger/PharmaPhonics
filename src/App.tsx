@@ -9,6 +9,7 @@ import {
   Camera,
   FolderOpen,
   Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import {
   BnfMedicationItem,
@@ -45,6 +46,13 @@ export function App() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isCategoryMinimized, setIsCategoryMinimized] = useState(false);
   const [selectedCategoryDrug, setSelectedCategoryDrug] = useState<string | null>(null);
+
+  // Search panel UI states (controlled from App so How to Use MedSpeak buttons can open/focus them)
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
+  const [isQuickCategoriesMinimized, setIsQuickCategoriesMinimized] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
 
   // Toxicity Mode state & Tox Calculator inputs
   const [isToxicityMode, setIsToxicityMode] = useState(false);
@@ -199,6 +207,15 @@ export function App() {
     }
   }, []);
 
+  // Triggers the first-time JRCALC+ / Clinical Disclaimer warning modal
+  // only the first time a drug's clinical or overdose details are opened
+  const triggerFirstTimeClinicalWarning = useCallback(() => {
+    if (!hasSeenJrcalcWarning) {
+      setHasSeenJrcalcWarning(true);
+      setIsJrcalcModalOpen(true);
+    }
+  }, [hasSeenJrcalcWarning]);
+
   const handleSelectMedication = useCallback(
     (item: BnfMedicationItem) => {
       const cardKey = getCardKey(item);
@@ -210,6 +227,8 @@ export function App() {
       }));
 
       if (willBeSelected) {
+        triggerFirstTimeClinicalWarning();
+
         const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
         const preferredUnit = detectPreferredToxUnit(item.name, existingTox?.toxicThreshold);
         setToxCalculatorValues((prev) =>
@@ -236,48 +255,60 @@ export function App() {
       toxicityLoadingByKey,
       loadClinicalDetailsForMedication,
       loadToxicityDetailsForMedication,
+      triggerFirstTimeClinicalWarning,
     ]
   );
 
   // Requirement 4 (State Logic):
-  // If the user toggles Toxicity Mode on/off while one or more drugs are currently selected,
-  // automatically fetch the data for those selected drugs using the appropriate standard or tox prompt.
-  const handleToggleToxicityMode = useCallback(() => {
-    const nextToxMode = !isToxicityMode;
-    setIsToxicityMode(nextToxMode);
+  // If the user toggles Toxicity Mode on/off from a drug card, ensure that drug card is
+  // expanded and automatically fetch the data for all selected drugs using the appropriate prompt.
+  const handleToggleToxicityMode = useCallback(
+    (clickedMedication?: BnfMedicationItem) => {
+      const nextToxMode = !isToxicityMode;
+      setIsToxicityMode(nextToxMode);
 
-    results.forEach((item) => {
-      const cardKey = getCardKey(item);
-      if (selectedCardKeys[cardKey]) {
-        const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
-        if (existingTox) {
-          const preferredUnit = detectPreferredToxUnit(item.name, existingTox.toxicThreshold);
-          setToxCalculatorValues((prev) =>
-            prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
-          );
-        }
-        if (nextToxMode) {
-          if (!toxicityDetailsByKey[cardKey] && !toxicityLoadingByKey[cardKey]) {
-            void loadToxicityDetailsForMedication(item);
-          }
-        } else {
-          if (!clinicalDetailsByKey[cardKey] && !clinicalLoadingByKey[cardKey]) {
-            void loadClinicalDetailsForMedication(item);
-          }
-        }
+      const nextSelectedKeys = { ...selectedCardKeys };
+      if (clickedMedication) {
+        triggerFirstTimeClinicalWarning();
+        nextSelectedKeys[getCardKey(clickedMedication)] = true;
+        setSelectedCardKeys(nextSelectedKeys);
       }
-    });
-  }, [
-    isToxicityMode,
-    results,
-    selectedCardKeys,
-    toxicityDetailsByKey,
-    toxicityLoadingByKey,
-    clinicalDetailsByKey,
-    clinicalLoadingByKey,
-    loadToxicityDetailsForMedication,
-    loadClinicalDetailsForMedication,
-  ]);
+
+      results.forEach((item) => {
+        const cardKey = getCardKey(item);
+        if (nextSelectedKeys[cardKey]) {
+          const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
+          if (existingTox) {
+            const preferredUnit = detectPreferredToxUnit(item.name, existingTox.toxicThreshold);
+            setToxCalculatorValues((prev) =>
+              prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+            );
+          }
+          if (nextToxMode) {
+            if (!toxicityDetailsByKey[cardKey] && !toxicityLoadingByKey[cardKey]) {
+              void loadToxicityDetailsForMedication(item);
+            }
+          } else {
+            if (!clinicalDetailsByKey[cardKey] && !clinicalLoadingByKey[cardKey]) {
+              void loadClinicalDetailsForMedication(item);
+            }
+          }
+        }
+      });
+    },
+    [
+      isToxicityMode,
+      results,
+      selectedCardKeys,
+      toxicityDetailsByKey,
+      toxicityLoadingByKey,
+      clinicalDetailsByKey,
+      clinicalLoadingByKey,
+      loadToxicityDetailsForMedication,
+      loadClinicalDetailsForMedication,
+      triggerFirstTimeClinicalWarning,
+    ]
+  );
 
   const handleDismissNewFeatureModal = useCallback(() => {
     setIsNewFeatureModalOpen(false);
@@ -292,17 +323,7 @@ export function App() {
     }, 3400);
   }, []);
 
-  // Triggers the first-time JRCALC+ / Clinical Disclaimer warning modal
-  // whenever the user first interacts with ANY Quick Category or the search bar
-  const triggerFirstTimeClinicalWarning = useCallback(() => {
-    if (!hasSeenJrcalcWarning) {
-      setHasSeenJrcalcWarning(true);
-      setIsJrcalcModalOpen(true);
-    }
-  }, [hasSeenJrcalcWarning]);
-
   // Clicking a category pill in the top row:
-  // - Shows the first-time JRCALC+ clinical warning pop-up when any category is first selected
   // - If clicking a different category: open it expanded
   // - If clicking the same category while minimized: re-expand it
   // - If clicking the same category while already expanded: close it
@@ -314,8 +335,6 @@ export function App() {
         setSelectedCategoryDrug(null);
         return;
       }
-
-      triggerFirstTimeClinicalWarning();
 
       if (activeCategory === category) {
         if (isCategoryMinimized) {
@@ -329,7 +348,7 @@ export function App() {
         setIsCategoryMinimized(false);
       }
     },
-    [activeCategory, isCategoryMinimized, triggerFirstTimeClinicalWarning]
+    [activeCategory, isCategoryMinimized]
   );
 
   // Clicking the "Listen" voice button on a medication card:
@@ -362,21 +381,27 @@ export function App() {
     setPendingSpeech(null);
   }, []);
 
-  // Clicking a drug inside a category list:
-  // - Records the selected drug, minimizes the category list so flashcards are visible below,
-  //   and triggers the OpenPrescribing + Gemini fetch flow
-  const handleSelectCategoryDrug = useCallback((drugName: string) => {
-    autoExpandNextResultRef.current = true;
-    setSelectedCategoryDrug(drugName);
-    setIsCategoryMinimized(true);
-    setSearchQuery(drugName);
-  }, []);
+  // Clicking a drug inside a category list or extracted prescription pill:
+  // - Triggers the first-time JRCALC clinical disclaimer if not yet seen,
+  //   records the selected drug, minimizes the category list, and opens the flashcard
+  const handleSelectCategoryDrug = useCallback(
+    (drugName: string) => {
+      triggerFirstTimeClinicalWarning();
+      autoExpandNextResultRef.current = true;
+      setSelectedCategoryDrug(drugName);
+      setIsCategoryMinimized(true);
+      setSearchQuery(drugName);
+    },
+    [triggerFirstTimeClinicalWarning]
+  );
 
   // Allows looking up a brand-new or unlisted medication directly via Gemini AI
   // even if it is not yet in the local UK BNF index
   const handleLookupCustomDrugWithAi = useCallback(() => {
     const raw = debouncedQuery.trim();
     if (!raw) return;
+
+    triggerFirstTimeClinicalWarning();
 
     const formattedName = raw.charAt(0).toUpperCase() + raw.slice(1);
     const customItem: BnfMedicationItem = {
@@ -399,6 +424,7 @@ export function App() {
     isToxicityMode,
     loadClinicalDetailsForMedication,
     loadToxicityDetailsForMedication,
+    triggerFirstTimeClinicalWarning,
   ]);
 
   // Keep a ref to current isToxicityMode so the search effect always uses the latest mode
@@ -518,10 +544,9 @@ export function App() {
       />
 
       <Header
-        isTtsApiKeyConfigured={serverHealth.ttsConfigured}
         isGeminiApiKeyConfigured={serverHealth.geminiConfigured}
         isToxicityMode={isToxicityMode}
-        onToggleToxicityMode={handleToggleToxicityMode}
+        onExitToxicityMode={() => setIsToxicityMode(false)}
         onOpenGuide={() => setIsGuideOpen(true)}
       />
 
@@ -576,9 +601,7 @@ export function App() {
 
         <SearchAndFilter
           searchQuery={searchQuery}
-          onSearchInteract={triggerFirstTimeClinicalWarning}
           onSearchChange={(q) => {
-            triggerFirstTimeClinicalWarning();
             setSearchQuery(q);
             if (!q.trim()) {
               setSelectedCategoryDrug(null);
@@ -595,6 +618,10 @@ export function App() {
           hasActiveQuery={hasActiveQuery}
           isToxicityMode={isToxicityMode}
           highlightUploadButton={highlightUploadButton}
+          isUploaderOpen={isUploaderOpen}
+          onSetUploaderOpen={setIsUploaderOpen}
+          isQuickCategoriesMinimized={isQuickCategoriesMinimized}
+          onSetQuickCategoriesMinimized={setIsQuickCategoriesMinimized}
           onUploadActiveChange={(isActive) => {
             setIsToxCalculatorMinimized(isActive);
           }}
@@ -650,62 +677,167 @@ export function App() {
             </div>
 
             <ul className="space-y-2.5 text-left max-w-lg mx-auto">
-              <li className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div
-                  className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.getElementById(
+                      'medspeak-search-input'
+                    ) as HTMLInputElement | null;
+                    input?.focus();
+                    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-left transition-all cursor-pointer active:scale-[0.99] group ${
                     isToxicityMode
-                      ? 'bg-rose-100 text-rose-600'
-                      : 'bg-emerald-100 text-ambulance-green'
+                      ? 'hover:bg-rose-50/70 hover:border-rose-300'
+                      : 'hover:bg-emerald-50/70 hover:border-emerald-300'
                   }`}
                 >
-                  <Search className="w-4 h-4" aria-hidden="true" />
-                </div>
-                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                  <strong className="text-slate-900">Search</strong> — look up any UK drug for
-                  essential on-scene context, indications, and pronunciation.
-                </span>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                        isToxicityMode
+                          ? 'bg-rose-100 text-rose-600'
+                          : 'bg-emerald-100 text-ambulance-green'
+                      }`}
+                    >
+                      <Search className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                      <strong className="text-slate-900">Search</strong> — look up any UK drug for
+                      essential on-scene context, indications, and pronunciation.
+                    </span>
+                  </div>
+                  <ChevronRight
+                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform group-hover:translate-x-0.5 ${
+                      isToxicityMode
+                        ? 'group-hover:text-rose-600'
+                        : 'group-hover:text-ambulance-green'
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
               </li>
 
-              <li className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div
-                  className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUploaderOpen(true);
+                    requestAnimationFrame(() => {
+                      const uploader =
+                        document.getElementById('medspeak-prescription-uploader') ??
+                        document.getElementById('medspeak-search-input');
+                      uploader?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-left transition-all cursor-pointer active:scale-[0.99] group ${
                     isToxicityMode
-                      ? 'bg-rose-100 text-rose-600'
-                      : 'bg-emerald-100 text-ambulance-green'
+                      ? 'hover:bg-rose-50/70 hover:border-rose-300'
+                      : 'hover:bg-emerald-50/70 hover:border-emerald-300'
                   }`}
                 >
-                  <Camera className="w-4 h-4" aria-hidden="true" />
-                </div>
-                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                  <strong className="text-slate-900">Upload or Paste</strong> — snap a photo or
-                  paste text from a patient’s medication list for an instant holistic overview.
-                </span>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                        isToxicityMode
+                          ? 'bg-rose-100 text-rose-600'
+                          : 'bg-emerald-100 text-ambulance-green'
+                      }`}
+                    >
+                      <Camera className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                      <strong className="text-slate-900">Upload or Paste</strong> — snap a photo or
+                      paste text from a patient’s medication list for an instant holistic overview.
+                    </span>
+                  </div>
+                  <ChevronRight
+                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform group-hover:translate-x-0.5 ${
+                      isToxicityMode
+                        ? 'group-hover:text-rose-600'
+                        : 'group-hover:text-ambulance-green'
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
               </li>
 
-              <li className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div
-                  className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickCategoriesMinimized(false);
+                    requestAnimationFrame(() => {
+                      const categoriesEl = document.getElementById('medspeak-quick-categories');
+                      categoriesEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-left transition-all cursor-pointer active:scale-[0.99] group ${
                     isToxicityMode
-                      ? 'bg-rose-100 text-rose-600'
-                      : 'bg-emerald-100 text-ambulance-green'
+                      ? 'hover:bg-rose-50/70 hover:border-rose-300'
+                      : 'hover:bg-emerald-50/70 hover:border-emerald-300'
                   }`}
                 >
-                  <FolderOpen className="w-4 h-4" aria-hidden="true" />
-                </div>
-                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                  <strong className="text-slate-900">Quick Categories</strong> — tap any category
-                  above to browse commonly encountered emergency and community drugs.
-                </span>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                        isToxicityMode
+                          ? 'bg-rose-100 text-rose-600'
+                          : 'bg-emerald-100 text-ambulance-green'
+                      }`}
+                    >
+                      <FolderOpen className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                      <strong className="text-slate-900">Quick Categories</strong> — tap any category
+                      above to browse commonly encountered emergency and community drugs.
+                    </span>
+                  </div>
+                  <ChevronRight
+                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform group-hover:translate-x-0.5 ${
+                      isToxicityMode
+                        ? 'group-hover:text-rose-600'
+                        : 'group-hover:text-ambulance-green'
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
               </li>
 
-              <li className="flex items-start gap-3 p-3 rounded-xl bg-rose-50/70 border border-rose-200/80">
-                <div className="p-1.5 rounded-lg bg-rose-100 text-rose-600 shrink-0 mt-0.5">
-                  <Skull className="w-4 h-4" aria-hidden="true" />
-                </div>
-                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                  <strong className="text-rose-900">Toxicity Mode</strong> — switch on Toxicity
-                  Mode at the top to calculate ingested doses and view toxic thresholds and effects.
-                </span>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const willBeTox = !isToxicityMode;
+                    handleToggleToxicityMode();
+                    if (willBeTox) {
+                      setIsToxCalculatorMinimized(false);
+                      requestAnimationFrame(() => {
+                        const input = document.getElementById(
+                          'medspeak-search-input'
+                        ) as HTMLInputElement | null;
+                        input?.focus();
+                        input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      });
+                    }
+                  }}
+                  className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-rose-50/70 border border-rose-200/80 hover:bg-rose-100/70 hover:border-rose-300 text-left transition-all cursor-pointer active:scale-[0.99] group"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-rose-100 text-rose-600 shrink-0 mt-0.5">
+                      <Skull className="w-4 h-4" aria-hidden="true" />
+                    </div>
+                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                      <strong className="text-rose-900">Toxicity Mode</strong> — tap Toxicity Mode on
+                      any drug card to calculate ingested doses and view toxic thresholds and effects.
+                    </span>
+                  </div>
+                  <ChevronRight
+                    className="w-4 h-4 text-rose-400 group-hover:text-rose-600 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </button>
               </li>
             </ul>
           </div>
@@ -769,6 +901,7 @@ export function App() {
                   clinicalError={clinicalErrorByKey[cardKey]}
                   onRetryClinical={loadClinicalDetailsForMedication}
                   isToxicityMode={isToxicityMode}
+                  onToggleToxicityMode={handleToggleToxicityMode}
                   toxicityDetails={toxicityDetailsByKey[cardKey]}
                   isToxicityLoading={Boolean(toxicityLoadingByKey[cardKey])}
                   toxicityError={toxicityErrorByKey[cardKey]}

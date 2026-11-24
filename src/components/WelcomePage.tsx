@@ -46,9 +46,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
             UK Paramedic Medication Study Tool
           </h1>
           <p className="mt-2.5 text-sm sm:text-base text-emerald-100/95 max-w-3xl leading-relaxed">
-            Built for UK paramedics, EMTs, and student clinicians to quickly revise UK BNF
-            medications, pre-hospital on-scene context, overdose toxicity thresholds, British
-            English drug pronunciations, and holistic prescription lists.
+            Built for UK paramedics, EMTs, and student clinicians to quickly search UK BNF
+            medications, get pre-hospital on-scene context, overdose toxicity and calculator, and
+            holistic prescription breakdowns.
           </p>
         </div>
       </header>
@@ -130,7 +130,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
               </div>
 
               <p className="text-sm text-slate-600 leading-relaxed mb-3">
-                Toggle <strong>Toxicity Mode</strong> in the top header to switch the app into a
+                Tap <strong>Toxicity Mode</strong> on any medication card to switch the app into a
                 high-alert red overdose assessment view.
               </p>
 

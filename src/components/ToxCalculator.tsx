@@ -184,7 +184,7 @@ export const ToxCalculator: React.FC<ToxCalculatorProps> = ({
         {/* Unit Switcher (mg <-> micrograms), Reset Button & Collapse/Expand Toggle */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-2 shrink-0"
+          className="flex flex-wrap items-center gap-2 shrink-0"
         >
           {!isMinimized && (
             <>

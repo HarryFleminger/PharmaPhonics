@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Volume2,
   VolumeX,
@@ -33,6 +33,7 @@ interface MedicationCardProps {
   clinicalError?: string | null;
   onRetryClinical: (medication: BnfMedicationItem) => void;
   isToxicityMode?: boolean;
+  onToggleToxicityMode?: (medication: BnfMedicationItem) => void;
   toxicityDetails?: GeminiToxicityDetails;
   isToxicityLoading?: boolean;
   toxicityError?: string | null;
@@ -106,6 +107,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
   clinicalError,
   onRetryClinical,
   isToxicityMode = false,
+  onToggleToxicityMode,
   toxicityDetails,
   isToxicityLoading = false,
   toxicityError,
@@ -116,8 +118,11 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
   isSpeaking,
   onListen,
 }) => {
+  const cardRef = useRef<HTMLElement | null>(null);
+
   return (
     <article
+      ref={cardRef}
       onClick={() => onSelect(medication)}
       className={`group bg-white rounded-2xl border transition-all duration-200 overflow-hidden cursor-pointer ${
         isSelected || isSpeaking || isAudioLoading
@@ -196,52 +201,89 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
             </p>
           </div>
 
-          {/* Right: Listen Audio Button (Google Cloud TTS en-GB-Neural2-B) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onListen(medication.id, medication.name);
-            }}
-            aria-busy={isAudioLoading}
-            aria-label={
-              isAudioLoading
-                ? `Fetching pronunciation audio for ${medication.name}`
-                : isSpeaking
-                ? `Stop pronunciation of ${medication.name}`
-                : `Listen to British English pronunciation of ${medication.name}`
-            }
-            className={`shrink-0 inline-flex items-center justify-center gap-2 min-w-[112px] px-4 py-3 rounded-xl font-semibold text-sm transition-all cursor-pointer select-none shadow-sm ${
-              isAudioLoading
-                ? isToxicityMode
-                  ? 'bg-rose-800 text-rose-50 ring-2 ring-rose-500/40'
-                  : 'bg-emerald-800 text-emerald-50 ring-2 ring-emerald-500/40'
-                : isSpeaking
-                ? isToxicityMode
-                  ? 'bg-rose-700 text-white ring-4 ring-rose-500/30 animate-pulse'
-                  : 'bg-emerald-700 text-white ring-4 ring-emerald-500/30 animate-pulse'
-                : isToxicityMode
-                ? 'bg-rose-600 text-white hover:bg-rose-700 active:scale-[0.98]'
-                : 'bg-ambulance-green text-white hover:bg-emerald-800 active:scale-[0.98]'
-            }`}
-          >
-            {isAudioLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 shrink-0 animate-spin" aria-hidden="true" />
-                <span>Loading…</span>
-              </>
-            ) : isSpeaking ? (
-              <>
-                <VolumeX className="w-5 h-5 shrink-0" aria-hidden="true" />
-                <span>Stop</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-5 h-5 shrink-0" aria-hidden="true" />
-                <span>Listen</span>
-              </>
+          {/* Right: Listen Audio Button & Toxicity Mode Toggle Button */}
+          <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onListen(medication.id, medication.name);
+              }}
+              aria-busy={isAudioLoading}
+              aria-label={
+                isAudioLoading
+                  ? `Fetching pronunciation audio for ${medication.name}`
+                  : isSpeaking
+                  ? `Stop pronunciation of ${medication.name}`
+                  : `Listen to British English pronunciation of ${medication.name}`
+              }
+              className={`inline-flex items-center justify-center gap-2 min-w-[108px] px-3.5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all cursor-pointer select-none shadow-sm ${
+                isAudioLoading
+                  ? isToxicityMode
+                    ? 'bg-rose-800 text-rose-50 ring-2 ring-rose-500/40'
+                    : 'bg-emerald-800 text-emerald-50 ring-2 ring-emerald-500/40'
+                  : isSpeaking
+                  ? isToxicityMode
+                    ? 'bg-rose-700 text-white ring-4 ring-rose-500/30 animate-pulse'
+                    : 'bg-emerald-700 text-white ring-4 ring-emerald-500/30 animate-pulse'
+                  : isToxicityMode
+                  ? 'bg-rose-600 text-white hover:bg-rose-700 active:scale-[0.98]'
+                  : 'bg-ambulance-green text-white hover:bg-emerald-800 active:scale-[0.98]'
+              }`}
+            >
+              {isAudioLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden="true" />
+                  <span>Loading…</span>
+                </>
+              ) : isSpeaking ? (
+                <>
+                  <VolumeX className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span>Stop</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span>Listen</span>
+                </>
+              )}
+            </button>
+
+            {onToggleToxicityMode && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const prevTop = cardRef.current?.getBoundingClientRect().top ?? null;
+                  onToggleToxicityMode(medication);
+                  requestAnimationFrame(() => {
+                    if (prevTop !== null && cardRef.current) {
+                      const newTop = cardRef.current.getBoundingClientRect().top;
+                      const delta = newTop - prevTop;
+                      if (Math.abs(delta) > 1) {
+                        window.scrollBy({ top: delta, behavior: 'instant' });
+                      }
+                    }
+                  });
+                }}
+                aria-pressed={isToxicityMode}
+                title="Toggle Toxicity Mode for overdose calculator and toxic thresholds"
+                className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer select-none shadow-sm border active:scale-[0.98] ${
+                  isToxicityMode
+                    ? 'bg-rose-50 text-rose-700 border-rose-600 ring-2 ring-rose-500/30 hover:bg-rose-100'
+                    : 'bg-rose-600 text-white border-rose-600 hover:bg-rose-700'
+                }`}
+              >
+                <Skull
+                  className={`w-4 h-4 shrink-0 ${
+                    isToxicityMode ? 'text-rose-600' : 'text-white'
+                  }`}
+                  aria-hidden="true"
+                />
+                <span>{isToxicityMode ? 'Toxicity: ON' : 'Toxicity Mode'}</span>
+              </button>
             )}
-          </button>
+          </div>
         </div>
 
         {/* Expanded Panel when Card is Selected */}

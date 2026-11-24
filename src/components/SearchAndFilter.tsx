@@ -30,6 +30,10 @@ interface SearchAndFilterProps {
   isToxicityMode?: boolean;
   onUploadActiveChange?: (isActive: boolean) => void;
   highlightUploadButton?: boolean;
+  isUploaderOpen?: boolean;
+  onSetUploaderOpen?: (open: boolean | ((prev: boolean) => boolean)) => void;
+  isQuickCategoriesMinimized?: boolean;
+  onSetQuickCategoriesMinimized?: (minimized: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 const categoryNames = Object.keys(quickCategories);
@@ -50,12 +54,23 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   isToxicityMode = false,
   onUploadActiveChange,
   highlightUploadButton = false,
+  isUploaderOpen,
+  onSetUploaderOpen,
+  isQuickCategoriesMinimized,
+  onSetQuickCategoriesMinimized,
 }) => {
-  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const [isQuickCategoriesMinimized, setIsQuickCategoriesMinimized] = useState<boolean>(() => {
+  const [internalUploaderOpen, setInternalUploaderOpen] = useState(false);
+  const [internalQuickCategoriesMinimized, setInternalQuickCategoriesMinimized] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
   });
+
+  const uploaderOpen = isUploaderOpen ?? internalUploaderOpen;
+  const setUploaderOpen = onSetUploaderOpen ?? setInternalUploaderOpen;
+  const quickCategoriesMinimized =
+    isQuickCategoriesMinimized ?? internalQuickCategoriesMinimized;
+  const setQuickCategoriesMinimized =
+    onSetQuickCategoriesMinimized ?? setInternalQuickCategoriesMinimized;
 
   const trimmedLength = searchQuery.trim().length;
   const activeCategoryDrugs = activeCategory ? quickCategories[activeCategory] ?? [] : [];
@@ -65,7 +80,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
       aria-label="BNF medication search and Quick Categories"
       onDragEnter={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
-          setIsUploaderOpen(true);
+          setUploaderOpen(true);
         }
       }}
       className={`bg-white rounded-2xl shadow-sm border p-3.5 sm:p-5 mb-5 space-y-4 transition-colors ${
@@ -94,6 +109,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             )}
 
             <input
+              id="medspeak-search-input"
               type="search"
               value={searchQuery}
               onFocus={onSearchInteract}
@@ -129,13 +145,13 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             type="button"
             onClick={() => {
               onSearchInteract?.();
-              setIsUploaderOpen((prev) => !prev);
+              setUploaderOpen((prev) => !prev);
             }}
-            aria-expanded={isUploaderOpen}
+            aria-expanded={uploaderOpen}
             className={`inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm font-bold shrink-0 border transition-all cursor-pointer active:scale-[0.98] shadow-xs ${
               highlightUploadButton ? 'animate-flash-upload' : ''
             } ${
-              isUploaderOpen
+              uploaderOpen
                 ? isToxicityMode
                   ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-600/25'
                   : 'bg-ambulance-green text-white border-ambulance-green ring-2 ring-ambulance-green/25'
@@ -195,38 +211,40 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
       </div>
 
       {/* Expandable Drag-and-Drop & Camera/Photo Prescription Uploader */}
-      <PrescriptionUploader
-        isOpen={isUploaderOpen}
-        onToggleOpen={() => setIsUploaderOpen((prev) => !prev)}
-        onSelectMedication={(drugName) => onSelectDrug(drugName)}
-        activeSearchQuery={searchQuery}
-        isToxicityMode={isToxicityMode}
-        onFirstInteract={onSearchInteract}
-        onUploadActiveChange={(isActive) => {
-          const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
-          setIsQuickCategoriesMinimized(isActive || isMobileScreen);
-          if (isActive && activeCategory) {
-            onSelectCategory(null);
-          }
-          onUploadActiveChange?.(isActive);
-        }}
-      />
+      <div id="medspeak-prescription-uploader">
+        <PrescriptionUploader
+          isOpen={uploaderOpen}
+          onToggleOpen={() => setUploaderOpen((prev) => !prev)}
+          onSelectMedication={(drugName) => onSelectDrug(drugName)}
+          activeSearchQuery={searchQuery}
+          isToxicityMode={isToxicityMode}
+          onFirstInteract={onSearchInteract}
+          onUploadActiveChange={(isActive) => {
+            const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
+            setQuickCategoriesMinimized(isActive || isMobileScreen);
+            if (isActive && activeCategory) {
+              onSelectCategory(null);
+            }
+            onUploadActiveChange?.(isActive);
+          }}
+        />
+      </div>
 
       {/* 2. Below Search Bar: Quick Categories (Collapsible Header + Folder Tabs) */}
-      <div className="pt-3 border-t border-slate-100">
+      <div id="medspeak-quick-categories" className="pt-3 border-t border-slate-100">
         <div
-          onClick={() => setIsQuickCategoriesMinimized((prev) => !prev)}
+          onClick={() => setQuickCategoriesMinimized((prev) => !prev)}
           role="button"
           tabIndex={0}
-          aria-expanded={!isQuickCategoriesMinimized}
+          aria-expanded={!quickCategoriesMinimized}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              setIsQuickCategoriesMinimized((prev) => !prev);
+              setQuickCategoriesMinimized((prev) => !prev);
             }
           }}
           className={`flex items-center justify-between gap-2 cursor-pointer select-none rounded-lg px-1 py-0.5 hover:bg-slate-50 transition-colors ${
-            isQuickCategoriesMinimized ? '' : 'mb-2.5'
+            quickCategoriesMinimized ? '' : 'mb-2.5'
           }`}
         >
           <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -237,7 +255,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
               aria-hidden="true"
             />
             <span>Quick Categories</span>
-            {isQuickCategoriesMinimized && (
+            {quickCategoriesMinimized && (
               <span className="text-[11px] font-medium normal-case text-slate-400">
                 (tap to open)
               </span>
@@ -245,7 +263,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           </span>
 
           <div className="flex items-center gap-2">
-            {activeCategory && !isQuickCategoriesMinimized && (
+            {activeCategory && !quickCategoriesMinimized && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -264,8 +282,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                   : 'bg-emerald-50 text-ambulance-green border-emerald-200'
               }`}
             >
-              <span>{isQuickCategoriesMinimized ? 'Open' : 'Minimise'}</span>
-              {isQuickCategoriesMinimized ? (
+              <span>{quickCategoriesMinimized ? 'Open' : 'Minimise'}</span>
+              {quickCategoriesMinimized ? (
                 <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
               ) : (
                 <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -274,7 +292,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           </div>
         </div>
 
-        {!isQuickCategoriesMinimized && (
+        {!quickCategoriesMinimized && (
           <div
             role="tablist"
             aria-label="Quick Categories"
