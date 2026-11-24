@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-white/15 text-emerald-100 border-white/20'
                   }`}
                 >
-                  {isToxicityMode ? 'TOXICITY / OVERDOSE MODE' : 'UK BNF'}
+                  {isToxicityMode ? 'TOXICITY / OVERDOSE MODE' : 'UK Study Tool'}
                 </span>
               )}
             </div>
@@ -71,8 +71,8 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               {isToxicityMode
-                ? 'Pre-Hospital Overdose & Toxbase Study Assessment'
-                : 'Built for UK paramedics, EMTs, and student clinicians to quickly search UK BNF medications, get pre-hospital on-scene context, overdose toxicity and calculator, and holistic prescription breakdowns.'}
+                ? 'Pre-Hospital Overdose & Toxicology Study Reference (Not for Live Clinical Care)'
+                : 'Built for UK paramedics, EMTs, and student clinicians to quickly search UK prescribed medications, get pre-hospital on-scene study context, overdose toxicity and calculator, and holistic prescription breakdowns.'}
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Gemini AI Clinical Pharmacology Status Badge */}
             <div
               className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15"
-              title="Powered by Google Gemini API for UK BNF Clinical Details"
+              title="Powered by Google Gemini API for UK Pharmacology Study Details"
             >
               <Sparkles
                 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${

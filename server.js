@@ -237,6 +237,29 @@ function readRequestBody(req, maxBytes = MAX_PAYLOAD_BYTES) {
   });
 }
 
+function scrubMedListText(rawText) {
+  return rawText
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED]')
+    .replace(/\b\d{3}[\s-]?\d{3}[\s-]?\d{4}\b/g, '[REDACTED]')
+    .replace(/\b\d{1,4}[/.-]\d{1,2}[/.-]\d{2,4}\b/g, '[REDACTED]')
+    .replace(
+      /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b/gi,
+      '[REDACTED]'
+    )
+    .replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s+\d[A-Z]{2}\b/gi, '[REDACTED]')
+    .replace(/\b(?:\+44\s?7\d{3}|\(?07\d{3}\)?|\(?0[12]\d{2,3}\)?)\s?\d{3}\s?\d{3,4}\b/g, '[REDACTED]')
+    .replace(
+      /\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}\b/g,
+      '[REDACTED]'
+    )
+    .replace(
+      /^\s*(?:patient\s*name|name|nhs\s*(?:no|number)|chi|mrn|hospital\s*(?:no|number)|dob|date\s*of\s*birth|address|postcode|tel|telephone|mobile|gp|surgery)\s*:.*$/gim,
+      '[REDACTED]'
+    )
+    .trim()
+    .slice(0, 4000);
+}
+
 /**
  * Handles `/api/health`, `/api/gemini`, `/api/tts`, and `/api/openprescribing/*`.
  * Returns `true` if the request matched an `/api/` route, or `false` to fall through to static files.
@@ -352,7 +375,7 @@ export async function handleApiRequest(req, res) {
           throw new Error('Missing valid `base64Data` or `image/*` `mimeType`.');
         }
         const visionPrompt =
-          "You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
+          "PRIVACY GUARDRAIL: Completely ignore and NEVER transcribe, echo, or infer any visible patient names, dates of birth, NHS numbers, addresses, prescriber names, or pharmacy labels—extract medication names and clinical pharmacology study points ONLY. You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine this image of a prescription, repeat medication list, discharge summary, or medicine packaging. Keep all points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names visible), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are visible, return empty arrays for all keys.";
         contents = [
           {
             parts: [
@@ -368,11 +391,11 @@ export async function handleApiRequest(req, res) {
         ];
       } else if (mode === 'medlist') {
         const rawText = typeof parsedBody.text === 'string' ? parsedBody.text.trim() : '';
-        if (!rawText) {
+        const scrubbedText = scrubMedListText(rawText);
+        if (!scrubbedText) {
           throw new Error('Missing required `text` string for medication list extraction.');
         }
-        const cappedText = rawText.slice(0, 4000);
-        const medListPrompt = `You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine the following pasted text from a prescription table, repeat medication list, discharge summary, or clinical letter. Extract all distinct UK medications mentioned, converting UK brand names (such as Eliquis, Xarelto, MST Continus, Zomorph, Ventolin, Clenil, Epilim, Plavix, Brilique) to their generic UK BNF / rINN name where identifiable (e.g. 'Apixaban', 'Rivaroxaban', 'Morphine Sulfate', 'Salbutamol'). Keep all summary points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names found), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are found, return empty arrays for all keys.\n\nPASTED MEDICATION TEXT:\n${cappedText}`;
+        const medListPrompt = `You are a UK Paramedic (JRCALC), Toxbase, and BNF pharmacology expert. Examine the following pasted text from a prescription table, repeat medication list, discharge summary, or clinical letter. Extract all distinct UK medications mentioned, converting UK brand names (such as Eliquis, Xarelto, MST Continus, Zomorph, Ventolin, Clenil, Epilim, Plavix, Brilique) to their generic UK BNF / rINN name where identifiable (e.g. 'Apixaban', 'Rivaroxaban', 'Morphine Sulfate', 'Salbutamol'). Keep all summary points streamlined, concise, and easy to scan (1 short sentence or phrase per bullet, max 15 words each). Return ONLY a flat JSON object with exactly these 5 keys: 'medications' (array of strings: distinct UK generic/BNF drug names found), 'patientConditions' (array of 2 to 4 brief strings: what medical conditions/PMH the patient likely has based on these meds, naming the relevant drugs in brackets), 'onSceneBullets' (array of 2 to 4 brief strings: key pre-hospital on-scene considerations such as bleeding risk, masked tachycardia, postural hypotension, or hypoglycaemia risk), 'interactionBullets' (array of 2 to 4 brief strings: dangerous drug-drug interactions or synergistic overdose effects between these medications), and 'toxRedFlagBullets' (array of 2 to 4 brief strings: key vital sign or ECG red flags to watch for in a mixed overdose of these drugs). If no medications are found, return empty arrays for all keys.\n\nPASTED MEDICATION TEXT:\n${scrubbedText}`;
         contents = [{ parts: [{ text: medListPrompt }] }];
       } else {
         throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', 'prescription', or 'medlist'.");

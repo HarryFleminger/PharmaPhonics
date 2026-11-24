@@ -24,6 +24,7 @@ import {
 
 const MAX_IMAGE_DIMENSION_PX = 1024;
 const JPEG_COMPRESSION_QUALITY = 0.75;
+const NO_PID_SESSION_KEY = 'medspeak_no_pid_confirmed_v1';
 
 type UploaderTab = 'photo' | 'paste';
 
@@ -109,6 +110,15 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<UploaderTab>('photo');
   const [pastedText, setPastedText] = useState('');
+  const [hasConfirmedNoPid, setHasConfirmedNoPid] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || !window.sessionStorage) return false;
+    try {
+      return window.sessionStorage.getItem(NO_PID_SESSION_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [showPidWarning, setShowPidWarning] = useState(false);
 
   const [isDragging, setIsDragging] = useState(false);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -124,8 +134,33 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
+  const requireNoPidConfirmation = useCallback((): boolean => {
+    if (hasConfirmedNoPid) return true;
+    setShowPidWarning(true);
+    return false;
+  }, [hasConfirmedNoPid]);
+
+  const handleToggleNoPidConfirmation = (checked: boolean) => {
+    setHasConfirmedNoPid(checked);
+    if (checked) {
+      setShowPidWarning(false);
+    }
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        if (checked) {
+          window.sessionStorage.setItem(NO_PID_SESSION_KEY, 'true');
+        } else {
+          window.sessionStorage.removeItem(NO_PID_SESSION_KEY);
+        }
+      } catch {
+        // Ignore sessionStorage access errors
+      }
+    }
+  };
+
   const processImageFile = useCallback(
     (file: File) => {
+      if (!requireNoPidConfirmation()) return;
       onFirstInteract?.();
 
       if (!file.type.startsWith('image/')) {
@@ -182,10 +217,11 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         }
       })();
     },
-    [onFirstInteract, onSelectMedication, onUploadActiveChange]
+    [requireNoPidConfirmation, onFirstInteract, onSelectMedication, onUploadActiveChange]
   );
 
   const handleExtractPastedText = useCallback(() => {
+    if (!requireNoPidConfirmation()) return;
     const trimmed = pastedText.trim();
     if (!trimmed) {
       setScanError('Please paste a medication list or clinical summary first.');
@@ -223,7 +259,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         );
       }
     })();
-  }, [pastedText, onFirstInteract, onSelectMedication, onUploadActiveChange]);
+  }, [pastedText, requireNoPidConfirmation, onFirstInteract, onSelectMedication, onUploadActiveChange]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -371,6 +407,52 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         </button>
       </div>
 
+      {/* Mandatory Session No-PID Privacy Guardrail */}
+      <div
+        className={`mb-3 rounded-xl border p-3 transition-colors ${
+          showPidWarning && !hasConfirmedNoPid
+            ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/40'
+            : hasConfirmedNoPid
+            ? 'bg-white/90 border-emerald-200'
+            : 'bg-white/95 border-slate-200'
+        }`}
+      >
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={hasConfirmedNoPid}
+            onChange={(e) => handleToggleNoPidConfirmation(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-ambulance-green focus:ring-ambulance-green shrink-0 cursor-pointer"
+          />
+          <span className="text-xs text-slate-700 leading-snug">
+            <strong className="text-slate-900 inline-flex items-center gap-1 mr-1">
+              <ShieldCheck
+                className={`w-3.5 h-3.5 inline shrink-0 ${
+                  isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+                }`}
+                aria-hidden="true"
+              />
+              No Patient Identifiers:
+            </strong>
+            I confirm this is an anonymised/simulated list or cropped medication-only strip with{' '}
+            <strong>NO patient name, DOB, address, or NHS number</strong> visible (UK GDPR / HCPC
+            compliance).
+          </span>
+        </label>
+        {showPidWarning && !hasConfirmedNoPid && (
+          <p
+            role="alert"
+            className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-800"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
+            <span>
+              Please tick the privacy confirmation box above before uploading or extracting
+              medications.
+            </span>
+          </p>
+        )}
+      </div>
+
       {/* TAB 1: UPLOAD PHOTO (Drag-and-Drop / Camera & Photo Picker) */}
       {activeTab === 'photo' ? (
         !imagePreviewUrl ? (
@@ -378,12 +460,16 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              if (!requireNoPidConfirmation()) return;
+              fileInputRef.current?.click();
+            }}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
+                if (!requireNoPidConfirmation()) return;
                 fileInputRef.current?.click();
               }
             }}
@@ -408,10 +494,11 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             </div>
 
             <p className="text-xs sm:text-sm font-bold text-slate-800">
-              Drag &amp; drop a prescription or medication list photo here
+              Drag &amp; drop a cropped medication-only photo or blister pack here
             </p>
             <p className="text-xs text-slate-500 mt-0.5">
-              Supports repeat prescriptions, discharge letters, blister packs, or medicine boxes
+              Supports cropped repeat med strips, blister packs, medicine boxes, or anonymised study
+              lists (no patient names or NHS numbers)
             </p>
 
             <div
@@ -421,7 +508,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               {/* Mobile Camera Button */}
               <button
                 type="button"
-                onClick={() => cameraInputRef.current?.click()}
+                onClick={() => {
+                  if (!requireNoPidConfirmation()) return;
+                  cameraInputRef.current?.click();
+                }}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-xs transition-all cursor-pointer active:scale-[0.98] ${
                   isToxicityMode
                     ? 'bg-rose-600 hover:bg-rose-700'
@@ -435,7 +525,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               {/* Photo Library / File Picker Button */}
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (!requireNoPidConfirmation()) return;
+                  fileInputRef.current?.click();
+                }}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white border shadow-2xs transition-all cursor-pointer active:scale-[0.98] ${
                   isToxicityMode
                     ? 'border-rose-300 text-rose-700 hover:bg-rose-50'
@@ -484,7 +577,10 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (!requireNoPidConfirmation()) return;
+                  fileInputRef.current?.click();
+                }}
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
               >
                 <Upload className="w-3.5 h-3.5" aria-hidden="true" />
@@ -510,7 +606,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             onChange={(e) => setPastedText(e.target.value)}
             rows={3}
             maxLength={4000}
-            placeholder="Paste messy text from a repeat prescription table, discharge summary, GP record, or clinical letter (e.g. 'Ramipril 5mg OD, Eliquis 5mg BD, Bisoprolol 2.5mg')..."
+            placeholder="Paste an anonymised or simulated medication list (e.g. 'Ramipril 5mg OD, Eliquis 5mg BD, Bisoprolol 2.5mg') — do not include patient names, DOBs, or NHS numbers..."
             aria-label="Paste medication list text"
             className={`w-full p-3 text-base bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all resize-y ${
               isToxicityMode
@@ -777,7 +873,8 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
                 )}
 
                 <p className="mt-3 pt-2 border-t border-slate-100 text-xs text-slate-400 text-center">
-                  This content was generated by Gemini Ai which can make mistakes
+                  AI-generated study summary (Gemini) — may contain mistakes. For off-duty
+                  educational use only.
                 </p>
               </div>
             )}

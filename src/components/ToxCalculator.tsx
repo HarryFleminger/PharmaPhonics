@@ -164,7 +164,7 @@ export const ToxCalculator: React.FC<ToxCalculatorProps> = ({
           </div>
           <div className="min-w-0">
             <h2 className="text-sm sm:text-base font-bold tracking-tight flex flex-wrap items-center gap-2">
-              <span>Overdose / Tox Dose Calculator</span>
+              <span>Overdose / Tox Study Calculator</span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-800/80 text-rose-100 border border-rose-400/30">
                 <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
                 <span>Study Tool Only</span>
@@ -373,6 +373,11 @@ export const ToxCalculator: React.FC<ToxCalculatorProps> = ({
             </div>
             </div>
           </div>
+
+          <p className="text-xs text-slate-500 text-center pt-1">
+            Simulation &amp; revision practice only — not a medical device. Always consult TOXBASE
+            &amp; JRCALC+ in clinical practice.
+          </p>
         </div>
       )}
     </section>

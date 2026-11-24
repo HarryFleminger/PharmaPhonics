@@ -77,7 +77,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 
   return (
     <section
-      aria-label="BNF medication search and Quick Categories"
+      aria-label="UK medication search and Quick Categories"
       onDragEnter={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           setUploaderOpen(true);
@@ -117,10 +117,10 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={
                 isToxicityMode
-                  ? 'Search medication for overdose assessment (type 3+ chars, or pick a category)...'
-                  : 'Search UK BNF database (type 3+ chars, or pick a category below)...'
+                  ? 'Search medication for overdose study (type 3+ chars, or pick a category)...'
+                  : 'Search UK medications (type 3+ chars, or pick a category below)...'
               }
-              aria-label="Search live UK BNF medications via OpenPrescribing API"
+              aria-label="Search UK prescribed medications"
               className={`w-full pl-11 pr-10 py-3 sm:py-3.5 text-base bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
                 isToxicityMode
                   ? 'border-rose-200 focus:ring-rose-600 focus:border-rose-600'
@@ -159,7 +159,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100/80 hover:border-rose-300'
                 : 'bg-emerald-50 text-ambulance-green border-emerald-200 hover:bg-emerald-100/80 hover:border-emerald-300'
             }`}
-            title="Upload or take a photo of a prescription or repeat medication list"
+            title="Upload a cropped med list photo or paste an anonymised med list"
           >
             <Camera className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>Upload Prescription / Med List</span>
@@ -179,19 +179,20 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                   isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
                 }`}
               >
-                Fetching BNF records for &ldquo;{searchQuery.trim()}&rdquo;…
+                Searching UK medications for &ldquo;{searchQuery.trim()}&rdquo;…
               </span>
             ) : hasActiveQuery ? (
               <span>
-                Found <strong className="text-slate-800 font-semibold">{resultCount}</strong> BNF{' '}
-                {resultCount === 1 ? 'entry' : 'entries'} for{' '}
+                Found <strong className="text-slate-800 font-semibold">{resultCount}</strong> UK
+                prescribing {resultCount === 1 ? 'entry' : 'entries'} for{' '}
                 <strong className="text-slate-800 font-semibold">
                   &ldquo;{searchQuery.trim()}&rdquo;
                 </strong>
               </span>
             ) : (
               <span>
-                Search any UK drug above, upload a prescription photo, or open a Quick Category below
+                Search any UK drug above, upload a cropped med list photo, or open a Quick Category
+                below
               </span>
             )}
           </span>
@@ -447,7 +448,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                     }`}
                   >
                     — select a drug below to open its{' '}
-                    {isToxicityMode ? 'Overdose / Tox' : 'BNF'} flashcard
+                    {isToxicityMode ? 'Overdose / Tox' : 'study'} flashcard
                   </span>
                 </div>
 

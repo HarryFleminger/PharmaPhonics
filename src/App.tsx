@@ -37,6 +37,7 @@ import {
 import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
+import { LegalModal, LegalModalTab } from './components/LegalModal';
 
 const PRESCRIPTION_FEATURE_STORAGE_KEY = 'medspeak_seen_prescription_feature_v1';
 
@@ -90,6 +91,7 @@ export function App() {
 
   const [hasSeenVoiceNotice, setHasSeenVoiceNotice] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalModalTab | null>(null);
   const [pendingSpeech, setPendingSpeech] = useState<{ id: string; name: string } | null>(
     null
   );
@@ -486,7 +488,7 @@ export function App() {
           setSearchError(
             err instanceof Error
               ? err.message
-              : 'Unable to fetch UK BNF medications from OpenPrescribing.'
+              : 'Unable to fetch UK medications from OpenPrescribing.'
           );
           setResults([]);
           setIsSearching(false);
@@ -502,7 +504,15 @@ export function App() {
   const toxCalculatedMetrics = computeToxDoseMetrics(toxCalculatorValues);
 
   if (isGuideOpen) {
-    return <WelcomePage onClose={() => setIsGuideOpen(false)} />;
+    return (
+      <WelcomePage
+        onClose={() => setIsGuideOpen(false)}
+        onOpenLegal={(tab) => {
+          setIsGuideOpen(false);
+          setLegalModalTab(tab);
+        }}
+      />
+    );
   }
 
   return (
@@ -515,21 +525,28 @@ export function App() {
       <NoticeModal
         isOpen={isNewFeatureModalOpen}
         variant="new-feature"
-        title="Scan Prescriptions & Repeat Med Lists"
-        message="You can now upload a photo or screenshot of a prescription or repeat medication list to scan multiple drugs at once — complete with a holistic summary of likely patient conditions, on-scene considerations, and drug interaction risks."
+        title="Scan Cropped Med Lists & Anonymised Lists"
+        message="You can now upload a cropped medication-only photo or paste an anonymised list to review multiple drugs at once — complete with a holistic study summary of likely conditions, on-scene considerations, and interaction risks. Never include patient names, DOBs, or NHS numbers."
         confirmLabel="Got It"
         onConfirm={handleDismissNewFeatureModal}
         onClose={handleDismissNewFeatureModal}
       />
 
-      {/* First-Time JRCALC Clinical Disclaimer Modal */}
+      {/* First-Time Educational / MHRA Study Disclaimer Modal */}
       <NoticeModal
         isOpen={isJrcalcModalOpen}
         variant="clinical-warning"
-        title="JRCALC Clinical Disclaimer"
-        message="Practitioners must always check JRCALC+ (or local Trust clinical guidelines) for use on the road. Do not make any clinical decisions based on the information on this app — it is for learning purposes only."
+        title="Educational Study Disclaimer"
+        message="MedSpeak is strictly an off-duty educational and CPD study tool (not a medical device). Practitioners must always check JRCALC+, TOXBASE, and local Trust clinical guidelines on the road — never make clinical decisions using this app."
         confirmLabel="I Understand"
         onConfirm={() => setIsJrcalcModalOpen(false)}
+      />
+
+      {/* Study Guardrails, Privacy & Licensing Modal */}
+      <LegalModal
+        isOpen={legalModalTab !== null}
+        initialTab={legalModalTab ?? 'terms'}
+        onClose={() => setLegalModalTab(null)}
       />
 
       {/* First-Time Voice Pronunciation Notice Modal */}
@@ -584,7 +601,7 @@ export function App() {
             <div className="flex items-start gap-2.5">
               <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
               <div>
-                <p className="font-semibold">OpenPrescribing BNF Search Error</p>
+                <p className="font-semibold">UK Medication Search Error</p>
                 <p className="mt-0.5 text-amber-900">{searchError}</p>
               </div>
             </div>
@@ -640,7 +657,7 @@ export function App() {
         {/* Loading Skeleton State while OpenPrescribing API Fetches */}
         {isSearching ? (
           <section
-            aria-label="Loading BNF search results"
+            aria-label="Loading UK medication search results"
             aria-busy="true"
             className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5"
           >
@@ -748,8 +765,9 @@ export function App() {
                       <Camera className="w-4 h-4" aria-hidden="true" />
                     </div>
                     <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                      <strong className="text-slate-900">Upload or Paste</strong> — snap a photo or
-                      paste text from a patient’s medication list for an instant holistic overview.
+                      <strong className="text-slate-900">Upload or Paste</strong> — snap a cropped
+                      med-only photo or paste an anonymised medication list for an instant holistic
+                      study overview.
                     </span>
                   </div>
                   <ChevronRight
@@ -852,7 +870,7 @@ export function App() {
               <SearchX className="w-6 h-6" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-bold text-slate-900">
-              No local BNF entry found for &ldquo;{debouncedQuery.trim()}&rdquo;
+              No local UK prescribing entry found for &ldquo;{debouncedQuery.trim()}&rdquo;
             </h2>
             <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
               If this is a new medication or a brand name, you can generate its{' '}
@@ -885,7 +903,7 @@ export function App() {
         ) : (
           /* Responsive Flashcard Grid */
           <section
-            aria-label="OpenPrescribing BNF Medication Flashcards"
+            aria-label="UK Medication Study Flashcards"
             className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 items-start"
           >
             {results.map((item) => {
@@ -923,7 +941,7 @@ export function App() {
         )}
       </main>
 
-      <footer className="border-t border-slate-200 bg-white py-4 px-4 sm:px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-4 px-4 sm:px-6 text-center text-xs text-slate-500 space-y-1.5">
         <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
           <span>
             <strong>MedSpeak</strong> — Powered by{' '}
@@ -935,7 +953,7 @@ export function App() {
                 isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
               }`}
             >
-              OpenPrescribing BNF API
+              NHSBSA &amp; OpenPrescribing Data (OGL v3.0)
             </a>
             , Google Gemini AI, &amp; Google Cloud Text-to-Speech (UK English Voice).
           </span>
@@ -949,6 +967,40 @@ export function App() {
           >
             Welcome Guide
           </button>
+          <span aria-hidden="true">·</span>
+          <button
+            type="button"
+            onClick={() => setLegalModalTab('terms')}
+            className={`hover:underline font-semibold cursor-pointer ${
+              isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+            }`}
+          >
+            Terms &amp; MHRA Notice
+          </button>
+          <span aria-hidden="true">·</span>
+          <button
+            type="button"
+            onClick={() => setLegalModalTab('privacy')}
+            className={`hover:underline font-semibold cursor-pointer ${
+              isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+            }`}
+          >
+            Privacy &amp; No-PID
+          </button>
+          <span aria-hidden="true">·</span>
+          <button
+            type="button"
+            onClick={() => setLegalModalTab('licensing')}
+            className={`hover:underline font-semibold cursor-pointer ${
+              isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+            }`}
+          >
+            Licensing &amp; Trademarks
+          </button>
+        </p>
+        <p className="text-[11px] text-slate-400">
+          For off-duty clinical education &amp; CPD study only — not a medical device and not
+          affiliated with BNF®, JRCALC®, TOXBASE®, or the NHS.
         </p>
       </footer>
     </div>

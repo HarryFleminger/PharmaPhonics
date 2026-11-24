@@ -262,6 +262,26 @@ function savePrescriptionScanCacheToLocalStorage(): void {
 hydrateCachesFromLocalStorage();
 
 /**
+ * Clears all locally cached clinical, toxicity, and prescription/medlist scan data
+ * from both in-memory maps and browser `localStorage`.
+ */
+export function clearAllCachedStudyData(): void {
+  clinicalDetailsCache.clear();
+  toxicityDetailsCache.clear();
+  prescriptionScanCache.clear();
+
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  try {
+    window.localStorage.removeItem(CLINICAL_STORAGE_KEY);
+    window.localStorage.removeItem(TOXICITY_STORAGE_KEY);
+    window.localStorage.removeItem(PRESCRIPTION_SCAN_STORAGE_KEY);
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not clear localStorage study caches:', err);
+  }
+}
+
+/**
  * Returns whether the backend server reported `GEMINI_API_KEY` as configured.
  */
 export function hasGeminiApiKey(): boolean {
@@ -654,8 +674,8 @@ const MAX_PASTED_MEDLIST_CHARS = 4000;
 
 /**
  * Client-side privacy scrubber that removes potential patient identifiers (NHS numbers,
- * dates of birth, UK postcodes, phone numbers, email addresses, and patient name headers)
- * locally in the browser before any pasted text is sent to `/api/gemini`.
+ * dates of birth, UK postcodes, phone numbers, email addresses, titled personal names,
+ * and patient header lines) locally in the browser before any pasted text is sent to `/api/gemini`.
  */
 export function scrubMedicationListText(rawText: string): string {
   return (
@@ -664,15 +684,25 @@ export function scrubMedicationListText(rawText: string): string {
       .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED]')
       // 2. 10-digit UK NHS numbers (e.g. "123 456 7890", "123-456-7890", or "1234567890")
       .replace(/\b\d{3}[\s-]?\d{3}[\s-]?\d{4}\b/g, '[REDACTED]')
-      // 3. Calendar dates / DOBs (e.g. "12/04/1958", "12-04-58", "1958-04-12", "12.04.1958")
+      // 3. Calendar numeric dates / DOBs (e.g. "12/04/1958", "12-04-58", "1958-04-12", "12.04.1958")
       .replace(/\b\d{1,4}[/.-]\d{1,2}[/.-]\d{2,4}\b/g, '[REDACTED]')
-      // 4. UK Postcodes (e.g. "SW1A 1AA", "EC1A 1BB", "M1 1AE")
-      .replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s+\d[A-Z]{2}\b/gi, '[REDACTED]')
-      // 5. UK & international phone numbers (e.g. "+44 7...", "07...", "01...", "02...")
-      .replace(/\b(?:\+44\s?7\d{3}|\(?07\d{3}\)?|\(?0[12]\d{2,3}\)?)\s?\d{3}\s?\d{3,4}\b/g, '[REDACTED]')
-      // 6. Explicit patient name / NHS number / DOB / Address header lines
+      // 4. Textual dates / DOBs (e.g. "12 April 1958", "3rd Jan 84")
       .replace(
-        /^\s*(?:patient\s*name|name|nhs\s*(?:no|number)|dob|date\s*of\s*birth|address|hospital\s*(?:no|number))\s*:.*$/gim,
+        /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b/gi,
+        '[REDACTED]'
+      )
+      // 5. UK Postcodes (e.g. "SW1A 1AA", "EC1A 1BB", "M1 1AE")
+      .replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s+\d[A-Z]{2}\b/gi, '[REDACTED]')
+      // 6. UK & international phone numbers (e.g. "+44 7...", "07...", "01...", "02...")
+      .replace(/\b(?:\+44\s?7\d{3}|\(?07\d{3}\)?|\(?0[12]\d{2,3}\)?)\s?\d{3}\s?\d{3,4}\b/g, '[REDACTED]')
+      // 7. Titled personal names (e.g. "Mr John Smith", "Dr A. Jones")
+      .replace(
+        /\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}\b/g,
+        '[REDACTED]'
+      )
+      // 8. Explicit patient name / ID / DOB / contact / GP header lines
+      .replace(
+        /^\s*(?:patient\s*name|name|nhs\s*(?:no|number)|chi|mrn|hospital\s*(?:no|number)|dob|date\s*of\s*birth|address|postcode|tel|telephone|mobile|gp|surgery)\s*:.*$/gim,
         '[REDACTED]'
       )
       .trim()

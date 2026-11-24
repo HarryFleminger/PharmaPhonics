@@ -7,13 +7,16 @@ import {
   Volume2,
   ArrowLeft,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
+import type { LegalModalTab } from './LegalModal';
 
 interface WelcomePageProps {
   onClose: () => void;
+  onOpenLegal?: (tab: LegalModalTab) => void;
 }
 
-export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
+export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose, onOpenLegal }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       {/* Top Hero Banner */}
@@ -27,7 +30,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
               <div className="flex items-center gap-2">
                 <span className="text-xl sm:text-2xl font-bold tracking-tight">MedSpeak</span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-white/15 text-emerald-100 border border-white/20">
-                  UK BNF
+                  UK Study Tool
                 </span>
               </div>
             </div>
@@ -46,9 +49,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
             UK Paramedic Medication Study Tool
           </h1>
           <p className="mt-2.5 text-sm sm:text-base text-emerald-100/95 max-w-3xl leading-relaxed">
-            Built for UK paramedics, EMTs, and student clinicians to quickly search UK BNF
-            medications, get pre-hospital on-scene context, overdose toxicity and calculator, and
-            holistic prescription breakdowns.
+            Built for UK paramedics, EMTs, and student clinicians to quickly search UK prescribed
+            medications, get pre-hospital on-scene study context, overdose toxicity and calculator,
+            and holistic prescription breakdowns.
           </p>
         </div>
       </header>
@@ -83,7 +86,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
 
               <p className="text-sm text-slate-600 leading-relaxed mb-3">
                 Browse <strong>101 pre-loaded UK emergency and community medications</strong> across
-                10 Quick Categories or search the live UK BNF database.
+                10 Quick Categories or search the UK prescribing index.
               </p>
 
               <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
@@ -104,8 +107,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                     aria-hidden="true"
                   />
                   <span>
-                    <strong>Drug Class &amp; Indications:</strong> Instant UK BNF classification and
-                    common clinical indications.
+                    <strong>Drug Class &amp; Indications:</strong> Instant UK pharmacological
+                    classification and common clinical indications.
                   </span>
                 </li>
               </ul>
@@ -131,7 +134,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
 
               <p className="text-sm text-slate-600 leading-relaxed mb-3">
                 Tap <strong>Toxicity Mode</strong> on any medication card to switch the app into a
-                high-alert red overdose assessment view.
+                high-alert red overdose study view for simulation and revision.
               </p>
 
               <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
@@ -141,7 +144,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                     aria-hidden="true"
                   />
                   <span>
-                    <strong>Live Tox Dose Calculator:</strong> Enter pill strength, quantity, and
+                    <strong>Live Tox Study Calculator:</strong> Enter pill strength, quantity, and
                     patient weight to calculate total dose and weight-adjusted dose (auto-switching
                     between <code>mg/kg</code> and <code>mcg/kg</code>).
                   </span>
@@ -153,7 +156,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                   />
                   <span>
                     <strong>Thresholds, Vital Signs &amp; TOXBASE:</strong> Compare against known
-                    toxic thresholds, clinical overdose presentations, and 1-tap TOXBASE links.
+                    toxic thresholds for revision scenarios, clinical overdose presentations, and
+                    1-tap TOXBASE links.
                   </span>
                 </li>
               </ul>
@@ -231,9 +235,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
               </div>
 
               <p className="text-sm text-slate-600 leading-relaxed mb-3">
-                Tap <strong>Upload Prescription / Med List</strong> next to the search bar to snap a
-                photo or upload a screenshot of a repeat prescription, discharge letter, or blister
-                pack.
+                Tap <strong>Upload Prescription / Med List</strong> next to the search bar to upload
+                a <strong>cropped medication-only strip</strong>, blister pack, or medicine box—or
+                paste an <strong>anonymised study list</strong> (never patient names, DOBs, or NHS
+                numbers).
               </p>
 
               <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
@@ -262,6 +267,57 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
             </div>
           </div>
         </div>
+
+        {/* Study, Privacy & Trademark Guardrails Callout */}
+        <section
+          aria-label="Study, Privacy and Trademark Guardrails"
+          className="bg-amber-50/70 rounded-2xl border border-amber-200 p-4 sm:p-5 space-y-2.5"
+        >
+          <div className="flex items-center gap-2 text-amber-950 font-bold text-sm sm:text-base">
+            <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0" aria-hidden="true" />
+            <h2>Study, Privacy &amp; Trademark Guardrails</h2>
+          </div>
+          <ul className="space-y-1 text-xs sm:text-sm text-amber-900">
+            <li>
+              <strong>Educational Only (Not a Medical Device):</strong> Off-duty revision, simulation,
+              and CPD only — always use JRCALC+, TOXBASE, and local Trust guidelines on the road.
+            </li>
+            <li>
+              <strong>Zero Patient Identifiers (UK GDPR / HCPC):</strong> Never upload or paste real
+              patient names, DOBs, addresses, or NHS numbers.
+            </li>
+            <li>
+              <strong>Open Data &amp; Independent Branding:</strong> Prescribing codes use NHSBSA /
+              OpenPrescribing data (OGL v3.0); MedSpeak is independent of BNF®, JRCALC®, TOXBASE®,
+              and the NHS.
+            </li>
+          </ul>
+          {onOpenLegal && (
+            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => onOpenLegal('terms')}
+                className="text-ambulance-green hover:underline cursor-pointer"
+              >
+                Terms &amp; MHRA Notice
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenLegal('privacy')}
+                className="text-ambulance-green hover:underline cursor-pointer"
+              >
+                Privacy &amp; No-PID Policy
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenLegal('licensing')}
+                className="text-ambulance-green hover:underline cursor-pointer"
+              >
+                Data &amp; Trademarks
+              </button>
+            </div>
+          )}
+        </section>
 
         {/* Bottom Return Button */}
         <div className="pt-2 flex justify-center">
