@@ -3,8 +3,13 @@ import {
   GeminiToxicityDetails,
   PrescriptionScanResult,
 } from '../types/medication';
+import { ClinicalAssessmentItem } from '../types/assessment';
 import { findPregeneratedClinicalDetails } from '../data/pregeneratedClinicalDetails';
 import { findPregeneratedToxicityDetails } from '../data/pregeneratedToxicityDetails';
+import {
+  ASSESSMENT_CATEGORIES,
+  PREGENERATED_ASSESSMENTS,
+} from '../data/pregeneratedAssessments';
 import { enforceRateLimit } from './rateLimitService';
 import { setServerTtsConfigured } from './googleTtsService';
 
@@ -27,6 +32,7 @@ const MAX_DRUG_NAME_LENGTH = 120;
 const CLINICAL_STORAGE_KEY = 'medspeak_clinical_cache_v1';
 const TOXICITY_STORAGE_KEY = 'medspeak_toxicity_cache_v1';
 const PRESCRIPTION_SCAN_STORAGE_KEY = 'medspeak_prescription_scan_cache_v1';
+const ASSESSMENT_STORAGE_KEY = 'medspeak_assessment_cache_v1';
 const MAX_PERSISTED_PRESCRIPTION_SCANS = 25;
 
 interface GeminiGenerateContentResponse {
@@ -49,11 +55,13 @@ interface HealthCheckResponse {
 const clinicalDetailsCache = new Map<string, GeminiClinicalDetails>();
 const toxicityDetailsCache = new Map<string, GeminiToxicityDetails>();
 const prescriptionScanCache = new Map<string, PrescriptionScanResult>();
+const assessmentCache = new Map<string, ClinicalAssessmentItem>();
 
 // In-flight request deduplicators so concurrent requests for the same drug/image share one Promise
 const inFlightClinicalRequests = new Map<string, Promise<GeminiClinicalDetails>>();
 const inFlightToxicityRequests = new Map<string, Promise<GeminiToxicityDetails>>();
 const inFlightVisionRequests = new Map<string, Promise<PrescriptionScanResult>>();
+const inFlightAssessmentRequests = new Map<string, Promise<ClinicalAssessmentItem>>();
 
 let serverGeminiConfigured = true;
 
@@ -126,6 +134,29 @@ function isValidPrescriptionScanResult(value: unknown): value is PrescriptionSca
     isStringArray(record.onSceneBullets) &&
     isStringArray(record.interactionBullets) &&
     isStringArray(record.toxRedFlagBullets)
+  );
+}
+
+function isValidAssessmentItem(value: unknown): value is ClinicalAssessmentItem {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  const isNonEmptyStringArray = (arr: unknown): arr is string[] =>
+    Array.isArray(arr) &&
+    arr.length > 0 &&
+    arr.every((item) => typeof item === 'string' && item.trim() !== '');
+
+  return (
+    typeof record.id === 'string' &&
+    record.id.trim() !== '' &&
+    typeof record.title === 'string' &&
+    record.title.trim() !== '' &&
+    typeof record.category === 'string' &&
+    record.category.trim() !== '' &&
+    Array.isArray(record.aliases) &&
+    record.aliases.every((item) => typeof item === 'string') &&
+    isNonEmptyStringArray(record.keyQuestions) &&
+    isNonEmptyStringArray(record.keyAssessments) &&
+    isNonEmptyStringArray(record.redFlags)
   );
 }
 
@@ -203,6 +234,22 @@ function hydrateCachesFromLocalStorage(): void {
   } catch (err) {
     console.warn('[GeminiClinicalService] Could not read prescription scan cache:', err);
   }
+
+  try {
+    const rawAssessments = window.localStorage.getItem(ASSESSMENT_STORAGE_KEY);
+    if (rawAssessments) {
+      const parsed: unknown = JSON.parse(rawAssessments);
+      if (parsed && typeof parsed === 'object') {
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+          if (isValidAssessmentItem(value)) {
+            assessmentCache.set(key, value);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not read assessment cache:', err);
+  }
 }
 
 /**
@@ -255,6 +302,23 @@ function savePrescriptionScanCacheToLocalStorage(): void {
     );
   } catch (err) {
     console.warn('[GeminiClinicalService] Could not write prescription scan cache:', err);
+  }
+}
+
+/**
+ * Persists the current assessmentCache map to localStorage.
+ */
+function saveAssessmentCacheToLocalStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  try {
+    const serialized: Record<string, ClinicalAssessmentItem> = {};
+    assessmentCache.forEach((value, key) => {
+      serialized[key] = value;
+    });
+    window.localStorage.setItem(ASSESSMENT_STORAGE_KEY, JSON.stringify(serialized));
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not write assessment cache:', err);
   }
 }
 
@@ -402,6 +466,10 @@ type GeminiProxyPayload =
   | {
       mode: 'medlist';
       text: string;
+    }
+  | {
+      mode: 'assessment';
+      condition: string;
     };
 
 /**
@@ -763,5 +831,154 @@ export async function extractMedicationsFromPastedText(
     return await requestPromise;
   } finally {
     inFlightVisionRequests.delete(fingerprint);
+  }
+}
+
+function normalizeAssessmentCategory(rawCategory: string): string {
+  const trimmed = rawCategory.trim().toLowerCase();
+  const matched = ASSESSMENT_CATEGORIES.find((cat) => cat.toLowerCase() === trimmed);
+  return matched ?? 'Medical, Endocrine & Sepsis';
+}
+
+function parseAndValidateAssessmentJson(
+  rawText: string,
+  queriedCondition: string
+): ClinicalAssessmentItem {
+  const cleanedText = rawText
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+
+  const parsed: unknown = JSON.parse(cleanedText);
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid JSON structure returned by Gemini for assessment.');
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const toCleanStringArray = (val: unknown): string[] =>
+    Array.isArray(val)
+      ? val
+          .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+          .map((item) => item.trim())
+      : [];
+
+  const title = typeof record.title === 'string' ? record.title.trim() : '';
+  const rawCategory = typeof record.category === 'string' ? record.category.trim() : '';
+  const keyQuestions = toCleanStringArray(record.keyQuestions);
+  const keyAssessments = toCleanStringArray(record.keyAssessments);
+  const redFlags = toCleanStringArray(record.redFlags);
+
+  if (
+    !title ||
+    keyQuestions.length === 0 ||
+    keyAssessments.length === 0 ||
+    redFlags.length === 0
+  ) {
+    throw new Error('Gemini assessment response missing required checklist fields.');
+  }
+
+  const slug = queriedCondition
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  const normalizedQuery = queriedCondition.trim().toLowerCase();
+
+  return {
+    id: `ai-${slug || 'condition'}`,
+    title,
+    category: normalizeAssessmentCategory(rawCategory),
+    aliases: normalizedQuery ? [normalizedQuery] : [],
+    keyQuestions,
+    keyAssessments,
+    redFlags,
+  };
+}
+
+/**
+ * Returns all unique AI-generated assessment checklists cached in `localStorage`.
+ */
+export function getAllCachedAiAssessments(): ClinicalAssessmentItem[] {
+  const uniqueById = new Map<string, ClinicalAssessmentItem>();
+  assessmentCache.forEach((item) => {
+    if (!uniqueById.has(item.id)) {
+      uniqueById.set(item.id, item);
+    }
+  });
+  return Array.from(uniqueById.values());
+}
+
+/**
+ * Generates or retrieves a UK Paramedic pocketbook assessment checklist for any custom
+ * condition or presentation (`POST /api/gemini` with `mode: 'assessment'`).
+ * - Returns matching built-in pregenerated checklist or `localStorage` entry with 0 tokens.
+ * - Deduplicates concurrent in-flight requests and enforces `gemini_text` rate limit.
+ */
+export async function fetchConditionAssessment(
+  conditionQuery: string,
+  signal?: AbortSignal
+): Promise<ClinicalAssessmentItem> {
+  const trimmedCondition = conditionQuery.trim().slice(0, MAX_DRUG_NAME_LENGTH);
+  const normalizedKey = trimmedCondition.toLowerCase();
+  if (!normalizedKey) {
+    throw new Error('Please enter a condition or call-out presentation.');
+  }
+
+  const pregeneratedMatch = PREGENERATED_ASSESSMENTS.find(
+    (item) => item.title.toLowerCase() === normalizedKey
+  );
+  if (pregeneratedMatch) {
+    return pregeneratedMatch;
+  }
+
+  const directCached = assessmentCache.get(normalizedKey);
+  if (directCached) {
+    return directCached;
+  }
+
+  for (const cachedItem of assessmentCache.values()) {
+    if (cachedItem.title.toLowerCase() === normalizedKey) {
+      return cachedItem;
+    }
+  }
+
+  const existingInFlight = inFlightAssessmentRequests.get(normalizedKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  enforceRateLimit('gemini_text');
+
+  const requestPromise = (async () => {
+    try {
+      const rawText = await callServerGeminiProxy(
+        {
+          mode: 'assessment',
+          condition: trimmedCondition,
+        },
+        signal
+      );
+      const item = parseAndValidateAssessmentJson(rawText, trimmedCondition);
+
+      assessmentCache.set(normalizedKey, item);
+      saveAssessmentCacheToLocalStorage();
+
+      return item;
+    } catch (error) {
+      console.error(
+        `[GeminiClinicalService] Failed to fetch assessment for "${conditionQuery}":`,
+        error
+      );
+      throw error;
+    }
+  })();
+
+  inFlightAssessmentRequests.set(normalizedKey, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightAssessmentRequests.delete(normalizedKey);
   }
 }

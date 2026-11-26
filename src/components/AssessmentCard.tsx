@@ -3,6 +3,7 @@ import {
   HelpCircle,
   Stethoscope,
   AlertTriangle,
+  Sparkles,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -56,6 +57,12 @@ export const AssessmentCard: React.FC<AssessmentCardProps> = ({
           <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
             {assessment.category}
           </span>
+          {assessment.id.startsWith('ai-') && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-nhs-blue border border-sky-200 shrink-0">
+              <Sparkles className="w-3 h-3" aria-hidden="true" />
+              <span>AI</span>
+            </span>
+          )}
         </div>
 
         <button

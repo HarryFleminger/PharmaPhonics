@@ -10,11 +10,12 @@ const MAX_DRUG_NAME_LENGTH = 120;
 const MAX_MEDLIST_TEXT_LENGTH = 4000;
 
 interface LocalGeminiPayload {
-  mode?: 'clinical' | 'toxicity' | 'prescription' | 'medlist';
+  mode?: 'clinical' | 'toxicity' | 'prescription' | 'medlist' | 'assessment';
   drugName?: string;
   base64Data?: string;
   mimeType?: string;
   text?: string;
+  condition?: string;
 }
 
 function buildLockedContents(body: LocalGeminiPayload): unknown[] {
@@ -72,7 +73,23 @@ function buildLockedContents(body: LocalGeminiPayload): unknown[] {
     return [{ parts: [{ text: medListPrompt }] }];
   }
 
-  throw new Error("Invalid `mode`. Expected 'clinical', 'toxicity', 'prescription', or 'medlist'.");
+  if (mode === 'assessment') {
+    const rawCondition = typeof body.condition === 'string' ? body.condition.trim() : '';
+    if (!rawCondition) {
+      throw new Error('Missing required `condition` string.');
+    }
+    if (rawCondition.length > MAX_DRUG_NAME_LENGTH) {
+      throw new Error(`condition exceeds maximum length of ${MAX_DRUG_NAME_LENGTH} characters.`);
+    }
+    const sanitizedCondition = rawCondition.replace(/[\r\n"'`\\]/g, ' ').trim();
+    const assessmentPrompt = `You are a UK Paramedic (JRCALC / NICE) pre-hospital clinical assessment expert. Create a rapid-reference pocketbook assessment checklist for a patient presenting with '${sanitizedCondition}'. Keep every bullet ultra-concise, telegraphic, and straight to the point (no prose explanations, no filler). For 'keyQuestions' and 'keyAssessments', start each string with a short 1-3 word label followed by a colon (max 24 chars before ':'), e.g. 'Onset: Sudden or gradual? What were they doing?' or 'Obs: RR, SpO2, HR, BP, Temp, BM, GCS'. Return ONLY a flat JSON object with exactly these 5 keys: 'title' (string: clean UK clinical title for the condition/presentation), 'category' (string: choose the closest fit from 'Cardiovascular', 'Respiratory', 'Neurological', 'Abdominal, GI & Renal', 'Medical, Endocrine & Sepsis', 'Trauma & MSK', or 'Maternity, Paeds & Mental Health'), 'keyQuestions' (array of 5 to 7 concise SOCRATES/SOCATE/ROS history questions in 'Label: question?' format), 'keyAssessments' (array of 4 to 6 concise bedside primary/secondary survey checks in 'Label: check' format), and 'redFlags' (array of 4 to 5 blunt time-critical red flag signs/symptoms). No markdown, no extra text.`;
+
+    return [{ parts: [{ text: assessmentPrompt }] }];
+  }
+
+  throw new Error(
+    "Invalid `mode`. Expected 'clinical', 'toxicity', 'prescription', 'medlist', or 'assessment'."
+  );
 }
 
 /**

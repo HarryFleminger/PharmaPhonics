@@ -9,11 +9,18 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  Sparkles,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   ASSESSMENT_CATEGORIES,
   PREGENERATED_ASSESSMENTS,
 } from '../data/pregeneratedAssessments';
+import {
+  fetchConditionAssessment,
+  getAllCachedAiAssessments,
+} from '../services/geminiClinicalService';
 import { ClinicalAssessmentItem } from '../types/assessment';
 import { AssessmentCard } from './AssessmentCard';
 
@@ -40,14 +47,17 @@ function normalizeSearchText(text: string): string {
     .trim();
 }
 
-function searchPregeneratedAssessments(rawQuery: string): ClinicalAssessmentItem[] {
+function searchAssessments(
+  rawQuery: string,
+  items: ClinicalAssessmentItem[]
+): ClinicalAssessmentItem[] {
   const qRaw = rawQuery.trim().toLowerCase();
   const qNorm = normalizeSearchText(rawQuery);
   if (!qRaw) return [];
 
   const scored: Array<{ item: ClinicalAssessmentItem; score: number }> = [];
 
-  for (const item of PREGENERATED_ASSESSMENTS) {
+  for (const item of items) {
     const titleLower = item.title.toLowerCase();
     const titleNorm = normalizeSearchText(item.title);
     const categoryNorm = normalizeSearchText(item.category);
@@ -112,20 +122,38 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
     return window.innerWidth < 768;
   });
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [aiAssessments, setAiAssessments] = useState<ClinicalAssessmentItem[]>(() =>
+    getAllCachedAiAssessments()
+  );
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const allAssessments = useMemo(() => {
+    const mergedMap = new Map<string, ClinicalAssessmentItem>();
+    for (const item of PREGENERATED_ASSESSMENTS) {
+      mergedMap.set(item.id, item);
+    }
+    for (const item of aiAssessments) {
+      if (!mergedMap.has(item.id)) {
+        mergedMap.set(item.id, item);
+      }
+    }
+    return Array.from(mergedMap.values());
+  }, [aiAssessments]);
 
   const assessmentsByCategory = useMemo(() => {
     const map: Record<string, ClinicalAssessmentItem[]> = {};
     for (const category of ASSESSMENT_CATEGORIES) {
       map[category] = [];
     }
-    for (const item of PREGENERATED_ASSESSMENTS) {
+    for (const item of allAssessments) {
       if (!map[item.category]) {
         map[item.category] = [];
       }
       map[item.category].push(item);
     }
     return map;
-  }, []);
+  }, [allAssessments]);
 
   const commonCallOuts = useMemo(() => {
     return COMMON_CALLOUT_IDS.map((id) =>
@@ -135,14 +163,17 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
 
   const activeCategoryItems = activeCategory ? assessmentsByCategory[activeCategory] ?? [] : [];
 
-  const searchResults = useMemo(() => searchPregeneratedAssessments(query), [query]);
+  const searchResults = useMemo(
+    () => searchAssessments(query, allAssessments),
+    [query, allAssessments]
+  );
 
   const selectedAssessment = useMemo(
     () =>
       selectedAssessmentId
-        ? PREGENERATED_ASSESSMENTS.find((item) => item.id === selectedAssessmentId) ?? null
+        ? allAssessments.find((item) => item.id === selectedAssessmentId) ?? null
         : null,
-    [selectedAssessmentId]
+    [selectedAssessmentId, allAssessments]
   );
 
   const handleToggleCard = (assessment: ClinicalAssessmentItem) => {
@@ -181,6 +212,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
 
   const handleSelectAssessmentFromList = (assessment: ClinicalAssessmentItem) => {
     setQuery('');
+    setAiError(null);
     setSelectedAssessmentId(assessment.id);
     setActiveCategory(assessment.category);
     setIsCategoryDrawerMinimized(true);
@@ -193,16 +225,82 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
 
   const handleResetAll = () => {
     setQuery('');
+    setAiError(null);
     setSelectedAssessmentId(null);
     setActiveCategory(null);
     setIsCategoryDrawerMinimized(false);
   };
 
-  const hasSearchQuery = query.trim() !== '';
+  const handleLookupWithAi = async (rawCondition: string) => {
+    const trimmed = rawCondition.trim();
+    if (trimmed.length < 2 || isAiLoading) return;
+
+    onOpenAssessment?.();
+    setIsAiLoading(true);
+    setAiError(null);
+
+    try {
+      const generated = await fetchConditionAssessment(trimmed);
+      setAiAssessments((prev) => {
+        const cached = getAllCachedAiAssessments();
+        const combined = new Map<string, ClinicalAssessmentItem>();
+        for (const item of prev) combined.set(item.id, item);
+        for (const item of cached) combined.set(item.id, item);
+        if (generated.id.startsWith('ai-')) {
+          combined.set(generated.id, generated);
+        }
+        return Array.from(combined.values());
+      });
+      setQuery('');
+      setSelectedAssessmentId(generated.id);
+      setActiveCategory(generated.category);
+      setIsCategoryDrawerMinimized(true);
+      setExpandedIds((prev) => ({
+        ...prev,
+        [generated.id]: true,
+      }));
+    } catch (err) {
+      setAiError(
+        err instanceof Error ? err.message : 'Unable to generate assessment checklist.'
+      );
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const trimmedQuery = query.trim();
+  const hasSearchQuery = trimmedQuery !== '';
   const hasSingleSearchMatch = hasSearchQuery && searchResults.length === 1;
+  const hasExactTitleMatch =
+    hasSearchQuery &&
+    searchResults.some((item) => item.title.toLowerCase() === trimmedQuery.toLowerCase());
 
   return (
     <div className="space-y-4">
+      {/* Gemini Assessment Error Alert */}
+      {aiError && (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 shadow-sm"
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <p className="font-semibold">Gemini AI Lookup Error</p>
+              <p className="mt-0.5 text-amber-900">{aiError}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAiError(null)}
+            aria-label="Dismiss AI lookup error"
+            className="p-1 rounded-lg text-amber-600 hover:bg-amber-100 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       {/* Search Bar & Collapsible Quick Categories Panel */}
       <section
         aria-label="Clinical assessment search and Quick Categories"
@@ -211,10 +309,17 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
         {/* 1. Search Input */}
         <div>
           <div className="relative">
-            <Search
-              className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              aria-hidden="true"
-            />
+            {isAiLoading ? (
+              <Loader2
+                className="w-5 h-5 text-ambulance-green animate-spin absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                aria-hidden="true"
+              />
+            ) : (
+              <Search
+                className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                aria-hidden="true"
+              />
+            )}
             <input
               id="medspeak-assessment-search"
               type="search"
@@ -222,15 +327,30 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
               onChange={(e) => {
                 setQuery(e.target.value);
                 setSelectedAssessmentId(null);
+                if (aiError) setAiError(null);
               }}
-              placeholder="Search condition or 999 call-out (e.g. Chest Pain, SOB, Stroke, Sepsis)..."
+              onKeyDown={(e) => {
+                if (
+                  e.key === 'Enter' &&
+                  trimmedQuery.length >= 2 &&
+                  searchResults.length === 0 &&
+                  !isAiLoading
+                ) {
+                  e.preventDefault();
+                  void handleLookupWithAi(trimmedQuery);
+                }
+              }}
+              placeholder="Search condition or 999 call-out (e.g. Chest Pain, SOB, Pericarditis)..."
               aria-label="Search condition or 999 call-out presentation"
               className="w-full pl-11 pr-10 py-3 rounded-xl border border-slate-300 bg-slate-50/60 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-ambulance-green/30 focus:border-ambulance-green focus:bg-white transition-all"
             />
             {query && (
               <button
                 type="button"
-                onClick={() => setQuery('')}
+                onClick={() => {
+                  setQuery('');
+                  setAiError(null);
+                }}
                 aria-label="Clear assessment search"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/70 absolute right-2.5 top-1/2 -translate-y-1/2 transition-colors cursor-pointer"
               >
@@ -447,7 +567,20 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
       </section>
 
       {/* Main Output Below Search Panel */}
-      {hasSearchQuery ? (
+      {isAiLoading ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-white rounded-2xl border border-emerald-200 p-8 text-center max-w-lg mx-auto my-6 shadow-sm"
+        >
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-ambulance-green flex items-center justify-center mx-auto mb-3 border border-emerald-200">
+            <Loader2 className="w-6 h-6 animate-spin" aria-hidden="true" />
+          </div>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+            Generating pocketbook checklist for &ldquo;{trimmedQuery}&rdquo; with Gemini AI…
+          </h2>
+        </div>
+      ) : hasSearchQuery ? (
         searchResults.length > 0 ? (
           <section aria-label="Matching clinical assessments" className="space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-500 px-1">
@@ -472,6 +605,23 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
                 onToggle={handleToggleCard}
               />
             ))}
+
+            {trimmedQuery.length >= 3 && !hasExactTitleMatch && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                <span className="text-xs sm:text-sm text-slate-700 font-medium">
+                  Want a dedicated checklist specifically for{' '}
+                  <strong className="text-slate-900">&ldquo;{trimmedQuery}&rdquo;</strong>?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleLookupWithAi(trimmedQuery)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-ambulance-green hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+                >
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  <span>Generate with Gemini AI</span>
+                </button>
+              </div>
+            )}
           </section>
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-lg mx-auto my-6 shadow-sm">
@@ -479,19 +629,31 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
               <SearchX className="w-6 h-6" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-bold text-slate-900">
-              No pre-generated checklist found for &ldquo;{query.trim()}&rdquo;
+              No local checklist found for &ldquo;{trimmedQuery}&rdquo;
             </h2>
             <p className="text-sm text-slate-600 mt-1.5">
-              Try a broader term (e.g. chest pain, SOB, stroke, sepsis, trauma) or browse Quick
-              Categories above. Live Gemini AI condition lookup comes next in Step 3.
+              Generate its pocketbook Key Questions, Assessments, and Red Flags checklist directly
+              with Gemini AI, or check your spelling.
             </p>
-            <button
-              type="button"
-              onClick={() => setQuery('')}
-              className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-ambulance-green hover:bg-emerald-800 text-white text-sm font-bold shadow-xs transition-all cursor-pointer"
-            >
-              Reset Search
-            </button>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                type="button"
+                disabled={trimmedQuery.length < 2 || isAiLoading}
+                onClick={() => void handleLookupWithAi(trimmedQuery)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-ambulance-green hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+              >
+                <Sparkles className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Look up &ldquo;{trimmedQuery}&rdquo; with Gemini AI</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="inline-flex items-center px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors cursor-pointer"
+              >
+                Reset Search
+              </button>
+            </div>
           </div>
         )
       ) : selectedAssessment ? (
@@ -539,7 +701,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
               </h2>
             </div>
             <span className="text-[11px] sm:text-xs font-semibold text-slate-400">
-              {PREGENERATED_ASSESSMENTS.length} checklists ready
+              {allAssessments.length} checklists ready
             </span>
           </div>
 
