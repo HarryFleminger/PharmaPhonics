@@ -557,7 +557,13 @@ export function App() {
         onOpenGuide={() => setIsGuideOpen(true)}
       />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 py-4 sm:px-6 sm:py-8">
+      <main
+        className={`flex-1 max-w-6xl w-full mx-auto px-3.5 py-4 sm:px-6 sm:py-8 ${
+          activeSection === 'medications' && searchQuery !== ''
+            ? 'min-h-[calc(100vh+4rem)]'
+            : ''
+        }`}
+      >
         {/* Top-Level Section Switcher: Medications | Assessments */}
         <nav
           aria-label="MedSpeak section switcher"
@@ -647,7 +653,7 @@ export function App() {
         <SearchAndFilter
           searchQuery={searchQuery}
           onSearchChange={(q) => {
-            if (searchQuery === '' && q !== '') {
+            if ((searchQuery === '' || selectedCategoryDrug !== null) && q !== '') {
               setSelectedCardKeys({});
             }
             setSearchQuery(q);

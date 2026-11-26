@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Search,
   X,
@@ -75,21 +75,46 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   const trimmedLength = searchQuery.trim().length;
   const activeCategoryDrugs = activeCategory ? quickCategories[activeCategory] ?? [] : [];
   const searchSectionRef = useRef<HTMLElement | null>(null);
+  const pendingScrollRef = useRef(false);
+  const lastScrollRef = useRef<{ target: number; time: number }>({ target: -1, time: 0 });
 
   const scrollSearchBelowHeader = () => {
     const sectionEl = searchSectionRef.current;
-    if (!sectionEl) return;
+    if (!sectionEl || typeof window === 'undefined') return;
 
     const headerEl = document.querySelector('header');
     const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
-    const targetTop =
-      window.scrollY + sectionEl.getBoundingClientRect().top - headerHeight - 8;
+    const desiredViewportTop = headerHeight + 8;
+    const currentViewportTop = sectionEl.getBoundingClientRect().top;
 
+    if (Math.abs(currentViewportTop - desiredViewportTop) <= 4) {
+      return;
+    }
+
+    const targetTop = Math.max(0, window.scrollY + currentViewportTop - desiredViewportTop);
+    const now = Date.now();
+    if (
+      Math.abs(targetTop - lastScrollRef.current.target) <= 4 &&
+      now - lastScrollRef.current.time < 400
+    ) {
+      return;
+    }
+
+    lastScrollRef.current = { target: targetTop, time: now };
     window.scrollTo({
-      top: Math.max(0, targetTop),
+      top: targetTop,
       behavior: 'smooth',
     });
   };
+
+  useEffect(() => {
+    if (!pendingScrollRef.current) return;
+    pendingScrollRef.current = false;
+    const frameId = requestAnimationFrame(() => {
+      scrollSearchBelowHeader();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [searchQuery, activeCategory, quickCategoriesMinimized, uploaderOpen]);
 
   return (
     <section
@@ -134,22 +159,10 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
               onChange={(e) => {
                 const nextQuery = e.target.value;
                 if (nextQuery !== '') {
-                  const shouldSnapToTop =
-                    searchQuery === '' ||
-                    activeCategory !== null ||
-                    selectedCategoryDrug !== null ||
-                    !quickCategoriesMinimized ||
-                    uploaderOpen;
-
                   onSelectCategory(null);
                   setUploaderOpen(false);
                   setQuickCategoriesMinimized(true);
-
-                  if (shouldSnapToTop) {
-                    requestAnimationFrame(() => {
-                      scrollSearchBelowHeader();
-                    });
-                  }
+                  pendingScrollRef.current = true;
                 }
                 onSearchChange(nextQuery);
               }}

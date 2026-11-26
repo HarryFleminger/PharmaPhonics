@@ -131,19 +131,45 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const searchSectionRef = useRef<HTMLElement | null>(null);
+  const pendingScrollRef = useRef(false);
+  const lastScrollRef = useRef<{ target: number; time: number }>({ target: -1, time: 0 });
 
   const scrollSearchBelowHeader = () => {
     const sectionEl = searchSectionRef.current;
     if (!sectionEl || typeof window === 'undefined') return;
     const headerEl = document.querySelector('header');
     const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
-    const targetTop =
-      window.scrollY + sectionEl.getBoundingClientRect().top - headerHeight - 8;
+    const desiredViewportTop = headerHeight + 8;
+    const currentViewportTop = sectionEl.getBoundingClientRect().top;
+
+    if (Math.abs(currentViewportTop - desiredViewportTop) <= 4) {
+      return;
+    }
+
+    const targetTop = Math.max(0, window.scrollY + currentViewportTop - desiredViewportTop);
+    const now = Date.now();
+    if (
+      Math.abs(targetTop - lastScrollRef.current.target) <= 4 &&
+      now - lastScrollRef.current.time < 400
+    ) {
+      return;
+    }
+
+    lastScrollRef.current = { target: targetTop, time: now };
     window.scrollTo({
-      top: Math.max(0, targetTop),
+      top: targetTop,
       behavior: 'smooth',
     });
   };
+
+  useEffect(() => {
+    if (!pendingScrollRef.current) return;
+    pendingScrollRef.current = false;
+    const frameId = requestAnimationFrame(() => {
+      scrollSearchBelowHeader();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [query, activeCategory, quickCategoriesMinimized]);
 
   const allAssessments = useMemo(() => {
     const mergedMap = new Map<string, ClinicalAssessmentItem>();
@@ -304,7 +330,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   }, [hasSingleSearchMatch, onOpenAssessment]);
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${query !== '' ? 'min-h-[100vh]' : ''}`}>
       {/* Gemini Assessment Error Alert */}
       {aiError && (
         <div
@@ -356,23 +382,14 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
               onChange={(e) => {
                 const nextQuery = e.target.value;
                 if (nextQuery !== '') {
-                  const shouldSnapToTop =
-                    query === '' ||
-                    activeCategory !== null ||
-                    selectedAssessmentId !== null ||
-                    !quickCategoriesMinimized;
                   setActiveCategory(null);
                   setIsCategoryDrawerMinimized(false);
                   setSelectedAssessmentId(null);
-                  if (query === '') {
+                  if (query === '' || selectedAssessmentId !== null) {
                     setExpandedIds({});
                   }
                   setQuickCategoriesMinimized(true);
-                  if (shouldSnapToTop) {
-                    requestAnimationFrame(() => {
-                      scrollSearchBelowHeader();
-                    });
-                  }
+                  pendingScrollRef.current = true;
                 } else {
                   setSelectedAssessmentId(null);
                 }
