@@ -143,7 +143,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
     >
       <div className="p-5 sm:p-6">
         {/* Top Row: Optional Entity Type & Clinical/Tox Details Action Badge */}
-        <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2 h-6">
           {medication.type ? (
             <span
               className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border ${
@@ -193,16 +193,27 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
         </div>
 
         {/* Main Header: Prominent Drug Name, BNF ID Subtitle & Google Cloud TTS Listen Button */}
-        <div className="flex items-start justify-between gap-4">
+        <div
+          className={`flex justify-between gap-4 ${
+            isSelected
+              ? 'min-h-[5.75rem] sm:min-h-[5.625rem] items-start'
+              : 'h-[5.75rem] sm:h-[5.625rem] items-center'
+          }`}
+        >
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight break-words leading-snug">
+            <h2
+              title={medication.name}
+              className={`text-lg sm:text-xl font-bold text-slate-900 tracking-tight break-words leading-snug ${
+                isSelected ? '' : 'line-clamp-2'
+              }`}
+            >
               {medication.name}
             </h2>
 
-            <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-500">
+            <p className="mt-1.5 inline-flex max-w-full items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-500 whitespace-nowrap">
               <Hash className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true" />
               <span>BNF ID:</span>
-              <code className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/80 text-slate-700 font-mono text-xs sm:text-sm">
+              <code className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/80 text-slate-700 font-mono text-xs sm:text-sm truncate">
                 {medication.id}
               </code>
             </p>

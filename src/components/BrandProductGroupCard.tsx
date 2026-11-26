@@ -184,7 +184,7 @@ export const BrandProductGroupCard: React.FC<BrandProductGroupCardProps> = ({
 
       {/* Tree-Connected Child Drug Cards */}
       <div
-        className={`mt-4 pl-3 sm:pl-5 ml-1.5 sm:ml-2.5 border-l-2 space-y-4 ${
+        className={`mt-4 pl-3 sm:pl-5 ml-1.5 sm:ml-2.5 border-l-2 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start ${
           isToxicityMode ? 'border-rose-300' : 'border-emerald-300'
         }`}
       >
@@ -195,24 +195,26 @@ export const BrandProductGroupCard: React.FC<BrandProductGroupCardProps> = ({
             .replace(/[^a-z0-9-_]/g, '-');
 
           return (
-            <div key={cardKey} id={anchorId} className="relative">
-              {/* Horizontal tree connector tick */}
+            <div key={cardKey} id={anchorId} className="relative min-w-0">
+              {/* Horizontal tree connector tick (left column on lg+, all rows when stacked) */}
               <span
                 aria-hidden="true"
                 className={`absolute -left-3 sm:-left-5 top-6 w-2.5 sm:w-4 h-0.5 ${
-                  isToxicityMode ? 'bg-rose-300' : 'bg-emerald-300'
-                }`}
+                  idx % 2 === 1 ? 'lg:hidden' : ''
+                } ${isToxicityMode ? 'bg-rose-300' : 'bg-emerald-300'}`}
               />
 
               {/* Branch label showing hierarchy relationship */}
-              <div className="flex items-center gap-1.5 mb-1.5 pl-0.5 text-[11px] font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 mb-1.5 pl-0.5 h-4 text-[11px] font-bold uppercase tracking-wider">
                 <ArrowDownRight
                   className={`w-3.5 h-3.5 shrink-0 ${
                     isToxicityMode ? 'text-rose-500' : 'text-emerald-600'
                   }`}
                   aria-hidden="true"
                 />
-                <span className={isToxicityMode ? 'text-rose-700' : 'text-emerald-800'}>
+                <span
+                  className={`truncate ${isToxicityMode ? 'text-rose-700' : 'text-emerald-800'}`}
+                >
                   {count > 1
                     ? `Component ${idx + 1} of ${count} in ${group.brandName}`
                     : `Active Generic Drug in ${group.brandName}`}
