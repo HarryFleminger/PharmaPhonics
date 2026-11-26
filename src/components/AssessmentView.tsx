@@ -24,7 +24,7 @@ import {
   getAllCachedAiAssessments,
 } from '../services/geminiClinicalService';
 import { ClinicalAssessmentItem } from '../types/assessment';
-import { AssessmentCard } from './AssessmentCard';
+import { AssessmentCard, getAssessmentCardDomId } from './AssessmentCard';
 
 interface AssessmentViewProps {
   onOpenAssessment?: () => void;
@@ -133,6 +133,8 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   const searchSectionRef = useRef<HTMLElement | null>(null);
   const pendingScrollRef = useRef(false);
   const lastScrollRef = useRef<{ target: number; time: number }>({ target: -1, time: 0 });
+  const pendingCardScrollIdRef = useRef<string | null>(null);
+  const [cardScrollTrigger, setCardScrollTrigger] = useState(0);
 
   const scrollSearchBelowHeader = () => {
     const sectionEl = searchSectionRef.current;
@@ -170,6 +172,30 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     });
     return () => cancelAnimationFrame(frameId);
   }, [query, activeCategory, quickCategoriesMinimized]);
+
+  useEffect(() => {
+    const targetAssessmentId = pendingCardScrollIdRef.current;
+    if (!targetAssessmentId || isAiLoading) return;
+
+    const frameId = requestAnimationFrame(() => {
+      const targetEl = document.getElementById(getAssessmentCardDomId(targetAssessmentId));
+      if (targetEl && typeof window !== 'undefined') {
+        pendingCardScrollIdRef.current = null;
+        const headerEl = document.querySelector('header');
+        const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
+        const targetTop = Math.max(
+          0,
+          window.scrollY + targetEl.getBoundingClientRect().top - headerHeight - 12
+        );
+        window.scrollTo({
+          top: targetTop,
+          behavior: 'smooth',
+        });
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [selectedAssessmentId, expandedIds, isAiLoading, cardScrollTrigger]);
 
   const allAssessments = useMemo(() => {
     const mergedMap = new Map<string, ClinicalAssessmentItem>();
@@ -219,6 +245,14 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   );
 
   const handleToggleCard = (assessment: ClinicalAssessmentItem) => {
+    const isCurrentlyExpanded =
+      Boolean(expandedIds[assessment.id]) ||
+      (query.trim() !== '' && searchResults.length === 1);
+    if (!isCurrentlyExpanded) {
+      pendingCardScrollIdRef.current = assessment.id;
+      setCardScrollTrigger((prev) => prev + 1);
+    }
+
     setExpandedIds((prev) => {
       const nextExpanded = !prev[assessment.id];
       if (nextExpanded) {
@@ -268,6 +302,8 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
       ...prev,
       [assessment.id]: true,
     }));
+    pendingCardScrollIdRef.current = assessment.id;
+    setCardScrollTrigger((prev) => prev + 1);
     onOpenAssessment?.();
   };
 
@@ -307,6 +343,8 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
         ...prev,
         [generated.id]: true,
       }));
+      pendingCardScrollIdRef.current = generated.id;
+      setCardScrollTrigger((prev) => prev + 1);
     } catch (err) {
       setAiError(
         err instanceof Error ? err.message : 'Unable to generate assessment checklist.'
@@ -330,7 +368,11 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   }, [hasSingleSearchMatch, onOpenAssessment]);
 
   return (
-    <div className={`space-y-4 ${query !== '' ? 'min-h-[100vh]' : ''}`}>
+    <div
+      className={`space-y-4 ${
+        query !== '' || selectedAssessmentId !== null ? 'min-h-[100vh]' : ''
+      }`}
+    >
       {/* Gemini Assessment Error Alert */}
       {aiError && (
         <div
@@ -667,6 +709,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
             {searchResults.map((assessment) => (
               <AssessmentCard
                 key={assessment.id}
+                id={getAssessmentCardDomId(assessment.id)}
                 assessment={assessment}
                 isExpanded={Boolean(expandedIds[assessment.id]) || hasSingleSearchMatch}
                 onToggle={handleToggleCard}
@@ -736,6 +779,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
           </div>
 
           <AssessmentCard
+            id={getAssessmentCardDomId(selectedAssessment.id)}
             assessment={selectedAssessment}
             isExpanded={expandedIds[selectedAssessment.id] ?? true}
             onToggle={handleToggleCard}

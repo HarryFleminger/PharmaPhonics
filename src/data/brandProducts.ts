@@ -1068,10 +1068,11 @@ export function resolveScannedMedicationsHierarchy(
     }
 
     // 4. Single generic medication
-    const singleKey = `single::${normalizeCompactText(trimmed)}`;
+    const cleanedSingle = stripStrengthAndDoseSuffix(trimmed) || trimmed;
+    const singleKey = `single::${normalizeCompactText(cleanedSingle)}`;
     if (!seenKeys.has(singleKey)) {
       seenKeys.add(singleKey);
-      resolved.push({ kind: 'single', drugName: trimmed });
+      resolved.push({ kind: 'single', drugName: cleanedSingle });
     }
   }
 

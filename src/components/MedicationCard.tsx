@@ -25,6 +25,7 @@ import {
 import { formatMetricNumber, ToxDoseUnit } from './ToxCalculator';
 
 interface MedicationCardProps {
+  id?: string;
   medication: BnfMedicationItem;
   isSelected: boolean;
   onSelect: (medication: BnfMedicationItem) => void;
@@ -98,7 +99,12 @@ function renderPhoneticSyllables(phonetic: string, isToxicityMode = false): Reac
   });
 }
 
+export function getMedicationCardDomId(item: BnfMedicationItem): string {
+  return `medication-card-${item.id.toLowerCase().replace(/[^a-z0-9-_]/g, '-')}`;
+}
+
 export const MedicationCard: React.FC<MedicationCardProps> = ({
+  id,
   medication,
   isSelected,
   onSelect,
@@ -122,6 +128,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
 
   return (
     <article
+      id={id}
       ref={cardRef}
       onClick={() => onSelect(medication)}
       className={`group bg-white rounded-2xl border transition-all duration-200 overflow-hidden cursor-pointer ${

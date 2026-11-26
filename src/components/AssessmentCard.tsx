@@ -10,6 +10,7 @@ import {
 import { ClinicalAssessmentItem } from '../types/assessment';
 
 interface AssessmentCardProps {
+  id?: string;
   assessment: ClinicalAssessmentItem;
   isExpanded: boolean;
   onToggle: (assessment: ClinicalAssessmentItem) => void;
@@ -34,13 +35,19 @@ function renderChecklistLine(line: string, accentClass: string): React.ReactNode
   return <span className="text-slate-800">{line}</span>;
 }
 
+export function getAssessmentCardDomId(assessmentId: string): string {
+  return `assessment-card-${assessmentId.toLowerCase().replace(/[^a-z0-9-_]/g, '-')}`;
+}
+
 export const AssessmentCard: React.FC<AssessmentCardProps> = ({
+  id,
   assessment,
   isExpanded,
   onToggle,
 }) => {
   return (
     <article
+      id={id}
       onClick={() => onToggle(assessment)}
       className={`group bg-white rounded-2xl border transition-all duration-200 overflow-hidden cursor-pointer ${
         isExpanded

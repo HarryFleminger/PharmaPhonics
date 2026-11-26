@@ -33,7 +33,11 @@ import {
   computeToxDoseMetrics,
   detectPreferredToxUnit,
 } from './components/ToxCalculator';
-import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
+import {
+  MedicationCard,
+  MedicationCardSkeleton,
+  getMedicationCardDomId,
+} from './components/MedicationCard';
 import { BrandProductGroupCard, getBrandGroupDomId } from './components/BrandProductGroupCard';
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
@@ -103,7 +107,14 @@ export function App() {
     null
   );
 
-  const debouncedQuery = useDebounce(searchQuery, 400);
+  const rawDebouncedQuery = useDebounce(searchQuery, 400);
+  const [immediateSearchQuery, setImmediateSearchQuery] = useState<string | null>(null);
+  const debouncedQuery =
+    immediateSearchQuery !== null && immediateSearchQuery === searchQuery
+      ? immediateSearchQuery
+      : rawDebouncedQuery;
+
+  const [resolvedQuery, setResolvedQuery] = useState('');
 
   const [brandGroups, setBrandGroups] = useState<BrandProductGroup[]>([]);
   const [results, setResults] = useState<BnfMedicationItem[]>([]);
@@ -415,6 +426,7 @@ export function App() {
         setActiveCategory(category);
         setIsCategoryMinimized(false);
       }
+      setImmediateSearchQuery(null);
       setSearchQuery('');
       setSelectedCategoryDrug(null);
     },
@@ -460,6 +472,7 @@ export function App() {
       autoExpandNextResultRef.current = true;
       setSelectedCategoryDrug(drugName);
       setIsCategoryMinimized(true);
+      setImmediateSearchQuery(drugName);
       setSearchQuery(drugName);
       if (options?.scrollToResults) {
         pendingScrollTargetRef.current = {
@@ -497,6 +510,7 @@ export function App() {
         );
         setBrandGroups([brandGroup]);
         setResults([]);
+        setResolvedQuery(raw.toLowerCase());
         setSelectedCardKeys((prev) => {
           const next = { ...prev };
           brandGroup.constituents.forEach((item) => {
@@ -530,6 +544,7 @@ export function App() {
 
     setBrandGroups([]);
     setResults([customItem]);
+    setResolvedQuery(raw.toLowerCase());
     setSelectedCardKeys((prev) => ({ ...prev, [cardKey]: true }));
 
     if (isToxicityMode) {
@@ -558,6 +573,7 @@ export function App() {
     if (trimmed.length <= 2) {
       setBrandGroups([]);
       setResults([]);
+      setResolvedQuery('');
       setIsSearching(false);
       setSearchError(null);
       return;
@@ -565,6 +581,7 @@ export function App() {
 
     const abortController = new AbortController();
     setIsSearching(true);
+    setResolvedQuery('');
     setSearchError(null);
 
     searchMedicationsWithBrandHierarchy(trimmed, abortController.signal)
@@ -572,6 +589,7 @@ export function App() {
         if (!abortController.signal.aborted) {
           setBrandGroups(outcome.brandGroups);
           setResults(outcome.standaloneItems);
+          setResolvedQuery(trimmed.toLowerCase());
           setIsSearching(false);
 
           // If the user clicked a drug from Quick Categories or Upload/Paste Med List,
@@ -617,6 +635,7 @@ export function App() {
           );
           setBrandGroups([]);
           setResults([]);
+          setResolvedQuery(trimmed.toLowerCase());
           setIsSearching(false);
         }
       });
@@ -628,19 +647,25 @@ export function App() {
 
   useEffect(() => {
     const pending = pendingScrollTargetRef.current;
-    if (!pending || isSearching) return;
+    if (!pending || isSearching || isAiBrandLookupLoading) return;
     if (debouncedQuery.trim().toLowerCase() !== pending.query) return;
+    if (resolvedQuery !== pending.query) return;
 
-    pendingScrollTargetRef.current = null;
     const frameId = requestAnimationFrame(() => {
       const targetEl =
         (pending.brandGroupId
           ? document.getElementById(getBrandGroupDomId(pending.brandGroupId))
           : null) ??
+        (!pending.brandGroupId && results[0]
+          ? document.getElementById(getMedicationCardDomId(results[0]))
+          : null) ??
         (brandGroups[0] ? document.getElementById(getBrandGroupDomId(brandGroups[0].id)) : null) ??
-        document.getElementById('medspeak-results-section');
+        (results[0] ? document.getElementById(getMedicationCardDomId(results[0])) : null) ??
+        document.getElementById('medspeak-results-section') ??
+        document.getElementById('medspeak-no-match-card');
 
       if (targetEl && typeof window !== 'undefined') {
+        pendingScrollTargetRef.current = null;
         const headerEl = document.querySelector('header');
         const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
         const targetTop = Math.max(
@@ -655,23 +680,33 @@ export function App() {
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [brandGroups, results, isSearching, debouncedQuery, scrollTriggerCount]);
+  }, [
+    brandGroups,
+    results,
+    isSearching,
+    isAiBrandLookupLoading,
+    debouncedQuery,
+    resolvedQuery,
+    scrollTriggerCount,
+  ]);
 
   const hasActiveQuery = debouncedQuery.trim().length > 2;
   const totalResultCount =
     brandGroups.reduce((sum, group) => sum + group.constituents.length, 0) + results.length;
   const toxCalculatedMetrics = computeToxDoseMetrics(toxCalculatorValues);
 
-  if (isGuideOpen) {
-    return <WelcomePage onClose={() => setIsGuideOpen(false)} />;
-  }
-
   return (
-    <div
-      className={`min-h-screen flex flex-col text-slate-900 transition-colors duration-200 ${
-        isToxicityMode ? 'bg-rose-50/40' : 'bg-slate-50'
-      }`}
-    >
+    <>
+      {isGuideOpen && <WelcomePage onClose={() => setIsGuideOpen(false)} />}
+
+      <div
+        hidden={isGuideOpen}
+        className={`${
+          isGuideOpen ? 'hidden' : 'min-h-screen flex flex-col'
+        } text-slate-900 transition-colors duration-200 ${
+          isToxicityMode ? 'bg-rose-50/40' : 'bg-slate-50'
+        }`}
+      >
       {/* One-Time "New Feature" Prescription Upload Announcement Modal */}
       <NoticeModal
         isOpen={isNewFeatureModalOpen}
@@ -754,8 +789,10 @@ export function App() {
           </button>
         </nav>
 
-        {activeSection === 'medications' ? (
-          <>
+        <div
+          hidden={activeSection !== 'medications'}
+          className={activeSection === 'medications' ? '' : 'hidden'}
+        >
         {/* Google Cloud TTS Error Alert */}
         {ttsError && (
           <div
@@ -810,6 +847,7 @@ export function App() {
             if ((searchQuery === '' || selectedCategoryDrug !== null) && q !== '') {
               setSelectedCardKeys({});
             }
+            setImmediateSearchQuery(null);
             setSearchQuery(q);
             setSelectedCategoryDrug(null);
           }}
@@ -913,6 +951,7 @@ export function App() {
         ) : brandGroups.length === 0 && results.length === 0 ? (
           /* No Local BNF Match State — Offer 1-Tap Direct Gemini AI Lookup */
           <div
+            id="medspeak-no-match-card"
             className={`bg-white rounded-2xl border p-8 sm:p-10 text-center max-w-lg mx-auto my-6 shadow-sm ${
               isToxicityMode ? 'border-rose-200' : 'border-slate-200'
             }`}
@@ -944,7 +983,10 @@ export function App() {
 
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setImmediateSearchQuery(null);
+                  setSearchQuery('');
+                }}
                 className="inline-flex items-center px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors cursor-pointer"
               >
                 Clear Search
@@ -1008,6 +1050,7 @@ export function App() {
                     return (
                       <MedicationCard
                         key={cardKey}
+                        id={getMedicationCardDomId(item)}
                         medication={item}
                         isSelected={Boolean(selectedCardKeys[cardKey])}
                         onSelect={handleSelectMedication}
@@ -1039,9 +1082,12 @@ export function App() {
             )}
           </div>
         )}
-          </>
-        ) : (
-          <>
+        </div>
+
+        <div
+          hidden={activeSection !== 'assessments'}
+          className={activeSection === 'assessments' ? '' : 'hidden'}
+        >
             <AssessmentView
               onOpenAssessment={triggerFirstTimeClinicalWarning}
               isQuickCategoriesMinimized={isAssessmentCategoriesMinimized}
@@ -1102,8 +1148,7 @@ export function App() {
                 });
               }}
             />
-          </>
-        )}
+        </div>
       </main>
 
       <footer className="border-t border-slate-200 bg-white py-4 px-4 sm:px-6 text-center text-xs text-slate-500">
@@ -1139,6 +1184,7 @@ export function App() {
         </p>
       </footer>
     </div>
+    </>
   );
 }
 
