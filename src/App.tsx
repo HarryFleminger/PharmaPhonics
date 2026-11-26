@@ -3,13 +3,7 @@ import {
   SearchX,
   AlertCircle,
   X,
-  BookOpenCheck,
-  Skull,
-  Search,
-  Camera,
-  FolderOpen,
   Sparkles,
-  ChevronRight,
   Pill,
   Stethoscope,
 } from 'lucide-react';
@@ -40,6 +34,7 @@ import { MedicationCard, MedicationCardSkeleton } from './components/MedicationC
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
 import { AssessmentView } from './components/AssessmentView';
+import { HowToUseCard } from './components/HowToUseCard';
 
 const PRESCRIPTION_FEATURE_STORAGE_KEY = 'medspeak_seen_prescription_feature_v1';
 
@@ -57,6 +52,12 @@ export function App() {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
   });
+  const [isAssessmentCategoriesMinimized, setIsAssessmentCategoriesMinimized] = useState<boolean>(
+    () => {
+      if (typeof window === 'undefined') return false;
+      return window.innerWidth < 768;
+    }
+  );
 
   // Toxicity Mode state & Tox Calculator inputs
   const [isToxicityMode, setIsToxicityMode] = useState(false);
@@ -692,197 +693,60 @@ export function App() {
           </section>
         ) : !hasActiveQuery ? (
           /* Initial Prompt State before >2 chars are entered */
-          <div
-            className={`bg-white rounded-2xl border p-6 sm:p-8 max-w-2xl mx-auto my-4 sm:my-6 shadow-sm ${
-              isToxicityMode ? 'border-rose-200' : 'border-slate-200'
-            }`}
-          >
-            <div className="flex flex-col items-center text-center mb-5">
-              <div
-                className={`w-12 h-12 rounded-2xl border flex items-center justify-center mb-3 ${
-                  isToxicityMode
-                    ? 'bg-rose-50 text-rose-600 border-rose-200'
-                    : 'bg-emerald-50 text-ambulance-green border-emerald-200'
-                }`}
-              >
-                {isToxicityMode ? (
-                  <Skull className="w-6 h-6" aria-hidden="true" />
-                ) : (
-                  <BookOpenCheck className="w-6 h-6" aria-hidden="true" />
-                )}
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-                {isToxicityMode
-                  ? 'Toxicity Mode: Assess Overdose Doses & Effects'
-                  : 'How to Use MedSpeak'}
-              </h2>
-            </div>
-
-            <ul className="space-y-2.5 text-left max-w-lg mx-auto">
-              <li>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const input = document.getElementById(
-                      'medspeak-search-input'
-                    ) as HTMLInputElement | null;
-                    input?.focus();
-                    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }}
-                  className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-left transition-all cursor-pointer active:scale-[0.99] group ${
-                    isToxicityMode
-                      ? 'hover:bg-rose-50/70 hover:border-rose-300'
-                      : 'hover:bg-emerald-50/70 hover:border-emerald-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div
-                      className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
-                        isToxicityMode
-                          ? 'bg-rose-100 text-rose-600'
-                          : 'bg-emerald-100 text-ambulance-green'
-                      }`}
-                    >
-                      <Search className="w-4 h-4" aria-hidden="true" />
-                    </div>
-                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                      <strong className="text-slate-900">Search</strong> — look up any UK drug for
-                      essential on-scene context, indications, and pronunciation.
-                    </span>
-                  </div>
-                  <ChevronRight
-                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform group-hover:translate-x-0.5 ${
-                      isToxicityMode
-                        ? 'group-hover:text-rose-600'
-                        : 'group-hover:text-ambulance-green'
-                    }`}
-                    aria-hidden="true"
-                  />
-                </button>
-              </li>
-
-              <li>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsUploaderOpen(true);
-                    requestAnimationFrame(() => {
-                      const uploader =
-                        document.getElementById('medspeak-prescription-uploader') ??
-                        document.getElementById('medspeak-search-input');
-                      uploader?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    });
-                  }}
-                  className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-left transition-all cursor-pointer active:scale-[0.99] group ${
-                    isToxicityMode
-                      ? 'hover:bg-rose-50/70 hover:border-rose-300'
-                      : 'hover:bg-emerald-50/70 hover:border-emerald-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div
-                      className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
-                        isToxicityMode
-                          ? 'bg-rose-100 text-rose-600'
-                          : 'bg-emerald-100 text-ambulance-green'
-                      }`}
-                    >
-                      <Camera className="w-4 h-4" aria-hidden="true" />
-                    </div>
-                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                      <strong className="text-slate-900">Upload or Paste</strong> — snap a photo or
-                      paste text from a patient’s medication list for an instant holistic overview.
-                    </span>
-                  </div>
-                  <ChevronRight
-                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform group-hover:translate-x-0.5 ${
-                      isToxicityMode
-                        ? 'group-hover:text-rose-600'
-                        : 'group-hover:text-ambulance-green'
-                    }`}
-                    aria-hidden="true"
-                  />
-                </button>
-              </li>
-
-              <li>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsQuickCategoriesMinimized(false);
-                    requestAnimationFrame(() => {
-                      const categoriesEl = document.getElementById('medspeak-quick-categories');
-                      categoriesEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    });
-                  }}
-                  className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-left transition-all cursor-pointer active:scale-[0.99] group ${
-                    isToxicityMode
-                      ? 'hover:bg-rose-50/70 hover:border-rose-300'
-                      : 'hover:bg-emerald-50/70 hover:border-emerald-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div
-                      className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
-                        isToxicityMode
-                          ? 'bg-rose-100 text-rose-600'
-                          : 'bg-emerald-100 text-ambulance-green'
-                      }`}
-                    >
-                      <FolderOpen className="w-4 h-4" aria-hidden="true" />
-                    </div>
-                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                      <strong className="text-slate-900">Quick Categories</strong> — tap any category
-                      above to browse commonly encountered emergency and community drugs.
-                    </span>
-                  </div>
-                  <ChevronRight
-                    className={`w-4 h-4 text-slate-400 shrink-0 transition-transform group-hover:translate-x-0.5 ${
-                      isToxicityMode
-                        ? 'group-hover:text-rose-600'
-                        : 'group-hover:text-ambulance-green'
-                    }`}
-                    aria-hidden="true"
-                  />
-                </button>
-              </li>
-
-              <li>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const willBeTox = !isToxicityMode;
-                    handleToggleToxicityMode();
-                    if (willBeTox) {
-                      setIsToxCalculatorMinimized(false);
-                      requestAnimationFrame(() => {
-                        const input = document.getElementById(
-                          'medspeak-search-input'
-                        ) as HTMLInputElement | null;
-                        input?.focus();
-                        input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      });
-                    }
-                  }}
-                  className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-rose-50/70 border border-rose-200/80 hover:bg-rose-100/70 hover:border-rose-300 text-left transition-all cursor-pointer active:scale-[0.99] group"
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="p-1.5 rounded-lg bg-rose-100 text-rose-600 shrink-0 mt-0.5">
-                      <Skull className="w-4 h-4" aria-hidden="true" />
-                    </div>
-                    <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                      <strong className="text-rose-900">Toxicity Mode</strong> — tap Toxicity Mode on
-                      any drug card to calculate ingested doses and view toxic thresholds and effects.
-                    </span>
-                  </div>
-                  <ChevronRight
-                    className="w-4 h-4 text-rose-400 group-hover:text-rose-600 shrink-0 transition-transform group-hover:translate-x-0.5"
-                    aria-hidden="true"
-                  />
-                </button>
-              </li>
-            </ul>
-          </div>
+          <HowToUseCard
+            isToxicityMode={isToxicityMode}
+            onClickSearchDrugs={() => {
+              setActiveSection('medications');
+              requestAnimationFrame(() => {
+                const input = document.getElementById(
+                  'medspeak-search-input'
+                ) as HTMLInputElement | null;
+                input?.focus();
+                input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }}
+            onClickUploadMedList={() => {
+              setActiveSection('medications');
+              setIsUploaderOpen(true);
+              requestAnimationFrame(() => {
+                const uploader =
+                  document.getElementById('medspeak-prescription-uploader') ??
+                  document.getElementById('medspeak-search-input');
+                uploader?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }}
+            onClickQuickCategories={() => {
+              setIsQuickCategoriesMinimized(false);
+              requestAnimationFrame(() => {
+                const categoriesEl = document.getElementById('medspeak-quick-categories');
+                categoriesEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }}
+            onClickAssessments={() => {
+              setActiveSection('assessments');
+              requestAnimationFrame(() => {
+                const input = document.getElementById(
+                  'medspeak-assessment-search'
+                ) as HTMLInputElement | null;
+                input?.focus();
+                input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }}
+            onClickToxicityMode={() => {
+              const willBeTox = !isToxicityMode;
+              handleToggleToxicityMode();
+              if (willBeTox) {
+                setIsToxCalculatorMinimized(false);
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-search-input'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }
+            }}
+          />
         ) : results.length === 0 ? (
           /* No Local BNF Match State — Offer 1-Tap Direct Gemini AI Lookup */
           <div
@@ -965,7 +829,68 @@ export function App() {
         )}
           </>
         ) : (
-          <AssessmentView onOpenAssessment={triggerFirstTimeClinicalWarning} />
+          <>
+            <AssessmentView
+              onOpenAssessment={triggerFirstTimeClinicalWarning}
+              isQuickCategoriesMinimized={isAssessmentCategoriesMinimized}
+              onSetQuickCategoriesMinimized={setIsAssessmentCategoriesMinimized}
+            />
+            <HowToUseCard
+              isToxicityMode={false}
+              onClickSearchDrugs={() => {
+                setActiveSection('medications');
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-search-input'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickUploadMedList={() => {
+                setActiveSection('medications');
+                setIsUploaderOpen(true);
+                requestAnimationFrame(() => {
+                  const uploader =
+                    document.getElementById('medspeak-prescription-uploader') ??
+                    document.getElementById('medspeak-search-input');
+                  uploader?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickQuickCategories={() => {
+                setIsAssessmentCategoriesMinimized(false);
+                requestAnimationFrame(() => {
+                  const categoriesEl = document.getElementById(
+                    'medspeak-assessment-categories'
+                  );
+                  categoriesEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickAssessments={() => {
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-assessment-search'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickToxicityMode={() => {
+                setActiveSection('medications');
+                if (!isToxicityMode) {
+                  handleToggleToxicityMode();
+                }
+                setIsToxCalculatorMinimized(false);
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-search-input'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+            />
+          </>
         )}
       </main>
 

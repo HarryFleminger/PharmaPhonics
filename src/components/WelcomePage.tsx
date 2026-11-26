@@ -43,12 +43,12 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-            UK Paramedic Medication Study Tool
+            UK Paramedic Medication &amp; Assessment Study Tool
           </h1>
           <p className="mt-2.5 text-sm sm:text-base text-emerald-100/95 max-w-3xl leading-relaxed">
             Built for UK paramedics, EMTs, and student clinicians to quickly search UK BNF
-            medications, get pre-hospital on-scene context, overdose toxicity and calculator, and
-            holistic prescription breakdowns.
+            medications, get pre-hospital on-scene context, rapid 999 clinical assessment
+            checklists, overdose toxicity and calculator, and holistic prescription breakdowns.
           </p>
         </div>
       </header>
@@ -58,7 +58,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
         {/* Section Heading */}
         <div className="flex items-center justify-between">
           <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
-            How MedSpeak Works — 4 Core Study Tools
+            How MedSpeak Works — 5 Core Study Tools
           </h2>
         </div>
 
@@ -216,14 +216,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                   <Camera className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-ambulance-green">
-                      4. Multi-Drug Vision AI
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold uppercase bg-nhs-warmYellow text-slate-950">
-                      New
-                    </span>
-                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-ambulance-green">
+                    4. Multi-Drug Vision &amp; Text AI
+                  </span>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
                     Prescription Photo Scanner &amp; Holistic Reviews
                   </h3>
@@ -232,8 +227,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
 
               <p className="text-sm text-slate-600 leading-relaxed mb-3">
                 Tap <strong>Upload Prescription / Med List</strong> next to the search bar to snap a
-                photo or upload a screenshot of a repeat prescription, discharge letter, or blister
-                pack.
+                photo or paste text from a repeat prescription, discharge letter, or blister pack.
               </p>
 
               <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
@@ -256,6 +250,61 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                   <span>
                     <strong>Polypharmacy Interactions:</strong> In Toxicity Mode, highlights
                     dangerous drug-drug interactions and mixed-overdose red flags.
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* 5. Pre-Hospital Scene Assessments (New Feature — Last Tile) */}
+          <div className="md:col-span-2 bg-white rounded-2xl border border-emerald-200 p-5 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-ambulance-green flex items-center justify-center shrink-0">
+                  <Stethoscope className="w-5 h-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-ambulance-green">
+                      5. Clinical Assessments
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold uppercase bg-nhs-warmYellow text-slate-950">
+                      New
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+                    999 Call-Out Checklists &amp; Condition Lookup
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                Switch to the <strong>Assessments</strong> tab for concise, pocketbook-style{' '}
+                <strong>Key Questions to Ask</strong>, <strong>Key Assessments to Make</strong>,
+                and <strong>Red Flags</strong> without waffle or filler.
+              </p>
+
+              <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <strong>26 Instant 999 Call-Outs:</strong> Browse 7 clinical categories or
+                    search UK abbreviations (<code>cp</code>, <code>sob</code>, <code>tloc</code>,{' '}
+                    <code>fast</code>, <code>dka</code>, <code>ces</code>) with zero API tokens.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <strong>Live Gemini AI Lookup:</strong> Search any other condition (e.g.{' '}
+                    <em>Pericarditis</em> or <em>Ectopic Pregnancy</em>) to generate and locally
+                    cache its pocketbook checklist in seconds.
                   </span>
                 </li>
               </ul>

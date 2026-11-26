@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   SearchX,
@@ -26,6 +26,8 @@ import { AssessmentCard } from './AssessmentCard';
 
 interface AssessmentViewProps {
   onOpenAssessment?: () => void;
+  isQuickCategoriesMinimized?: boolean;
+  onSetQuickCategoriesMinimized?: (minimized: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 const COMMON_CALLOUT_IDS = [
@@ -112,15 +114,25 @@ function searchAssessments(
   return scored.map((entry) => entry.item);
 }
 
-export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment }) => {
+export const AssessmentView: React.FC<AssessmentViewProps> = ({
+  onOpenAssessment,
+  isQuickCategoriesMinimized,
+  onSetQuickCategoriesMinimized,
+}) => {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isCategoryDrawerMinimized, setIsCategoryDrawerMinimized] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null);
-  const [isQuickCategoriesMinimized, setIsQuickCategoriesMinimized] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < 768;
-  });
+  const [internalQuickCategoriesMinimized, setInternalQuickCategoriesMinimized] = useState<boolean>(
+    () => {
+      if (typeof window === 'undefined') return false;
+      return window.innerWidth < 768;
+    }
+  );
+  const quickCategoriesMinimized =
+    isQuickCategoriesMinimized ?? internalQuickCategoriesMinimized;
+  const setQuickCategoriesMinimized =
+    onSetQuickCategoriesMinimized ?? setInternalQuickCategoriesMinimized;
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [aiAssessments, setAiAssessments] = useState<ClinicalAssessmentItem[]>(() =>
     getAllCachedAiAssessments()
@@ -275,6 +287,12 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
     hasSearchQuery &&
     searchResults.some((item) => item.title.toLowerCase() === trimmedQuery.toLowerCase());
 
+  useEffect(() => {
+    if (hasSingleSearchMatch) {
+      onOpenAssessment?.();
+    }
+  }, [hasSingleSearchMatch, onOpenAssessment]);
+
   return (
     <div className="space-y-4">
       {/* Gemini Assessment Error Alert */}
@@ -363,24 +381,24 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
         {/* 2. Quick Categories (Collapsible Header + Pills, minimised on mobile by default) */}
         <div id="medspeak-assessment-categories" className="pt-3 border-t border-slate-100">
           <div
-            onClick={() => setIsQuickCategoriesMinimized((prev) => !prev)}
+            onClick={() => setQuickCategoriesMinimized((prev) => !prev)}
             role="button"
             tabIndex={0}
-            aria-expanded={!isQuickCategoriesMinimized}
+            aria-expanded={!quickCategoriesMinimized}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                setIsQuickCategoriesMinimized((prev) => !prev);
+                setQuickCategoriesMinimized((prev) => !prev);
               }
             }}
             className={`flex items-center justify-between gap-2 cursor-pointer select-none rounded-lg px-1 py-0.5 hover:bg-slate-50 transition-colors ${
-              isQuickCategoriesMinimized ? '' : 'mb-2.5'
+              quickCategoriesMinimized ? '' : 'mb-2.5'
             }`}
           >
             <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
               <Folder className="w-3.5 h-3.5 shrink-0 text-ambulance-green" aria-hidden="true" />
               <span>Quick Categories</span>
-              {isQuickCategoriesMinimized && (
+              {quickCategoriesMinimized && (
                 <span className="text-[11px] font-medium normal-case text-slate-400">
                   (tap to open)
                 </span>
@@ -388,7 +406,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
             </span>
 
             <div className="flex items-center gap-2">
-              {activeCategory && !isQuickCategoriesMinimized && (
+              {activeCategory && !quickCategoriesMinimized && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -401,8 +419,8 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
                 </button>
               )}
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border bg-emerald-50 text-ambulance-green border-emerald-200">
-                <span>{isQuickCategoriesMinimized ? 'Open' : 'Minimise'}</span>
-                {isQuickCategoriesMinimized ? (
+                <span>{quickCategoriesMinimized ? 'Open' : 'Minimise'}</span>
+                {quickCategoriesMinimized ? (
                   <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
                 ) : (
                   <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -411,7 +429,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({ onOpenAssessment
             </div>
           </div>
 
-          {!isQuickCategoriesMinimized && (
+          {!quickCategoriesMinimized && (
             <div
               role="tablist"
               aria-label="Clinical assessment categories"
