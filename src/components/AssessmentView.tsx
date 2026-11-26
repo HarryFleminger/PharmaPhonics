@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   SearchX,
@@ -130,6 +130,20 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   );
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const searchSectionRef = useRef<HTMLElement | null>(null);
+
+  const scrollSearchBelowHeader = () => {
+    const sectionEl = searchSectionRef.current;
+    if (!sectionEl || typeof window === 'undefined') return;
+    const headerEl = document.querySelector('header');
+    const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
+    const targetTop =
+      window.scrollY + sectionEl.getBoundingClientRect().top - headerHeight - 8;
+    window.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: 'smooth',
+    });
+  };
 
   const allAssessments = useMemo(() => {
     const mergedMap = new Map<string, ClinicalAssessmentItem>();
@@ -197,6 +211,8 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
       setIsCategoryDrawerMinimized(false);
       return;
     }
+
+    setQuery('');
 
     if (activeCategory === category) {
       if (isCategoryDrawerMinimized) {
@@ -315,6 +331,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
 
       {/* Search Bar & Collapsible Quick Categories Panel */}
       <section
+        ref={searchSectionRef}
         aria-label="Clinical assessment search and Quick Categories"
         className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 sm:p-5 space-y-4"
       >
@@ -337,8 +354,29 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
               type="search"
               value={query}
               onChange={(e) => {
-                setQuery(e.target.value);
-                setSelectedAssessmentId(null);
+                const nextQuery = e.target.value;
+                if (nextQuery !== '') {
+                  const shouldSnapToTop =
+                    query === '' ||
+                    activeCategory !== null ||
+                    selectedAssessmentId !== null ||
+                    !quickCategoriesMinimized;
+                  setActiveCategory(null);
+                  setIsCategoryDrawerMinimized(false);
+                  setSelectedAssessmentId(null);
+                  if (query === '') {
+                    setExpandedIds({});
+                  }
+                  setQuickCategoriesMinimized(true);
+                  if (shouldSnapToTop) {
+                    requestAnimationFrame(() => {
+                      scrollSearchBelowHeader();
+                    });
+                  }
+                } else {
+                  setSelectedAssessmentId(null);
+                }
+                setQuery(nextQuery);
                 if (aiError) setAiError(null);
               }}
               onKeyDown={(e) => {
