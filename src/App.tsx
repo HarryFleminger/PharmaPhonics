@@ -10,6 +10,8 @@ import {
   FolderOpen,
   Sparkles,
   ChevronRight,
+  Pill,
+  Stethoscope,
 } from 'lucide-react';
 import {
   BnfMedicationItem,
@@ -37,10 +39,12 @@ import {
 import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
+import { AssessmentView } from './components/AssessmentView';
 
 const PRESCRIPTION_FEATURE_STORAGE_KEY = 'medspeak_seen_prescription_feature_v1';
 
 export function App() {
+  const [activeSection, setActiveSection] = useState<'medications' | 'assessments'>('medications');
   const [searchQuery, setSearchQuery] = useState('');
   // No category is pre-applied when the page opens; user clicks a category pill to open it
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -545,12 +549,50 @@ export function App() {
 
       <Header
         isGeminiApiKeyConfigured={serverHealth.geminiConfigured}
-        isToxicityMode={isToxicityMode}
+        isToxicityMode={activeSection === 'medications' && isToxicityMode}
         onExitToxicityMode={() => setIsToxicityMode(false)}
         onOpenGuide={() => setIsGuideOpen(true)}
       />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 py-4 sm:px-6 sm:py-8">
+        {/* Top-Level Section Switcher: Medications | Assessments */}
+        <nav
+          aria-label="MedSpeak section switcher"
+          className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-slate-200/75 border border-slate-200/90 max-w-md mx-auto mb-5"
+        >
+          <button
+            type="button"
+            onClick={() => setActiveSection('medications')}
+            aria-pressed={activeSection === 'medications'}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm transition-all cursor-pointer ${
+              activeSection === 'medications'
+                ? isToxicityMode
+                  ? 'bg-white text-rose-700 shadow-sm font-bold'
+                  : 'bg-white text-ambulance-green shadow-sm font-bold'
+                : 'text-slate-600 hover:text-slate-900 font-semibold'
+            }`}
+          >
+            <Pill className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>Medications</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSection('assessments')}
+            aria-pressed={activeSection === 'assessments'}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm transition-all cursor-pointer ${
+              activeSection === 'assessments'
+                ? 'bg-white text-ambulance-green shadow-sm font-bold'
+                : 'text-slate-600 hover:text-slate-900 font-semibold'
+            }`}
+          >
+            <Stethoscope className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>Assessments</span>
+          </button>
+        </nav>
+
+        {activeSection === 'medications' ? (
+          <>
         {/* Google Cloud TTS Error Alert */}
         {ttsError && (
           <div
@@ -921,6 +963,10 @@ export function App() {
             })}
           </section>
         )}
+          </>
+        ) : (
+          <AssessmentView onOpenAssessment={triggerFirstTimeClinicalWarning} />
+        )}
       </main>
 
       <footer className="border-t border-slate-200 bg-white py-4 px-4 sm:px-6 text-center text-xs text-slate-500">
@@ -932,7 +978,9 @@ export function App() {
               target="_blank"
               rel="noopener noreferrer"
               className={`hover:underline font-medium ${
-                isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+                activeSection === 'medications' && isToxicityMode
+                  ? 'text-rose-600'
+                  : 'text-ambulance-green'
               }`}
             >
               OpenPrescribing BNF API
@@ -944,7 +992,9 @@ export function App() {
             type="button"
             onClick={() => setIsGuideOpen(true)}
             className={`hover:underline font-semibold cursor-pointer ${
-              isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
+              activeSection === 'medications' && isToxicityMode
+                ? 'text-rose-600'
+                : 'text-ambulance-green'
             }`}
           >
             Welcome Guide
