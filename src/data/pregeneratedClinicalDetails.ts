@@ -185,6 +185,16 @@ export const PREGENERATED_CLINICAL_DETAILS: Record<string, GeminiClinicalDetails
     medicSummary:
       'Slows ventricular heart rate and reduces myocardial oxygen demand. Critical on-scene pearl: Bisoprolol masks compensatory tachycardia during shock, sepsis, trauma, or hypoglycaemia, so rely on blood pressure, perfusion, respiratory rate, and lactate/skin signs rather than heart rate alone.',
   },
+  budesonide: {
+    phoneticSpelling: 'byoo-DES-o-nide',
+    class: 'Inhaled Corticosteroid (Preventer)',
+    indications: [
+      'Maintenance prophylaxis of asthma and COPD (including Symbicort and DuoResp)',
+      'Mild-to-moderate croup (nebulised) and Crohn’s disease',
+    ],
+    medicSummary:
+      'A daily preventer corticosteroid inhaler (alone as Pulmicort or combined with Formoterol in Symbicort) that reduces chronic airway inflammation. Unless the patient uses an approved Symbicort MART regimen for mild symptoms, severe acute bronchospasm on scene still requires nebulised Salbutamol and Ipratropium.',
+  },
   'calcium chloride': {
     phoneticSpelling: 'KAL-see-um KLOR-ide',
     class: 'Electrolyte / Cardioprotective Agent',
@@ -329,6 +339,15 @@ export const PREGENERATED_CLINICAL_DETAILS: Record<string, GeminiClinicalDetails
     medicSummary:
       'Enhances GABA activity in the brain to stop seizures, relax muscles, and sedate the central nervous system. When administering IV/IO or PR for seizures on scene, monitor airway patency, respiratory rate, and oxygen saturations closely for respiratory depression, and have bag-valve-mask support ready.',
   },
+  dihydrocodeine: {
+    phoneticSpelling: 'dy-hy-dro-KOH-deen',
+    class: 'Weak-to-Moderate Opioid Analgesic',
+    indications: [
+      'Moderate pain (alone or combined with Paracetamol as Co-dydramol)',
+    ],
+    medicSummary:
+      'A semi-synthetic opioid related to Codeine used for moderate acute or chronic pain. Before administering further analgesia on scene, check total opioid intake and watch for drowsiness, pinpoint pupils, respiratory depression, or opioid-induced constipation in older patients.',
+  },
   'diclofenac sodium': {
     phoneticSpelling: 'dy-KLOF-e-nak SOH-dee-um',
     class: 'Non-Steroidal Anti-Inflammatory Drug (NSAID)',
@@ -408,6 +427,15 @@ export const PREGENERATED_CLINICAL_DETAILS: Record<string, GeminiClinicalDetails
     ],
     medicSummary:
       'A potent anti-inflammatory steroid inhaler used daily for long-term airway control. Like Beclometasone, it will not relieve acute bronchospasm on scene—acute wheeze requires nebulised Salbutamol and Ipratropium.',
+  },
+  formoterol: {
+    phoneticSpelling: 'for-MOT-er-ol',
+    class: 'Long-Acting Beta-2 Adrenoceptor Agonist (LABA)',
+    indications: [
+      'Maintenance bronchodilation in asthma and COPD (e.g., Fostair, Symbicort, Trimbow)',
+    ],
+    medicSummary:
+      'A long-acting bronchodilator with a relatively fast onset that keeps airways relaxed for 12 hours, commonly co-formulated with inhaled steroids in combination inhalers. On scene during an acute exacerbation, ask whether the patient uses a combination MART inhaler and treat acute severe wheeze with nebulised Salbutamol.',
   },
   furosemide: {
     phoneticSpelling: 'fyoor-OH-se-mide',
@@ -1062,12 +1090,263 @@ export const PREGENERATED_CLINICAL_DETAILS: Record<string, GeminiClinicalDetails
     medicSummary:
       'Enhances GABA activity to induce sleep and commonly leaves a metallic taste in the mouth. On scene at night-time falls in older adults, Zopiclone is a frequent culprit due to ataxia, drowsiness, confusion, and unsteadiness.',
   },
+  sacubitril: {
+    phoneticSpelling: 'sa-KYOO-bi-tril',
+    class: 'Neprilysin Inhibitor (Combined with Valsartan in Entresto)',
+    indications: [
+      'Chronic heart failure with reduced ejection fraction (HFrEF)',
+    ],
+    medicSummary:
+      'Prescribed alongside Valsartan (as Entresto) to boost protective natriuretic peptides, reduce fluid overload, and lower cardiac strain in heart failure. On scene, its presence confirms significant heart failure and flags potential hypotension and a rare risk of non-allergic angioedema.',
+  },
+  salmeterol: {
+    phoneticSpelling: 'sal-MET-er-ol',
+    class: 'Long-Acting Beta-2 Adrenoceptor Agonist (LABA)',
+    indications: [
+      'Long-term maintenance bronchodilation in asthma and COPD (e.g., Seretide)',
+    ],
+    medicSummary:
+      'A twice-daily long-acting bronchodilator with a slower onset than Salbutamol, prescribed strictly for preventer maintenance rather than acute rescue relief. Treat acute breathlessness or wheeze on scene with short-acting Salbutamol.',
+  },
+  valsartan: {
+    phoneticSpelling: 'val-SAR-tan',
+    class: 'Angiotensin II Receptor Blocker (ARB)',
+    indications: [
+      'Chronic heart failure (including with Sacubitril in Entresto)',
+      'Essential hypertension and post-myocardial infarction',
+    ],
+    medicSummary:
+      'Relaxes blood vessels and offloads the failing heart by blocking angiotensin II receptors. Watch for postural hypotension (particularly when co-prescribed with Sacubitril or diuretics), hyperkalaemia, and renal impairment in dehydrated patients.',
+  },
 };
+
+const UK_PHARMACEUTICAL_WORD_PHONETICS: Record<string, string> = {
+  acetate: 'AS-e-tate',
+  acid: 'AS-id',
+  anhydrous: 'an-HY-drus',
+  arginine: 'AR-ji-neen',
+  axetil: 'AX-e-til',
+  benzoate: 'BEN-zo-ate',
+  besilate: 'BES-i-late',
+  besylate: 'BES-i-late',
+  bicarbonate: 'by-KAR-bo-nate',
+  bitartrate: 'by-TAR-trate',
+  bromide: 'BRO-mide',
+  butyrate: 'BYOO-ti-rate',
+  calcium: 'KAL-see-um',
+  carbonate: 'KAR-bo-nate',
+  chloride: 'KLOR-ide',
+  cilexetil: 'si-LEX-e-til',
+  citrate: 'SIT-rate',
+  clavulanate: 'klav-yoo-LAN-ate',
+  decanoate: 'dek-a-NOH-ate',
+  dihydrate: 'dy-HY-drate',
+  dihydrochloride: 'dy-hy-dro-KLOR-ide',
+  dinitrate: 'dy-NY-trate',
+  dipropionate: 'dy-PRO-pee-oh-nate',
+  disodium: 'dy-SOH-dee-um',
+  disoproxil: 'dy-so-PROX-il',
+  embonate: 'EM-bo-nate',
+  enantate: 'e-NAN-tate',
+  enanthate: 'e-NAN-tate',
+  erbumine: 'er-BYOO-meen',
+  esilate: 'ES-i-late',
+  esylate: 'ES-i-late',
+  etexilate: 'e-TEX-i-late',
+  fumarate: 'FYOO-ma-rate',
+  furoate: 'FYOOR-oh-ate',
+  glargine: 'GLAR-jeen',
+  gluconate: 'GLOO-ko-nate',
+  hemihydrate: 'hem-ee-HY-drate',
+  hydrate: 'HY-drate',
+  hydrobromide: 'hy-dro-BRO-mide',
+  hydrochloride: 'hy-dro-KLOR-ide',
+  hydrogen: 'HY-dro-jen',
+  hydroxide: 'hy-DROX-ide',
+  iodide: 'EYE-o-dide',
+  lactate: 'LAK-tate',
+  lispro: 'LIS-pro',
+  magnesium: 'mag-NEE-zee-um',
+  malate: 'MAL-ate',
+  maleate: 'MAL-ee-ate',
+  medoxomil: 'me-DOX-o-mil',
+  meglumine: 'MEG-loo-meen',
+  mesilate: 'MES-i-late',
+  mesylate: 'MES-i-late',
+  mofetil: 'MO-fe-til',
+  monohydrate: 'mon-oh-HY-drate',
+  mononitrate: 'mon-oh-NY-trate',
+  nitrate: 'NY-trate',
+  oxalate: 'OX-a-late',
+  oxide: 'OX-ide',
+  palmitate: 'PAL-mi-tate',
+  pamoate: 'PAM-oh-ate',
+  phosphate: 'FOS-fate',
+  pivoxil: 'pi-VOX-il',
+  potassium: 'po-TAS-ee-um',
+  propionate: 'PRO-pee-oh-nate',
+  proxetil: 'PROX-e-til',
+  salicylate: 'sa-LIS-i-late',
+  sodium: 'SOH-dee-um',
+  succinate: 'SUK-si-nate',
+  sulfate: 'SUL-fate',
+  sulphate: 'SUL-fate',
+  tartrate: 'TAR-trate',
+  teoclate: 'TEE-o-klate',
+  tosilate: 'TOS-i-late',
+  tosylate: 'TOS-i-late',
+  trihydrate: 'try-HY-drate',
+  trinitrate: 'try-NY-trate',
+  trometamol: 'tro-MET-a-mol',
+  valerate: 'VAL-er-ate',
+  valproate: 'VAL-pro-ate',
+  xinafoate: 'zi-NAF-oh-ate',
+  zinc: 'ZINK',
+};
+
+const DOSAGE_FORM_STOP_WORDS = new Set([
+  'tablet',
+  'tablets',
+  'capsule',
+  'capsules',
+  'inhaler',
+  'inhalation',
+  'oral',
+  'solution',
+  'suspension',
+  'injection',
+  'infusion',
+  'cream',
+  'ointment',
+  'gel',
+  'drops',
+  'spray',
+  'patch',
+  'patches',
+  'powder',
+  'granules',
+  'sachet',
+  'sachets',
+  'suppository',
+  'suppositories',
+  'nebules',
+  'liquid',
+  'syrup',
+  'lotion',
+  'foam',
+  'lozenge',
+  'lozenges',
+  'modified-release',
+  'gastro-resistant',
+  'prolonged-release',
+  'orodispersible',
+  'effervescent',
+  'dispersible',
+  'sublingual',
+  'buccal',
+  'nasal',
+  'eye',
+  'ear',
+  'cutaneous',
+  'transdermal',
+  'ampoules',
+  'vials',
+  'pre-filled',
+  'syringes',
+  'cfc-free',
+  'pressurised',
+]);
+
+function extractChemicalDrugWords(drugName: string): string[] {
+  const withoutParens = drugName.replace(/\([^)]*\)/g, ' ').trim().toLowerCase();
+  if (!withoutParens) return [];
+
+  const rawTokens = withoutParens.split(/\s+/);
+  const chemicalWords: string[] = [];
+
+  for (const token of rawTokens) {
+    const cleaned = token.replace(/^[,.;:]+|[,.;:]+$/g, '');
+    if (!cleaned) continue;
+    if (/\d/.test(cleaned) || DOSAGE_FORM_STOP_WORDS.has(cleaned)) {
+      break;
+    }
+    if (/^[a-z][a-z-]*$/.test(cleaned)) {
+      chemicalWords.push(cleaned);
+    }
+  }
+
+  return chemicalWords;
+}
+
+/**
+ * Ensures the displayed `phoneticSpelling` matches every word in `drugName`
+ * (for example, appending `"dy-PRO-pee-oh-nate"` for `"Beclometasone dipropionate"`
+ * or trimming `"BRO-mide"` when only `"Glycopyrronium"` is shown). Returns `null`
+ * if a trailing chemical word cannot be aligned cleanly, allowing a fresh Gemini lookup.
+ */
+export function alignClinicalPhoneticToDrugName(
+  drugName: string,
+  details: GeminiClinicalDetails,
+  matchedBaseKey?: string
+): GeminiClinicalDetails | null {
+  const cleanedPhonetic = details.phoneticSpelling
+    .replace(/^\s*\/\s*|\s*\/\s*$/g, '')
+    .replace(/\s*[/·•]\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanedPhonetic) return null;
+
+  const drugWords = extractChemicalDrugWords(drugName);
+  const phoneticTokens = cleanedPhonetic.split(' ').filter(Boolean);
+
+  if (drugWords.length === 0 || drugWords.length === phoneticTokens.length) {
+    return cleanedPhonetic === details.phoneticSpelling
+      ? details
+      : { ...details, phoneticSpelling: cleanedPhonetic };
+  }
+
+  if (drugWords.length > phoneticTokens.length) {
+    const trailingWords = drugWords.slice(phoneticTokens.length);
+    const trailingPhonetics: string[] = [];
+
+    for (const word of trailingWords) {
+      const saltPhonetic =
+        UK_PHARMACEUTICAL_WORD_PHONETICS[word] ??
+        PREGENERATED_CLINICAL_DETAILS[word]?.phoneticSpelling;
+      if (!saltPhonetic || saltPhonetic.includes(' ')) {
+        return null;
+      }
+      trailingPhonetics.push(saltPhonetic);
+    }
+
+    return {
+      ...details,
+      phoneticSpelling: [...phoneticTokens, ...trailingPhonetics].join(' '),
+    };
+  }
+
+  if (matchedBaseKey) {
+    const baseWords = extractChemicalDrugWords(matchedBaseKey);
+    if (
+      baseWords.length === phoneticTokens.length &&
+      drugWords.every((word, idx) => baseWords[idx] === word)
+    ) {
+      return {
+        ...details,
+        phoneticSpelling: phoneticTokens.slice(0, drugWords.length).join(' '),
+      };
+    }
+  }
+
+  return null;
+}
 
 /**
  * Looks up pre-generated clinical details for a drug by matching either the exact
  * drug name or its base UK generic name (e.g. "Bisoprolol fumarate" -> "bisoprolol",
- * "Morphine sulfate 10mg/1ml..." -> "morphine sulfate" / "morphine").
+ * "Morphine sulfate 10mg/1ml..." -> "morphine sulfate" / "morphine"), and aligns
+ * the phonetic spelling to cover every word of `drugName`.
  */
 export function findPregeneratedClinicalDetails(
   drugName: string
@@ -1076,7 +1355,13 @@ export function findPregeneratedClinicalDetails(
 
   // 1. Direct exact key match
   if (PREGENERATED_CLINICAL_DETAILS[normalized]) {
-    return PREGENERATED_CLINICAL_DETAILS[normalized];
+    return (
+      alignClinicalPhoneticToDrugName(
+        drugName,
+        PREGENERATED_CLINICAL_DETAILS[normalized],
+        normalized
+      ) ?? PREGENERATED_CLINICAL_DETAILS[normalized]
+    );
   }
 
   // 2. Match longest prefix / word-boundary key (e.g., "Amiodarone hydrochloride" -> "amiodarone")
@@ -1091,7 +1376,11 @@ export function findPregeneratedClinicalDetails(
       normalized.startsWith(`${key} (`) ||
       normalized.includes(`(${key})`)
     ) {
-      return PREGENERATED_CLINICAL_DETAILS[key];
+      return alignClinicalPhoneticToDrugName(
+        drugName,
+        PREGENERATED_CLINICAL_DETAILS[key],
+        key
+      ) ?? undefined;
     }
   }
 
@@ -1099,7 +1388,11 @@ export function findPregeneratedClinicalDetails(
   if (normalized.length >= 5) {
     for (const key of keys) {
       if (key.startsWith(`${normalized} `)) {
-        return PREGENERATED_CLINICAL_DETAILS[key];
+        return alignClinicalPhoneticToDrugName(
+          drugName,
+          PREGENERATED_CLINICAL_DETAILS[key],
+          key
+        ) ?? undefined;
       }
     }
   }

@@ -7,7 +7,10 @@ import {
 } from '../types/medication';
 import { registerDynamicBrandBreakdown } from '../data/brandProducts';
 import { ClinicalAssessmentItem } from '../types/assessment';
-import { findPregeneratedClinicalDetails } from '../data/pregeneratedClinicalDetails';
+import {
+  alignClinicalPhoneticToDrugName,
+  findPregeneratedClinicalDetails,
+} from '../data/pregeneratedClinicalDetails';
 import { findPregeneratedToxicityDetails } from '../data/pregeneratedToxicityDetails';
 import {
   ASSESSMENT_CATEGORIES,
@@ -396,7 +399,12 @@ export function getCachedClinicalDetails(
   }
 
   const normalizedKey = selectedDrugName.trim().toLowerCase();
-  return clinicalDetailsCache.get(normalizedKey);
+  const cached = clinicalDetailsCache.get(normalizedKey);
+  if (!cached) {
+    return undefined;
+  }
+
+  return alignClinicalPhoneticToDrugName(selectedDrugName, cached) ?? undefined;
 }
 
 /**
@@ -421,7 +429,7 @@ export function getCachedToxicityDetails(
  * `indications`, and a pre-hospital `medicSummary`.
  */
 export function buildClinicalPrompt(selectedDrugName: string): string {
-  return `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${selectedDrugName}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string), 'class' (string), 'indications' (array of brief strings), and 'medicSummary' (string: a plain-English, pre-hospital summary explaining why a patient is typically prescribed this medication and what an ambulance crew needs to be aware of on scene, such as bleeding risks, masked heart rates, or postural hypotension—highly relevant to a paramedic's primary survey and assessment, while strictly avoiding overly dense academic jargon). No markdown, no extra text.`;
+  return `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${selectedDrugName}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string: hyphenated UK English phonetic pronunciation covering EVERY word in '${selectedDrugName}', including any pharmaceutical salt, ester, or second word such as dipropionate, fumarate, hydrochloride, tartrate, or sodium, with stressed syllables in ALL CAPS and words separated by spaces, e.g. 'bek-lo-MET-a-zone dy-PRO-pee-oh-nate'), 'class' (string), 'indications' (array of brief strings), and 'medicSummary' (string: a plain-English, pre-hospital summary explaining why a patient is typically prescribed this medication and what an ambulance crew needs to be aware of on scene, such as bleeding risks, masked heart rates, or postural hypotension—highly relevant to a paramedic's primary survey and assessment, while strictly avoiding overly dense academic jargon). No markdown, no extra text.`;
 }
 
 /**
@@ -602,7 +610,9 @@ export async function fetchMedicationClinicalDetails(
         },
         signal
       );
-      const clinicalDetails = parseAndValidateClinicalJson(rawText);
+      const parsedDetails = parseAndValidateClinicalJson(rawText);
+      const clinicalDetails =
+        alignClinicalPhoneticToDrugName(trimmedDrugName, parsedDetails) ?? parsedDetails;
 
       clinicalDetailsCache.set(normalizedKey, clinicalDetails);
       saveClinicalCacheToLocalStorage();
