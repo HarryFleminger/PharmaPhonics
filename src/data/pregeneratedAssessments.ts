@@ -1,6 +1,20 @@
 import { ClinicalAssessmentItem } from '../types/assessment';
 
+export const COMMON_CALLOUT_CATEGORY = 'Common 999 Call-Outs';
+
+export const COMMON_CALLOUT_IDS = [
+  'chest-pain',
+  'difficulty-breathing',
+  'abdominal-pain',
+  'collapse-syncope',
+  'stroke-tia',
+  'seizure',
+  'suspected-sepsis',
+  'elderly-fall',
+] as const;
+
 export const ASSESSMENT_CATEGORIES = [
+  COMMON_CALLOUT_CATEGORY,
   'Cardiovascular',
   'Respiratory',
   'Neurological',

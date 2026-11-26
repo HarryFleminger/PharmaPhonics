@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {isToxicityMode
                 ? 'Pre-Hospital Overdose & Toxbase Study Assessment'
-                : 'Built for UK paramedics, EMTs, and student clinicians to quickly search UK BNF medications, get pre-hospital on-scene context, overdose toxicity and calculator, and holistic prescription breakdowns.'}
+                : 'Built for UK paramedics, EMTs, and student clinicians to search BNF drugs, 999 assessment checklists, on-scene context, overdose doses, and prescription breakdowns.'}
             </p>
           </div>
 

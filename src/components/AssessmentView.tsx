@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import {
   ASSESSMENT_CATEGORIES,
+  COMMON_CALLOUT_CATEGORY,
+  COMMON_CALLOUT_IDS,
   PREGENERATED_ASSESSMENTS,
 } from '../data/pregeneratedAssessments';
 import {
@@ -29,17 +31,6 @@ interface AssessmentViewProps {
   isQuickCategoriesMinimized?: boolean;
   onSetQuickCategoriesMinimized?: (minimized: boolean | ((prev: boolean) => boolean)) => void;
 }
-
-const COMMON_CALLOUT_IDS = [
-  'chest-pain',
-  'difficulty-breathing',
-  'abdominal-pain',
-  'collapse-syncope',
-  'stroke-tia',
-  'seizure',
-  'suspected-sepsis',
-  'elderly-fall',
-] as const;
 
 function normalizeSearchText(text: string): string {
   return text
@@ -120,7 +111,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   onSetQuickCategoriesMinimized,
 }) => {
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(COMMON_CALLOUT_CATEGORY);
   const [isCategoryDrawerMinimized, setIsCategoryDrawerMinimized] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null);
   const [internalQuickCategoriesMinimized, setInternalQuickCategoriesMinimized] = useState<boolean>(
@@ -158,7 +149,12 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     for (const category of ASSESSMENT_CATEGORIES) {
       map[category] = [];
     }
+    map[COMMON_CALLOUT_CATEGORY] = COMMON_CALLOUT_IDS.map((id) =>
+      allAssessments.find((item) => item.id === id)
+    ).filter((item): item is ClinicalAssessmentItem => Boolean(item));
+
     for (const item of allAssessments) {
+      if (item.category === COMMON_CALLOUT_CATEGORY) continue;
       if (!map[item.category]) {
         map[item.category] = [];
       }
@@ -166,12 +162,6 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     }
     return map;
   }, [allAssessments]);
-
-  const commonCallOuts = useMemo(() => {
-    return COMMON_CALLOUT_IDS.map((id) =>
-      PREGENERATED_ASSESSMENTS.find((item) => item.id === id)
-    ).filter((item): item is ClinicalAssessmentItem => Boolean(item));
-  }, []);
 
   const activeCategoryItems = activeCategory ? assessmentsByCategory[activeCategory] ?? [] : [];
 
@@ -226,7 +216,11 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     setQuery('');
     setAiError(null);
     setSelectedAssessmentId(assessment.id);
-    setActiveCategory(assessment.category);
+    setActiveCategory((prev) =>
+      prev && assessmentsByCategory[prev]?.some((item) => item.id === assessment.id)
+        ? prev
+        : assessment.category
+    );
     setIsCategoryDrawerMinimized(true);
     setExpandedIds((prev) => ({
       ...prev,
@@ -239,7 +233,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     setQuery('');
     setAiError(null);
     setSelectedAssessmentId(null);
-    setActiveCategory(null);
+    setActiveCategory((prev) => prev ?? COMMON_CALLOUT_CATEGORY);
     setIsCategoryDrawerMinimized(false);
   };
 
@@ -541,7 +535,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
                   </button>
                 </div>
 
-                <div className="p-3 sm:p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                <div className="p-3 sm:p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[260px] sm:max-h-none overflow-y-auto">
                   {activeCategoryItems.map((item) => {
                     const isActiveItem = selectedAssessmentId === item.id;
                     return (
@@ -682,7 +676,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
               onClick={handleResetAll}
               className="inline-flex items-center gap-1 text-xs font-semibold text-ambulance-green hover:underline cursor-pointer"
             >
-              <span>← Back to all call-outs</span>
+              <span>← Back to call-out list</span>
             </button>
           </div>
 
@@ -692,60 +686,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
             onToggle={handleToggleCard}
           />
         </section>
-      ) : activeCategory && activeCategoryItems.length > 0 ? (
-        <section aria-label={`${activeCategory} assessments`} className="space-y-3">
-          {activeCategoryItems.map((assessment) => (
-            <AssessmentCard
-              key={assessment.id}
-              assessment={assessment}
-              isExpanded={Boolean(expandedIds[assessment.id])}
-              onToggle={handleToggleCard}
-            />
-          ))}
-        </section>
-      ) : (
-        /* Initial Compact Common 999 Call-Outs Grid */
-        <section
-          aria-label="Common 999 call-outs"
-          className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm"
-        >
-          <div className="flex items-center justify-between gap-2 mb-3.5">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-emerald-100 text-ambulance-green shrink-0">
-                <Stethoscope className="w-4 h-4" aria-hidden="true" />
-              </div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Common 999 Call-Outs
-              </h2>
-            </div>
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-400">
-              {allAssessments.length} checklists ready
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {commonCallOuts.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleSelectAssessmentFromList(item)}
-                className="group flex items-center justify-between gap-2 px-3.5 py-3 rounded-xl bg-slate-50 border border-slate-200/90 hover:bg-emerald-50/70 hover:border-emerald-300 text-left transition-all cursor-pointer active:scale-[0.99]"
-              >
-                <div className="min-w-0">
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                    {item.title}
-                  </div>
-                  <div className="text-[11px] text-slate-500 truncate">{item.category}</div>
-                </div>
-                <ChevronRight
-                  className="w-4 h-4 text-slate-400 group-hover:text-ambulance-green shrink-0 transition-transform group-hover:translate-x-0.5"
-                  aria-hidden="true"
-                />
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      ) : null}
     </div>
   );
 };

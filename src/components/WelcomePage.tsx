@@ -46,9 +46,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
             UK Paramedic Medication &amp; Assessment Study Tool
           </h1>
           <p className="mt-2.5 text-sm sm:text-base text-emerald-100/95 max-w-3xl leading-relaxed">
-            Built for UK paramedics, EMTs, and student clinicians to quickly search UK BNF
-            medications, get pre-hospital on-scene context, rapid 999 clinical assessment
-            checklists, overdose toxicity and calculator, and holistic prescription breakdowns.
+            Built for UK paramedics, EMTs, and student clinicians to search BNF drugs, 999
+            assessment checklists, on-scene context, overdose doses, and prescription breakdowns.
           </p>
         </div>
       </header>
