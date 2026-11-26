@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Search,
   X,
@@ -74,9 +74,26 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 
   const trimmedLength = searchQuery.trim().length;
   const activeCategoryDrugs = activeCategory ? quickCategories[activeCategory] ?? [] : [];
+  const searchSectionRef = useRef<HTMLElement | null>(null);
+
+  const scrollSearchBelowHeader = () => {
+    const sectionEl = searchSectionRef.current;
+    if (!sectionEl) return;
+
+    const headerEl = document.querySelector('header');
+    const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
+    const targetTop =
+      window.scrollY + sectionEl.getBoundingClientRect().top - headerHeight - 8;
+
+    window.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: 'smooth',
+    });
+  };
 
   return (
     <section
+      ref={searchSectionRef}
       aria-label="BNF medication search and Quick Categories"
       onDragEnter={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
@@ -114,7 +131,28 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
               value={searchQuery}
               onFocus={onSearchInteract}
               onClick={onSearchInteract}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) => {
+                const nextQuery = e.target.value;
+                if (nextQuery !== '') {
+                  const shouldSnapToTop =
+                    searchQuery === '' ||
+                    activeCategory !== null ||
+                    selectedCategoryDrug !== null ||
+                    !quickCategoriesMinimized ||
+                    uploaderOpen;
+
+                  onSelectCategory(null);
+                  setUploaderOpen(false);
+                  setQuickCategoriesMinimized(true);
+
+                  if (shouldSnapToTop) {
+                    requestAnimationFrame(() => {
+                      scrollSearchBelowHeader();
+                    });
+                  }
+                }
+                onSearchChange(nextQuery);
+              }}
               placeholder={
                 isToxicityMode
                   ? 'Search medication for overdose assessment (type 3+ chars, or pick a category)...'

@@ -352,6 +352,8 @@ export function App() {
         setActiveCategory(category);
         setIsCategoryMinimized(false);
       }
+      setSearchQuery('');
+      setSelectedCategoryDrug(null);
     },
     [activeCategory, isCategoryMinimized]
   );
@@ -645,10 +647,11 @@ export function App() {
         <SearchAndFilter
           searchQuery={searchQuery}
           onSearchChange={(q) => {
-            setSearchQuery(q);
-            if (!q.trim()) {
-              setSelectedCategoryDrug(null);
+            if (searchQuery === '' && q !== '') {
+              setSelectedCardKeys({});
             }
+            setSearchQuery(q);
+            setSelectedCategoryDrug(null);
           }}
           activeCategory={activeCategory}
           isCategoryMinimized={isCategoryMinimized}
