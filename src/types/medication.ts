@@ -55,3 +55,32 @@ export interface PrescriptionScanResult {
 }
 
 export type SpeechSpeed = 1.0 | 0.75;
+
+/**
+ * Represents a UK brand-name or fixed-dose combination product expanded into its
+ * constituent active generic UK BNF drugs for clear hierarchical display.
+ */
+export interface BrandProductGroup {
+  /** Unique group identifier (e.g. "brand::trimbow") */
+  id: string;
+  /** Display brand/product name (e.g. "Trimbow") */
+  brandName: string;
+  /** Optional short clinical/formulation descriptor */
+  subtitle?: string;
+  /** Separate constituent UK BNF generic drug items */
+  constituents: BnfMedicationItem[];
+  /** Raw BNF IDs superseded by this brand group so combined cards aren't duplicated */
+  supersededBnfIds?: string[];
+}
+
+export interface BnfSearchOutcome {
+  brandGroups: BrandProductGroup[];
+  standaloneItems: BnfMedicationItem[];
+}
+
+export interface GeminiBrandResolution {
+  isBrandOrCombination: boolean;
+  productName: string;
+  subtitle?: string;
+  constituents: string[];
+}

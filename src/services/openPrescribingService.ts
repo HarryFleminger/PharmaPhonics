@@ -1,5 +1,6 @@
-import { BnfMedicationItem } from '../types/medication';
+import { BnfMedicationItem, BnfSearchOutcome } from '../types/medication';
 import { UK_BNF_FALLBACK_ITEMS } from '../data/bnfNomenclature';
+import { searchBrandProducts } from '../data/brandProducts';
 
 interface RawOpenPrescribingItem {
   id?: string | number;
@@ -178,4 +179,62 @@ export async function searchOpenPrescribingBnf(
   }
 
   return [];
+}
+
+/**
+ * Searches UK BNF medications while expanding matching UK brand names or combination
+ * products (e.g. Trimbow -> Beclometasone dipropionate / Formoterol fumarate / Glycopyrronium)
+ * into hierarchical groups of individual constituent drug cards.
+ */
+export async function searchMedicationsWithBrandHierarchy(
+  searchTerm: string,
+  signal?: AbortSignal
+): Promise<BnfSearchOutcome> {
+  const trimmed = searchTerm.trim();
+  if (trimmed.length <= 2) {
+    return { brandGroups: [], standaloneItems: [] };
+  }
+
+  const trimmedLower = trimmed.toLowerCase();
+  const hasGenericPrefixMatches = UK_BNF_FALLBACK_ITEMS.some((item) => {
+    const cleanBase = item.name.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+    return cleanBase.startsWith(trimmedLower);
+  });
+
+  const brandGroups = searchBrandProducts(trimmed, hasGenericPrefixMatches);
+  const localMatches = searchLocalBnfIndex(trimmed);
+
+  let rawStandalone: BnfMedicationItem[] = [];
+  if (localMatches.length > 0) {
+    rawStandalone = localMatches;
+  } else if (brandGroups.length === 0) {
+    rawStandalone = await searchOpenPrescribingBnf(trimmed, signal);
+  }
+
+  const supersededIds = new Set<string>();
+  brandGroups.forEach((group) => {
+    group.supersededBnfIds?.forEach((id) => supersededIds.add(id));
+  });
+
+  const hasExactBrandGroup = brandGroups.some((group) => {
+    const brandLower = group.brandName.toLowerCase();
+    return brandLower === trimmedLower || brandLower.startsWith(`${trimmedLower} `);
+  });
+
+  const standaloneItems = rawStandalone.filter((item) => {
+    if (supersededIds.has(item.id)) return false;
+    // If an exact brand group is shown, omit items that only matched parenthetically
+    if (hasExactBrandGroup) {
+      const cleanBaseLower = item.name.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+      if (!cleanBaseLower.includes(trimmedLower)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  return {
+    brandGroups,
+    standaloneItems,
+  };
 }

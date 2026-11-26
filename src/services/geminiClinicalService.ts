@@ -1,4 +1,5 @@
 import {
+  GeminiBrandResolution,
   GeminiClinicalDetails,
   GeminiToxicityDetails,
   PrescriptionScanResult,
@@ -33,6 +34,7 @@ const CLINICAL_STORAGE_KEY = 'medspeak_clinical_cache_v1';
 const TOXICITY_STORAGE_KEY = 'medspeak_toxicity_cache_v1';
 const PRESCRIPTION_SCAN_STORAGE_KEY = 'medspeak_prescription_scan_cache_v1';
 const ASSESSMENT_STORAGE_KEY = 'medspeak_assessment_cache_v1';
+const BRAND_STORAGE_KEY = 'medspeak_brand_cache_v1';
 const MAX_PERSISTED_PRESCRIPTION_SCANS = 25;
 
 interface GeminiGenerateContentResponse {
@@ -56,12 +58,14 @@ const clinicalDetailsCache = new Map<string, GeminiClinicalDetails>();
 const toxicityDetailsCache = new Map<string, GeminiToxicityDetails>();
 const prescriptionScanCache = new Map<string, PrescriptionScanResult>();
 const assessmentCache = new Map<string, ClinicalAssessmentItem>();
+const brandResolutionCache = new Map<string, GeminiBrandResolution>();
 
 // In-flight request deduplicators so concurrent requests for the same drug/image share one Promise
 const inFlightClinicalRequests = new Map<string, Promise<GeminiClinicalDetails>>();
 const inFlightToxicityRequests = new Map<string, Promise<GeminiToxicityDetails>>();
 const inFlightVisionRequests = new Map<string, Promise<PrescriptionScanResult>>();
 const inFlightAssessmentRequests = new Map<string, Promise<ClinicalAssessmentItem>>();
+const inFlightBrandRequests = new Map<string, Promise<GeminiBrandResolution>>();
 
 let serverGeminiConfigured = true;
 
@@ -160,6 +164,17 @@ function isValidAssessmentItem(value: unknown): value is ClinicalAssessmentItem 
   );
 }
 
+function isValidBrandResolution(value: unknown): value is GeminiBrandResolution {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.isBrandOrCombination === 'boolean' &&
+    typeof record.productName === 'string' &&
+    Array.isArray(record.constituents) &&
+    record.constituents.every((item) => typeof item === 'string')
+  );
+}
+
 /**
  * Computes a fast, deterministic FNV-1a fingerprint over a base64 image string
  * so re-uploading the same photo resolves from `localStorage` with 0 tokens.
@@ -250,6 +265,22 @@ function hydrateCachesFromLocalStorage(): void {
   } catch (err) {
     console.warn('[GeminiClinicalService] Could not read assessment cache:', err);
   }
+
+  try {
+    const rawBrands = window.localStorage.getItem(BRAND_STORAGE_KEY);
+    if (rawBrands) {
+      const parsed: unknown = JSON.parse(rawBrands);
+      if (parsed && typeof parsed === 'object') {
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+          if (isValidBrandResolution(value)) {
+            brandResolutionCache.set(key, value);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not read brand cache:', err);
+  }
 }
 
 /**
@@ -319,6 +350,20 @@ function saveAssessmentCacheToLocalStorage(): void {
     window.localStorage.setItem(ASSESSMENT_STORAGE_KEY, JSON.stringify(serialized));
   } catch (err) {
     console.warn('[GeminiClinicalService] Could not write assessment cache:', err);
+  }
+}
+
+function saveBrandCacheToLocalStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  try {
+    const serialized: Record<string, GeminiBrandResolution> = {};
+    brandResolutionCache.forEach((value, key) => {
+      serialized[key] = value;
+    });
+    window.localStorage.setItem(BRAND_STORAGE_KEY, JSON.stringify(serialized));
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not write brand cache:', err);
   }
 }
 
@@ -455,7 +500,7 @@ function parseAndValidateToxicityJson(rawText: string): GeminiToxicityDetails {
 
 type GeminiProxyPayload =
   | {
-      mode: 'clinical' | 'toxicity';
+      mode: 'clinical' | 'toxicity' | 'brand';
       drugName: string;
     }
   | {
@@ -980,5 +1025,101 @@ export async function fetchConditionAssessment(
     return await requestPromise;
   } finally {
     inFlightAssessmentRequests.delete(normalizedKey);
+  }
+}
+
+function parseAndValidateBrandJson(
+  rawText: string,
+  fallbackQuery: string
+): GeminiBrandResolution {
+  const cleanedText = rawText
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+
+  const parsed: unknown = JSON.parse(cleanedText);
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid JSON structure returned by Gemini for brand resolution.');
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const isBrandOrCombination = Boolean(record.isBrandOrCombination);
+  const rawProductName =
+    typeof record.productName === 'string' && record.productName.trim()
+      ? record.productName.trim()
+      : fallbackQuery;
+  const subtitle =
+    typeof record.subtitle === 'string' && record.subtitle.trim()
+      ? record.subtitle.trim()
+      : undefined;
+  const constituents = Array.isArray(record.constituents)
+    ? Array.from(
+        new Set(
+          record.constituents
+            .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+            .map((item) => item.trim())
+        )
+      ).slice(0, 5)
+    : [];
+
+  return {
+    isBrandOrCombination,
+    productName: rawProductName,
+    subtitle,
+    constituents,
+  };
+}
+
+/**
+ * Resolves an unlisted brand or combination product query into its generic UK BNF
+ * constituent drug names using Gemini AI (`mode: 'brand'`) with localStorage caching.
+ */
+export async function fetchBrandProductBreakdown(
+  query: string,
+  signal?: AbortSignal
+): Promise<GeminiBrandResolution> {
+  const trimmedQuery = query.trim().slice(0, MAX_DRUG_NAME_LENGTH);
+  const normalizedKey = trimmedQuery.toLowerCase();
+  if (!normalizedKey) {
+    throw new Error('Please enter a medication or brand name.');
+  }
+
+  const cached = brandResolutionCache.get(normalizedKey);
+  if (cached) {
+    return cached;
+  }
+
+  const existingInFlight = inFlightBrandRequests.get(normalizedKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  enforceRateLimit('gemini_text');
+
+  const requestPromise = (async () => {
+    try {
+      const rawText = await callServerGeminiProxy(
+        {
+          mode: 'brand',
+          drugName: trimmedQuery,
+        },
+        signal
+      );
+      const resolution = parseAndValidateBrandJson(rawText, trimmedQuery);
+      brandResolutionCache.set(normalizedKey, resolution);
+      saveBrandCacheToLocalStorage();
+      return resolution;
+    } catch (error) {
+      console.error(`[GeminiClinicalService] Failed to resolve brand "${query}":`, error);
+      throw error;
+    }
+  })();
+
+  inFlightBrandRequests.set(normalizedKey, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightBrandRequests.delete(normalizedKey);
   }
 }

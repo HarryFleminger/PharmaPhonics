@@ -125,6 +125,10 @@ function buildAssessmentPrompt(conditionName) {
   return `You are a UK Paramedic (JRCALC / NICE) pre-hospital clinical assessment expert. Create a rapid-reference pocketbook assessment checklist for a patient presenting with '${conditionName}'. Keep every bullet ultra-concise, telegraphic, and straight to the point (no prose explanations, no filler). For 'keyQuestions' and 'keyAssessments', start each string with a short 1-3 word label followed by a colon (max 24 chars before ':'), e.g. 'Onset: Sudden or gradual? What were they doing?' or 'Obs: RR, SpO2, HR, BP, Temp, BM, GCS'. Return ONLY a flat JSON object with exactly these 5 keys: 'title' (string: clean UK clinical title for the condition/presentation), 'category' (string: choose the closest fit from 'Cardiovascular', 'Respiratory', 'Neurological', 'Abdominal, GI & Renal', 'Medical, Endocrine & Sepsis', 'Trauma & MSK', or 'Maternity, Paeds & Mental Health'), 'keyQuestions' (array of 5 to 7 concise SOCRATES/SOCATE/ROS history questions in 'Label: question?' format), 'keyAssessments' (array of 4 to 6 concise bedside primary/secondary survey checks in 'Label: check' format), and 'redFlags' (array of 4 to 5 blunt time-critical red flag signs/symptoms). No markdown, no extra text.`;
 }
 
+function buildBrandPrompt(queryName) {
+  return `You are a UK BNF and NHS prescribing expert. Determine whether '${queryName}' is a UK brand-name medication or multi-ingredient combination product. Return ONLY a flat JSON object with exactly these 4 keys: 'isBrandOrCombination' (boolean: true if '${queryName}' is a brand/trade name or fixed-dose combination product, false if it is already a single generic UK BNF / rINN drug name), 'productName' (string: clean capitalised brand or product name), 'subtitle' (string: brief 2 to 5 word UK formulation/class description, or empty string), and 'constituents' (array of 1 to 5 strings: the distinct active generic UK BNF / rINN drug names contained in the product, e.g. ['Beclometasone dipropionate', 'Formoterol fumarate', 'Glycopyrronium']). No markdown, no extra text.`;
+}
+
 /**
  * Validates the incoming structured request body and returns the locked Gemini `contents` array.
  */
@@ -135,7 +139,7 @@ function buildLockedContentsFromBody(body) {
 
   const mode = body.mode;
 
-  if (mode === 'clinical' || mode === 'toxicity') {
+  if (mode === 'clinical' || mode === 'toxicity' || mode === 'brand') {
     const rawDrugName = typeof body.drugName === 'string' ? body.drugName.trim() : '';
     if (!rawDrugName) {
       throw new Error('Missing required `drugName` string.');
@@ -148,7 +152,9 @@ function buildLockedContentsFromBody(body) {
     const prompt =
       mode === 'clinical'
         ? buildClinicalPrompt(sanitizedDrugName)
-        : buildToxicityPrompt(sanitizedDrugName);
+        : mode === 'toxicity'
+        ? buildToxicityPrompt(sanitizedDrugName)
+        : buildBrandPrompt(sanitizedDrugName);
 
     return [{ parts: [{ text: prompt }] }];
   }
@@ -198,7 +204,7 @@ function buildLockedContentsFromBody(body) {
   }
 
   throw new Error(
-    "Invalid `mode`. Expected 'clinical', 'toxicity', 'prescription', 'medlist', or 'assessment'."
+    "Invalid `mode`. Expected 'clinical', 'toxicity', 'brand', 'prescription', 'medlist', or 'assessment'."
   );
 }
 

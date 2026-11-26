@@ -331,7 +331,7 @@ export async function handleApiRequest(req, res) {
     let contents;
     try {
       const mode = parsedBody?.mode;
-      if (mode === 'clinical' || mode === 'toxicity') {
+      if (mode === 'clinical' || mode === 'toxicity' || mode === 'brand') {
         const rawDrugName =
           typeof parsedBody.drugName === 'string' ? parsedBody.drugName.trim() : '';
         if (!rawDrugName || rawDrugName.length > 120) {
@@ -341,7 +341,9 @@ export async function handleApiRequest(req, res) {
         const prompt =
           mode === 'clinical'
             ? `You are a UK Paramedic (JRCALC) and BNF pharmacology expert. Provide clinical details for the drug '${sanitized}'. Return a flat JSON object using exactly these keys: 'phoneticSpelling' (string), 'class' (string), 'indications' (array of brief strings), and 'medicSummary' (string: a plain-English, pre-hospital summary explaining why a patient is typically prescribed this medication and what an ambulance crew needs to be aware of on scene, such as bleeding risks, masked heart rates, or postural hypotension—highly relevant to a paramedic's primary survey and assessment, while strictly avoiding overly dense academic jargon). No markdown, no extra text.`
-            : `You are a UK Paramedic and Toxbase/JRCALC expert. Provide pre-hospital overdose information for '${sanitized}'. Return ONLY flat JSON with exactly these keys: 'overdoseEffects' (string: plain-English summary of how the overdose presents clinically and vital sign changes) and 'toxicThreshold' (string: known toxic dose limit, e.g., '>75mg/kg' or specific mg amount).`;
+            : mode === 'toxicity'
+            ? `You are a UK Paramedic and Toxbase/JRCALC expert. Provide pre-hospital overdose information for '${sanitized}'. Return ONLY flat JSON with exactly these keys: 'overdoseEffects' (string: plain-English summary of how the overdose presents clinically and vital sign changes) and 'toxicThreshold' (string: known toxic dose limit, e.g., '>75mg/kg' or specific mg amount).`
+            : `You are a UK BNF and NHS prescribing expert. Determine whether '${sanitized}' is a UK brand-name medication or multi-ingredient combination product. Return ONLY a flat JSON object with exactly these 4 keys: 'isBrandOrCombination' (boolean: true if '${sanitized}' is a brand/trade name or fixed-dose combination product, false if it is already a single generic UK BNF / rINN drug name), 'productName' (string: clean capitalised brand or product name), 'subtitle' (string: brief 2 to 5 word UK formulation/class description, or empty string), and 'constituents' (array of 1 to 5 strings: the distinct active generic UK BNF / rINN drug names contained in the product, e.g. ['Beclometasone dipropionate', 'Formoterol fumarate', 'Glycopyrronium']). No markdown, no extra text.`;
         contents = [{ parts: [{ text: prompt }] }];
       } else if (mode === 'prescription') {
         const base64Data =
@@ -385,7 +387,7 @@ export async function handleApiRequest(req, res) {
         contents = [{ parts: [{ text: assessmentPrompt }] }];
       } else {
         throw new Error(
-          "Invalid `mode`. Expected 'clinical', 'toxicity', 'prescription', 'medlist', or 'assessment'."
+          "Invalid `mode`. Expected 'clinical', 'toxicity', 'brand', 'prescription', 'medlist', or 'assessment'."
         );
       }
     } catch (err) {

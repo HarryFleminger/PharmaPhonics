@@ -9,18 +9,21 @@ import {
 } from 'lucide-react';
 import {
   BnfMedicationItem,
+  BrandProductGroup,
   GeminiClinicalDetails,
   GeminiToxicityDetails,
 } from './types/medication';
 import { useDebounce } from './hooks/useDebounce';
-import { searchOpenPrescribingBnf } from './services/openPrescribingService';
+import { searchMedicationsWithBrandHierarchy } from './services/openPrescribingService';
 import {
+  fetchBrandProductBreakdown,
   fetchMedicationClinicalDetails,
   fetchMedicationToxicityDetails,
   fetchServerHealthStatus,
   getCachedClinicalDetails,
   getCachedToxicityDetails,
 } from './services/geminiClinicalService';
+import { buildBrandGroupFromResolution } from './data/brandProducts';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { Header } from './components/Header';
 import { SearchAndFilter } from './components/SearchAndFilter';
@@ -31,6 +34,7 @@ import {
   detectPreferredToxUnit,
 } from './components/ToxCalculator';
 import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
+import { BrandProductGroupCard } from './components/BrandProductGroupCard';
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
 import { AssessmentView } from './components/AssessmentView';
@@ -101,8 +105,10 @@ export function App() {
 
   const debouncedQuery = useDebounce(searchQuery, 400);
 
+  const [brandGroups, setBrandGroups] = useState<BrandProductGroup[]>([]);
   const [results, setResults] = useState<BnfMedicationItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isAiBrandLookupLoading, setIsAiBrandLookupLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   // Track whether the search was triggered by clicking a Quick Category drug
@@ -279,8 +285,14 @@ export function App() {
         setSelectedCardKeys(nextSelectedKeys);
       }
 
-      results.forEach((item) => {
+      const combinedItems = [...brandGroups.flatMap((g) => g.constituents), ...results];
+      const seenToggleKeys = new Set<string>();
+
+      combinedItems.forEach((item) => {
         const cardKey = getCardKey(item);
+        if (seenToggleKeys.has(cardKey)) return;
+        seenToggleKeys.add(cardKey);
+
         if (nextSelectedKeys[cardKey]) {
           const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
           if (existingTox) {
@@ -303,6 +315,7 @@ export function App() {
     },
     [
       isToxicityMode,
+      brandGroups,
       results,
       selectedCardKeys,
       toxicityDetailsByKey,
@@ -312,6 +325,54 @@ export function App() {
       loadToxicityDetailsForMedication,
       loadClinicalDetailsForMedication,
       triggerFirstTimeClinicalWarning,
+    ]
+  );
+
+  const handleExpandAllConstituents = useCallback(
+    (group: BrandProductGroup, expand: boolean) => {
+      if (expand) {
+        triggerFirstTimeClinicalWarning();
+      }
+
+      setSelectedCardKeys((prev) => {
+        const next = { ...prev };
+        group.constituents.forEach((item) => {
+          next[getCardKey(item)] = expand;
+        });
+        return next;
+      });
+
+      if (expand) {
+        group.constituents.forEach((item) => {
+          const cardKey = getCardKey(item);
+          const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
+          if (existingTox) {
+            const preferredUnit = detectPreferredToxUnit(item.name, existingTox.toxicThreshold);
+            setToxCalculatorValues((prev) =>
+              prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+            );
+          }
+          if (isToxicityMode) {
+            if (!toxicityDetailsByKey[cardKey] && !toxicityLoadingByKey[cardKey]) {
+              void loadToxicityDetailsForMedication(item);
+            }
+          } else {
+            if (!clinicalDetailsByKey[cardKey] && !clinicalLoadingByKey[cardKey]) {
+              void loadClinicalDetailsForMedication(item);
+            }
+          }
+        });
+      }
+    },
+    [
+      triggerFirstTimeClinicalWarning,
+      toxicityDetailsByKey,
+      clinicalDetailsByKey,
+      clinicalLoadingByKey,
+      toxicityLoadingByKey,
+      isToxicityMode,
+      loadClinicalDetailsForMedication,
+      loadToxicityDetailsForMedication,
     ]
   );
 
@@ -402,13 +463,53 @@ export function App() {
     [triggerFirstTimeClinicalWarning]
   );
 
-  // Allows looking up a brand-new or unlisted medication directly via Gemini AI
+  // Allows looking up a brand-name, combination, or unlisted medication via Gemini AI
   // even if it is not yet in the local UK BNF index
-  const handleLookupCustomDrugWithAi = useCallback(() => {
+  const handleLookupCustomDrugWithAi = useCallback(async () => {
     const raw = debouncedQuery.trim();
     if (!raw) return;
 
     triggerFirstTimeClinicalWarning();
+    setIsAiBrandLookupLoading(true);
+
+    try {
+      const resolution = await fetchBrandProductBreakdown(raw);
+      const isMultiOrAliasBrand =
+        resolution.isBrandOrCombination &&
+        resolution.constituents.length > 0 &&
+        (resolution.constituents.length > 1 ||
+          resolution.constituents[0].toLowerCase() !== raw.toLowerCase());
+
+      if (isMultiOrAliasBrand) {
+        const brandGroup = buildBrandGroupFromResolution(
+          resolution.productName,
+          resolution.constituents,
+          resolution.subtitle
+        );
+        setBrandGroups([brandGroup]);
+        setResults([]);
+        setSelectedCardKeys((prev) => {
+          const next = { ...prev };
+          brandGroup.constituents.forEach((item) => {
+            next[getCardKey(item)] = true;
+          });
+          return next;
+        });
+
+        brandGroup.constituents.forEach((item) => {
+          if (isToxicityMode) {
+            void loadToxicityDetailsForMedication(item);
+          } else {
+            void loadClinicalDetailsForMedication(item);
+          }
+        });
+        return;
+      }
+    } catch {
+      // Fall back to standard direct single-drug lookup if brand breakdown cannot resolve
+    } finally {
+      setIsAiBrandLookupLoading(false);
+    }
 
     const formattedName = raw.charAt(0).toUpperCase() + raw.slice(1);
     const customItem: BnfMedicationItem = {
@@ -418,6 +519,7 @@ export function App() {
     };
     const cardKey = getCardKey(customItem);
 
+    setBrandGroups([]);
     setResults([customItem]);
     setSelectedCardKeys((prev) => ({ ...prev, [cardKey]: true }));
 
@@ -440,11 +542,12 @@ export function App() {
     isToxicityModeRef.current = isToxicityMode;
   }, [isToxicityMode]);
 
-  // Fetch live UK BNF records from OpenPrescribing after 400ms debounce when input length > 2
+  // Fetch live UK BNF records (and expand matching UK brands) after 400ms debounce when input length > 2
   useEffect(() => {
     const trimmed = debouncedQuery.trim();
 
     if (trimmed.length <= 2) {
+      setBrandGroups([]);
       setResults([]);
       setIsSearching(false);
       setSearchError(null);
@@ -455,17 +558,19 @@ export function App() {
     setIsSearching(true);
     setSearchError(null);
 
-    searchOpenPrescribingBnf(trimmed, abortController.signal)
-      .then((items) => {
+    searchMedicationsWithBrandHierarchy(trimmed, abortController.signal)
+      .then((outcome) => {
         if (!abortController.signal.aborted) {
-          setResults(items);
+          setBrandGroups(outcome.brandGroups);
+          setResults(outcome.standaloneItems);
           setIsSearching(false);
 
           // If the user clicked a drug from Quick Categories, automatically
-          // select the first returned BNF card and fetch the active mode's details
-          if (autoExpandNextResultRef.current && items.length > 0) {
+          // select the first returned BNF card (or constituent) and fetch details
+          const firstItem =
+            outcome.standaloneItems[0] ?? outcome.brandGroups[0]?.constituents[0];
+          if (autoExpandNextResultRef.current && firstItem) {
             autoExpandNextResultRef.current = false;
-            const firstItem = items[0];
             const firstKey = getCardKey(firstItem);
             setSelectedCardKeys((prev) => ({ ...prev, [firstKey]: true }));
             const existingTox = getCachedToxicityDetails(firstItem.name);
@@ -495,6 +600,7 @@ export function App() {
               ? err.message
               : 'Unable to fetch UK BNF medications from OpenPrescribing.'
           );
+          setBrandGroups([]);
           setResults([]);
           setIsSearching(false);
         }
@@ -506,6 +612,8 @@ export function App() {
   }, [debouncedQuery, loadClinicalDetailsForMedication, loadToxicityDetailsForMedication]);
 
   const hasActiveQuery = debouncedQuery.trim().length > 2;
+  const totalResultCount =
+    brandGroups.reduce((sum, group) => sum + group.constituents.length, 0) + results.length;
   const toxCalculatedMetrics = computeToxDoseMetrics(toxCalculatorValues);
 
   if (isGuideOpen) {
@@ -665,8 +773,8 @@ export function App() {
           onSelectCategory={handleSelectCategory}
           onToggleMinimizeCategory={() => setIsCategoryMinimized((prev) => !prev)}
           onSelectDrug={handleSelectCategoryDrug}
-          isSearching={isSearching}
-          resultCount={results.length}
+          isSearching={isSearching || isAiBrandLookupLoading}
+          resultCount={totalResultCount}
           hasActiveQuery={hasActiveQuery}
           isToxicityMode={isToxicityMode}
           highlightUploadButton={highlightUploadButton}
@@ -690,7 +798,7 @@ export function App() {
         )}
 
         {/* Loading Skeleton State while OpenPrescribing API Fetches */}
-        {isSearching ? (
+        {isSearching || isAiBrandLookupLoading ? (
           <section
             aria-label="Loading BNF search results"
             aria-busy="true"
@@ -756,7 +864,7 @@ export function App() {
               }
             }}
           />
-        ) : results.length === 0 ? (
+        ) : brandGroups.length === 0 && results.length === 0 ? (
           /* No Local BNF Match State — Offer 1-Tap Direct Gemini AI Lookup */
           <div
             className={`bg-white rounded-2xl border p-8 sm:p-10 text-center max-w-lg mx-auto my-6 shadow-sm ${
@@ -777,7 +885,7 @@ export function App() {
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
               <button
                 type="button"
-                onClick={handleLookupCustomDrugWithAi}
+                onClick={() => void handleLookupCustomDrugWithAi()}
                 className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-bold shadow-xs transition-all cursor-pointer active:scale-[0.98] ${
                   isToxicityMode
                     ? 'bg-rose-600 hover:bg-rose-700'
@@ -798,43 +906,92 @@ export function App() {
             </div>
           </div>
         ) : (
-          /* Responsive Flashcard Grid */
-          <section
-            aria-label="OpenPrescribing BNF Medication Flashcards"
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 items-start"
-          >
-            {results.map((item) => {
-              const cardKey = getCardKey(item);
-              return (
-                <MedicationCard
-                  key={cardKey}
-                  medication={item}
-                  isSelected={Boolean(selectedCardKeys[cardKey])}
-                  onSelect={handleSelectMedication}
-                  clinicalDetails={clinicalDetailsByKey[cardKey]}
-                  isClinicalLoading={Boolean(clinicalLoadingByKey[cardKey])}
-                  clinicalError={clinicalErrorByKey[cardKey]}
-                  onRetryClinical={loadClinicalDetailsForMedication}
-                  isToxicityMode={isToxicityMode}
-                  onToggleToxicityMode={handleToggleToxicityMode}
-                  toxicityDetails={toxicityDetailsByKey[cardKey]}
-                  isToxicityLoading={Boolean(toxicityLoadingByKey[cardKey])}
-                  toxicityError={toxicityErrorByKey[cardKey]}
-                  onRetryToxicity={loadToxicityDetailsForMedication}
-                  toxCalculatedMetrics={toxCalculatedMetrics}
-                  onToggleToxUnit={() =>
-                    setToxCalculatorValues((prev) => ({
-                      ...prev,
-                      unit: prev.unit === 'mg' ? 'mcg' : 'mg',
-                    }))
-                  }
-                  isAudioLoading={audioLoadingId === item.id}
-                  isSpeaking={speakingId === item.id}
-                  onListen={handleListenClick}
-                />
-              );
-            })}
-          </section>
+          /* Brand Product Hierarchy Groups + Responsive Standalone Flashcard Grid */
+          <div className="space-y-6">
+            {brandGroups.length > 0 && (
+              <section
+                aria-label="Brand and combination product active ingredients"
+                className="space-y-5"
+              >
+                {brandGroups.map((group) => (
+                  <BrandProductGroupCard
+                    key={group.id}
+                    group={group}
+                    getCardKey={getCardKey}
+                    selectedCardKeys={selectedCardKeys}
+                    onSelectMedication={handleSelectMedication}
+                    onExpandAllConstituents={handleExpandAllConstituents}
+                    clinicalDetailsByKey={clinicalDetailsByKey}
+                    clinicalLoadingByKey={clinicalLoadingByKey}
+                    clinicalErrorByKey={clinicalErrorByKey}
+                    onRetryClinical={loadClinicalDetailsForMedication}
+                    isToxicityMode={isToxicityMode}
+                    onToggleToxicityMode={handleToggleToxicityMode}
+                    toxicityDetailsByKey={toxicityDetailsByKey}
+                    toxicityLoadingByKey={toxicityLoadingByKey}
+                    toxicityErrorByKey={toxicityErrorByKey}
+                    onRetryToxicity={loadToxicityDetailsForMedication}
+                    toxCalculatedMetrics={toxCalculatedMetrics}
+                    onToggleToxUnit={() =>
+                      setToxCalculatorValues((prev) => ({
+                        ...prev,
+                        unit: prev.unit === 'mg' ? 'mcg' : 'mg',
+                      }))
+                    }
+                    audioLoadingId={audioLoadingId}
+                    speakingId={speakingId}
+                    onListen={handleListenClick}
+                  />
+                ))}
+              </section>
+            )}
+
+            {results.length > 0 && (
+              <div className="space-y-3">
+                {brandGroups.length > 0 && (
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 px-1">
+                    Other Matching UK BNF Entries
+                  </h3>
+                )}
+                <section
+                  aria-label="OpenPrescribing BNF Medication Flashcards"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 items-start"
+                >
+                  {results.map((item) => {
+                    const cardKey = getCardKey(item);
+                    return (
+                      <MedicationCard
+                        key={cardKey}
+                        medication={item}
+                        isSelected={Boolean(selectedCardKeys[cardKey])}
+                        onSelect={handleSelectMedication}
+                        clinicalDetails={clinicalDetailsByKey[cardKey]}
+                        isClinicalLoading={Boolean(clinicalLoadingByKey[cardKey])}
+                        clinicalError={clinicalErrorByKey[cardKey]}
+                        onRetryClinical={loadClinicalDetailsForMedication}
+                        isToxicityMode={isToxicityMode}
+                        onToggleToxicityMode={handleToggleToxicityMode}
+                        toxicityDetails={toxicityDetailsByKey[cardKey]}
+                        isToxicityLoading={Boolean(toxicityLoadingByKey[cardKey])}
+                        toxicityError={toxicityErrorByKey[cardKey]}
+                        onRetryToxicity={loadToxicityDetailsForMedication}
+                        toxCalculatedMetrics={toxCalculatedMetrics}
+                        onToggleToxUnit={() =>
+                          setToxCalculatorValues((prev) => ({
+                            ...prev,
+                            unit: prev.unit === 'mg' ? 'mcg' : 'mg',
+                          }))
+                        }
+                        isAudioLoading={audioLoadingId === item.id}
+                        isSpeaking={speakingId === item.id}
+                        onListen={handleListenClick}
+                      />
+                    );
+                  })}
+                </section>
+              </div>
+            )}
+          </div>
         )}
           </>
         ) : (

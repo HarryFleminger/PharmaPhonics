@@ -1095,5 +1095,14 @@ export function findPregeneratedClinicalDetails(
     }
   }
 
+  // 3. Match salt-omitted generic bases (e.g. "glycopyrronium" -> "glycopyrronium bromide")
+  if (normalized.length >= 5) {
+    for (const key of keys) {
+      if (key.startsWith(`${normalized} `)) {
+        return PREGENERATED_CLINICAL_DETAILS[key];
+      }
+    }
+  }
+
   return undefined;
 }
