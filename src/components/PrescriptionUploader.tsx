@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   Camera,
   Upload,
@@ -6,7 +6,6 @@ import {
   X,
   Loader2,
   Pill,
-  ChevronRight,
   AlertCircle,
   Sparkles,
   Trash2,
@@ -16,7 +15,11 @@ import {
   AlertTriangle,
   FileText,
   ShieldCheck,
+  Layers,
+  ArrowDownRight,
 } from 'lucide-react';
+import { ExtractedBrandBreakdown, ScannedMedicationEntry } from '../types/medication';
+import { resolveScannedMedicationsHierarchy } from '../data/brandProducts';
 import {
   extractMedicationsFromPrescriptionImage,
   extractMedicationsFromPastedText,
@@ -91,11 +94,15 @@ function compressImageFileToDataUrl(file: File): Promise<string> {
 interface PrescriptionUploaderProps {
   isOpen: boolean;
   onToggleOpen: () => void;
-  onSelectMedication: (drugName: string) => void;
+  onSelectMedication: (
+    drugName: string,
+    options?: { scrollToResults?: boolean; brandGroupId?: string }
+  ) => void;
   activeSearchQuery: string;
   isToxicityMode?: boolean;
   onFirstInteract?: () => void;
   onUploadActiveChange?: (isActive: boolean) => void;
+  onSavedCountChange?: (count: number) => void;
 }
 
 export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
@@ -106,6 +113,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   isToxicityMode = false,
   onFirstInteract,
   onUploadActiveChange,
+  onSavedCountChange,
 }) => {
   const [activeTab, setActiveTab] = useState<UploaderTab>('photo');
   const [pastedText, setPastedText] = useState('');
@@ -116,6 +124,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scannedMedications, setScannedMedications] = useState<string[]>([]);
+  const [brandBreakdowns, setBrandBreakdowns] = useState<ExtractedBrandBreakdown[]>([]);
   const [patientConditions, setPatientConditions] = useState<string[]>([]);
   const [onSceneBullets, setOnSceneBullets] = useState<string[]>([]);
   const [interactionBullets, setInteractionBullets] = useState<string[]>([]);
@@ -159,6 +168,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             mimeType
           );
           setScannedMedications(scanResult.medications);
+          setBrandBreakdowns(scanResult.brandBreakdowns ?? []);
           setPatientConditions(scanResult.patientConditions);
           setOnSceneBullets(scanResult.onSceneBullets);
           setInteractionBullets(scanResult.interactionBullets);
@@ -166,7 +176,16 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
           setIsScanning(false);
 
           if (scanResult.medications.length > 0) {
-            onSelectMedication(scanResult.medications[0]);
+            const initialEntries = resolveScannedMedicationsHierarchy(
+              scanResult.medications,
+              scanResult.brandBreakdowns ?? []
+            );
+            const firstEntry = initialEntries[0];
+            const initialSelection =
+              firstEntry?.kind === 'brand'
+                ? firstEntry.group.brandName
+                : firstEntry?.drugName ?? scanResult.medications[0];
+            onSelectMedication(initialSelection, { scrollToResults: false });
           } else {
             setScanError(
               'No clearly readable medication names were detected. Try a clearer photo or search above.'
@@ -201,6 +220,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
       try {
         const scanResult = await extractMedicationsFromPastedText(trimmed);
         setScannedMedications(scanResult.medications);
+        setBrandBreakdowns(scanResult.brandBreakdowns ?? []);
         setPatientConditions(scanResult.patientConditions);
         setOnSceneBullets(scanResult.onSceneBullets);
         setInteractionBullets(scanResult.interactionBullets);
@@ -208,7 +228,16 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         setIsScanning(false);
 
         if (scanResult.medications.length > 0) {
-          onSelectMedication(scanResult.medications[0]);
+          const initialEntries = resolveScannedMedicationsHierarchy(
+            scanResult.medications,
+            scanResult.brandBreakdowns ?? []
+          );
+          const firstEntry = initialEntries[0];
+          const initialSelection =
+            firstEntry?.kind === 'brand'
+              ? firstEntry.group.brandName
+              : firstEntry?.drugName ?? scanResult.medications[0];
+          onSelectMedication(initialSelection, { scrollToResults: false });
         } else {
           setScanError(
             'No UK medication names were detected in the pasted text. Check the text or search above.'
@@ -263,6 +292,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     setImageFileName(null);
     setPastedText('');
     setScannedMedications([]);
+    setBrandBreakdowns([]);
     setPatientConditions([]);
     setOnSceneBullets([]);
     setInteractionBullets([]);
@@ -272,9 +302,45 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     onUploadActiveChange?.(false);
   };
 
-  if (!isOpen && !imagePreviewUrl && !isScanning && scannedMedications.length === 0) {
-    return null;
-  }
+  const resolvedEntries = useMemo(
+    () => resolveScannedMedicationsHierarchy(scannedMedications, brandBreakdowns),
+    [scannedMedications, brandBreakdowns]
+  );
+
+  const brandEntries = useMemo(
+    () =>
+      resolvedEntries.filter(
+        (entry): entry is Extract<ScannedMedicationEntry, { kind: 'brand' }> =>
+          entry.kind === 'brand'
+      ),
+    [resolvedEntries]
+  );
+
+  const singleEntries = useMemo(
+    () =>
+      resolvedEntries.filter(
+        (entry): entry is Extract<ScannedMedicationEntry, { kind: 'single' }> =>
+          entry.kind === 'single'
+      ),
+    [resolvedEntries]
+  );
+
+  const totalActiveDrugCount = useMemo(
+    () =>
+      resolvedEntries.reduce(
+        (sum, entry) => sum + (entry.kind === 'brand' ? entry.group.constituents.length : 1),
+        0
+      ),
+    [resolvedEntries]
+  );
+
+  useEffect(() => {
+    onSavedCountChange?.(resolvedEntries.length);
+  }, [resolvedEntries.length, onSavedCountChange]);
+
+  const hasAnyContent = Boolean(
+    imagePreviewUrl || pastedText.trim() !== '' || scannedMedications.length > 0 || scanError
+  );
 
   const hasStandardSummary = patientConditions.length > 0 || onSceneBullets.length > 0;
   const hasToxicitySummary = interactionBullets.length > 0 || toxRedFlagBullets.length > 0;
@@ -282,6 +348,8 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   return (
     <div
       className={`rounded-xl border p-3.5 sm:p-4 transition-all ${
+        !isOpen ? 'hidden' : ''
+      } ${
         isToxicityMode
           ? 'bg-rose-50/50 border-rose-200'
           : 'bg-emerald-50/40 border-emerald-200'
@@ -363,8 +431,15 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
 
         <button
           type="button"
-          onClick={onToggleOpen}
-          aria-label="Close prescription scanner"
+          onClick={() => {
+            if (hasAnyContent || isScanning) {
+              handleClearAll();
+            } else {
+              onToggleOpen();
+            }
+          }}
+          aria-label="Clear prescription scanner"
+          title="Clear uploaded photo or pasted medication list"
           className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white/70 transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
@@ -510,7 +585,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             onChange={(e) => setPastedText(e.target.value)}
             rows={3}
             maxLength={4000}
-            placeholder="Paste messy text from a repeat prescription table, discharge summary, GP record, or clinical letter (e.g. 'Ramipril 5mg OD, Eliquis 5mg BD, Bisoprolol 2.5mg')..."
+            placeholder="Paste messy text from a repeat prescription table, discharge summary, GP record, or clinical letter (e.g. 'Trimbow 2 puffs BD, Zapain 30/500mg, Eliquis 5mg BD, Ramipril 5mg OD')..."
             aria-label="Paste medication list text"
             className={`w-full p-3 text-base bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all resize-y ${
               isToxicityMode
@@ -584,64 +659,189 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             </div>
           )}
 
-          {/* Extracted Medication Pills */}
-          {scannedMedications.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+          {/* Extracted Medication Pills (with Brand -> Constituent Drug Hierarchy) */}
+          {resolvedEntries.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">
                 <Sparkles
                   className={`w-3.5 h-3.5 ${
                     isToxicityMode ? 'text-rose-600' : 'text-ambulance-green'
                   }`}
                   aria-hidden="true"
                 />
-                <span>Extracted Medications ({scannedMedications.length})</span>
+                <span>Extracted Medications ({resolvedEntries.length})</span>
+                {totalActiveDrugCount > resolvedEntries.length && (
+                  <span className="font-semibold normal-case text-slate-400">
+                    (comprising {totalActiveDrugCount} active drugs)
+                  </span>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {scannedMedications.map((drugName) => {
-                  const isActiveDrug =
-                    activeSearchQuery.trim().toLowerCase() === drugName.toLowerCase();
+              {/* 1. Brand / Combination Products with Tree-Connected Constituent Drugs */}
+              {brandEntries.length > 0 && (
+                <div className="space-y-2.5">
+                  {brandEntries.map(({ group }) => {
+                    const isBrandActive =
+                      activeSearchQuery.trim().toLowerCase() === group.brandName.toLowerCase();
 
-                  return (
-                    <button
-                      key={drugName}
-                      type="button"
-                      onClick={() => onSelectMedication(drugName)}
-                      className={`group flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-left text-xs sm:text-sm transition-all cursor-pointer border ${
-                        isActiveDrug
-                          ? isToxicityMode
-                            ? 'bg-rose-600 text-white border-rose-600 font-semibold shadow-sm'
-                            : 'bg-ambulance-green text-white border-ambulance-green font-semibold shadow-sm'
-                          : isToxicityMode
-                          ? 'bg-white border-rose-200 text-slate-800 font-medium hover:border-rose-600 hover:shadow-sm'
-                          : 'bg-white border-emerald-200 text-slate-800 font-medium hover:border-ambulance-green hover:shadow-sm'
-                      }`}
-                    >
-                      <span className="inline-flex items-center gap-1.5 min-w-0">
-                        <Pill
-                          className={`w-3.5 h-3.5 shrink-0 ${
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        aria-pressed={isBrandActive}
+                        onClick={() =>
+                          onSelectMedication(group.brandName, {
+                            scrollToResults: true,
+                            brandGroupId: group.id,
+                          })
+                        }
+                        className={`w-full group text-left rounded-xl border p-2.5 sm:p-3 bg-white shadow-2xs transition-all cursor-pointer ${
+                          isBrandActive
+                            ? isToxicityMode
+                              ? 'border-rose-500 ring-2 ring-rose-500/20'
+                              : 'border-ambulance-green ring-2 ring-ambulance-green/20'
+                            : isToxicityMode
+                            ? 'border-rose-200/90 hover:border-rose-400'
+                            : 'border-emerald-200/90 hover:border-ambulance-green'
+                        }`}
+                      >
+                        <div
+                          className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg text-left transition-all border ${
+                            isBrandActive
+                              ? isToxicityMode
+                                ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                                : 'bg-ambulance-green text-white border-ambulance-green shadow-sm'
+                              : isToxicityMode
+                              ? 'bg-rose-50/70 border-rose-200 group-hover:border-rose-500 text-slate-900'
+                              : 'bg-emerald-50/70 border-emerald-200 group-hover:border-ambulance-green text-slate-900'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  isBrandActive
+                                    ? 'bg-white/20 text-white'
+                                    : isToxicityMode
+                                    ? 'bg-rose-600 text-white'
+                                    : 'bg-ambulance-green text-white'
+                                }`}
+                              >
+                                <Layers className="w-3 h-3 shrink-0" aria-hidden="true" />
+                                <span>
+                                  {group.constituents.length > 1
+                                    ? `${group.constituents.length} Active Drugs`
+                                    : 'Brand'}
+                                </span>
+                              </span>
+                              <span className="text-xs sm:text-sm font-extrabold truncate">
+                                {group.brandName}
+                              </span>
+                            </div>
+                            <p
+                              className={`mt-1 text-[11px] sm:text-xs font-medium truncate ${
+                                isBrandActive
+                                  ? 'text-white/90'
+                                  : isToxicityMode
+                                  ? 'text-rose-900/80'
+                                  : 'text-emerald-900/80'
+                              }`}
+                            >
+                              Comprises:{' '}
+                              {group.constituents.map((item) => item.name).join(' / ')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Tree-Connected Separate Constituent Drug Rows (clicking any row selects the parent brand) */}
+                        <div
+                          className={`mt-2 ml-2 pl-3 border-l-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 ${
+                            isToxicityMode ? 'border-rose-300' : 'border-emerald-300'
+                          }`}
+                        >
+                          {group.constituents.map((item) => (
+                            <div key={`${group.id}::${item.id}::${item.name}`} className="relative">
+                              <span
+                                aria-hidden="true"
+                                className={`hidden sm:block absolute -left-3 top-1/2 -translate-y-1/2 w-2.5 h-0.5 ${
+                                  isToxicityMode ? 'bg-rose-300' : 'bg-emerald-300'
+                                }`}
+                              />
+                              <div
+                                className={`w-full flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-left text-xs border transition-colors ${
+                                  isToxicityMode
+                                    ? 'bg-slate-50 border-rose-200/80 text-slate-800 font-medium'
+                                    : 'bg-slate-50 border-emerald-200/80 text-slate-800 font-medium'
+                                }`}
+                              >
+                                <ArrowDownRight
+                                  className={`w-3 h-3 shrink-0 ${
+                                    isToxicityMode ? 'text-rose-500' : 'text-emerald-600'
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                                <span className="truncate">{item.name}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 2. Standalone Generic Medications */}
+              {singleEntries.length > 0 && (
+                <div>
+                  {brandEntries.length > 0 && (
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Single Generic Medications
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {singleEntries.map(({ drugName }) => {
+                      const isActiveDrug =
+                        activeSearchQuery.trim().toLowerCase() === drugName.toLowerCase();
+
+                      return (
+                        <button
+                          key={drugName}
+                          type="button"
+                          onClick={() =>
+                            onSelectMedication(drugName, { scrollToResults: true })
+                          }
+                          className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-xs sm:text-sm transition-all cursor-pointer border ${
                             isActiveDrug
                               ? isToxicityMode
-                                ? 'text-rose-200'
-                                : 'text-nhs-warmYellow'
+                                ? 'bg-rose-600 text-white border-rose-600 font-semibold shadow-sm'
+                                : 'bg-ambulance-green text-white border-ambulance-green font-semibold shadow-sm'
                               : isToxicityMode
-                              ? 'text-rose-600'
-                              : 'text-emerald-600'
+                              ? 'bg-white border-rose-200 text-slate-800 font-medium hover:border-rose-600 hover:shadow-sm'
+                              : 'bg-white border-emerald-200 text-slate-800 font-medium hover:border-ambulance-green hover:shadow-sm'
                           }`}
-                          aria-hidden="true"
-                        />
-                        <span className="truncate">{drugName}</span>
-                      </span>
-                      <ChevronRight
-                        className={`w-3.5 h-3.5 shrink-0 ${
-                          isActiveDrug ? 'text-white' : 'text-slate-300'
-                        }`}
-                        aria-hidden="true"
-                      />
-                    </button>
-                  );
-                })}
-              </div>
+                        >
+                          <span className="inline-flex items-center gap-1.5 min-w-0">
+                            <Pill
+                              className={`w-3.5 h-3.5 shrink-0 ${
+                                isActiveDrug
+                                  ? isToxicityMode
+                                    ? 'text-rose-200'
+                                    : 'text-nhs-warmYellow'
+                                  : isToxicityMode
+                                  ? 'text-rose-600'
+                                  : 'text-emerald-600'
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate">{drugName}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

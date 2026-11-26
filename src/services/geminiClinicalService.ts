@@ -1,9 +1,11 @@
 import {
+  ExtractedBrandBreakdown,
   GeminiBrandResolution,
   GeminiClinicalDetails,
   GeminiToxicityDetails,
   PrescriptionScanResult,
 } from '../types/medication';
+import { registerDynamicBrandBreakdown } from '../data/brandProducts';
 import { ClinicalAssessmentItem } from '../types/assessment';
 import { findPregeneratedClinicalDetails } from '../data/pregeneratedClinicalDetails';
 import { findPregeneratedToxicityDetails } from '../data/pregeneratedToxicityDetails';
@@ -32,7 +34,7 @@ const MAX_DRUG_NAME_LENGTH = 120;
  */
 const CLINICAL_STORAGE_KEY = 'medspeak_clinical_cache_v1';
 const TOXICITY_STORAGE_KEY = 'medspeak_toxicity_cache_v1';
-const PRESCRIPTION_SCAN_STORAGE_KEY = 'medspeak_prescription_scan_cache_v1';
+const PRESCRIPTION_SCAN_STORAGE_KEY = 'medspeak_prescription_scan_cache_v2';
 const ASSESSMENT_STORAGE_KEY = 'medspeak_assessment_cache_v1';
 const BRAND_STORAGE_KEY = 'medspeak_brand_cache_v1';
 const MAX_PERSISTED_PRESCRIPTION_SCANS = 25;
@@ -241,6 +243,9 @@ function hydrateCachesFromLocalStorage(): void {
       if (parsed && typeof parsed === 'object') {
         for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
           if (isValidPrescriptionScanResult(value)) {
+            value.brandBreakdowns?.forEach((breakdown) => {
+              registerDynamicBrandBreakdown(breakdown);
+            });
             prescriptionScanCache.set(key, value);
           }
         }
@@ -681,11 +686,48 @@ export async function fetchMedicationToxicityDetails(
   }
 }
 
+function parseBrandBreakdownsArray(val: unknown): ExtractedBrandBreakdown[] {
+  if (!Array.isArray(val)) return [];
+  const parsed: ExtractedBrandBreakdown[] = [];
+
+  for (const item of val) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Record<string, unknown>;
+    const brandName =
+      typeof record.brandName === 'string' ? record.brandName.trim() : '';
+    const subtitle =
+      typeof record.subtitle === 'string' && record.subtitle.trim()
+        ? record.subtitle.trim()
+        : undefined;
+    const constituents = Array.isArray(record.constituents)
+      ? Array.from(
+          new Set(
+            record.constituents
+              .filter((c): c is string => typeof c === 'string' && c.trim() !== '')
+              .map((c) => c.trim())
+          )
+        )
+      : [];
+
+    if (!brandName || constituents.length === 0) continue;
+
+    const breakdown: ExtractedBrandBreakdown = {
+      brandName,
+      subtitle,
+      constituents,
+    };
+    registerDynamicBrandBreakdown(breakdown);
+    parsed.push(breakdown);
+  }
+
+  return parsed;
+}
+
 /**
  * Analyzes a compressed photo of a UK prescription, repeat medication slip, blister pack,
  * or medicine box using `POST /api/gemini` (`inlineData`) and returns streamlined bullet points
  * for both Standard Mode and Toxicity Mode.
- * - Deduplicates & caches results by image fingerprint in `localStorage` (`medspeak_prescription_scan_cache_v1`).
+ * - Deduplicates & caches results by image fingerprint in `localStorage` (`medspeak_prescription_scan_cache_v2`).
  * - Enforces `gemini_vision` rate limits (max 2/min, 10/day, 10s cooldown) on uncached scans.
  */
 export async function extractMedicationsFromPrescriptionImage(
@@ -740,6 +782,7 @@ export async function extractMedicationsFromPrescriptionImage(
 
     const scanResult: PrescriptionScanResult = {
       medications: uniqueMeds,
+      brandBreakdowns: parseBrandBreakdownsArray(record.brandBreakdowns),
       patientConditions: toCleanStringArray(record.patientConditions),
       onSceneBullets: toCleanStringArray(record.onSceneBullets),
       interactionBullets: toCleanStringArray(record.interactionBullets),
@@ -856,6 +899,7 @@ export async function extractMedicationsFromPastedText(
 
     const scanResult: PrescriptionScanResult = {
       medications: uniqueMeds,
+      brandBreakdowns: parseBrandBreakdownsArray(record.brandBreakdowns),
       patientConditions: toCleanStringArray(record.patientConditions),
       onSceneBullets: toCleanStringArray(record.onSceneBullets),
       interactionBullets: toCleanStringArray(record.interactionBullets),

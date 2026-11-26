@@ -23,7 +23,10 @@ interface SearchAndFilterProps {
   selectedCategoryDrug: string | null;
   onSelectCategory: (category: string | null) => void;
   onToggleMinimizeCategory: () => void;
-  onSelectDrug: (drugName: string) => void;
+  onSelectDrug: (
+    drugName: string,
+    options?: { scrollToResults?: boolean; brandGroupId?: string }
+  ) => void;
   isSearching: boolean;
   resultCount: number;
   hasActiveQuery: boolean;
@@ -60,6 +63,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   onSetQuickCategoriesMinimized,
 }) => {
   const [internalUploaderOpen, setInternalUploaderOpen] = useState(false);
+  const [savedPrescriptionCount, setSavedPrescriptionCount] = useState(0);
   const [internalQuickCategoriesMinimized, setInternalQuickCategoriesMinimized] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768;
@@ -214,6 +218,17 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
           >
             <Camera className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>Upload Prescription / Med List</span>
+            {!uploaderOpen && savedPrescriptionCount > 0 && (
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${
+                  isToxicityMode
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-ambulance-green text-white'
+                }`}
+              >
+                {savedPrescriptionCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -262,14 +277,19 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
       </div>
 
       {/* Expandable Drag-and-Drop & Camera/Photo Prescription Uploader */}
-      <div id="medspeak-prescription-uploader">
+      <div
+        id="medspeak-prescription-uploader"
+        hidden={!uploaderOpen}
+        className={uploaderOpen ? '' : 'hidden'}
+      >
         <PrescriptionUploader
           isOpen={uploaderOpen}
           onToggleOpen={() => setUploaderOpen((prev) => !prev)}
-          onSelectMedication={(drugName) => onSelectDrug(drugName)}
+          onSelectMedication={(drugName, options) => onSelectDrug(drugName, options)}
           activeSearchQuery={searchQuery}
           isToxicityMode={isToxicityMode}
           onFirstInteract={onSearchInteract}
+          onSavedCountChange={setSavedPrescriptionCount}
           onUploadActiveChange={(isActive) => {
             const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
             setQuickCategoriesMinimized(isActive || isMobileScreen);

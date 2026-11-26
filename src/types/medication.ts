@@ -38,12 +38,24 @@ export interface GeminiToxicityDetails {
 }
 
 /**
+ * Structured breakdown of a brand-name or multi-ingredient combination product extracted
+ * from a prescription photo or pasted medication list.
+ */
+export interface ExtractedBrandBreakdown {
+  brandName: string;
+  subtitle?: string;
+  constituents: string[];
+}
+
+/**
  * Holistic analysis returned by Gemini Vision when scanning an uploaded prescription
  * or repeat medication list, structured as concise bullet points for quick reading.
  */
 export interface PrescriptionScanResult {
-  /** Distinct UK generic/BNF medication names detected in the image */
+  /** Distinct UK generic/BNF or brand medication names detected in the image/text */
   medications: string[];
+  /** Active generic ingredient breakdowns for any brand/combination medications found */
+  brandBreakdowns?: ExtractedBrandBreakdown[];
   /** Standard Mode: Brief bullet points of likely medical conditions / PMH */
   patientConditions: string[];
   /** Standard Mode: Brief pre-hospital on-scene considerations for the crew */
@@ -84,3 +96,7 @@ export interface GeminiBrandResolution {
   subtitle?: string;
   constituents: string[];
 }
+
+export type ScannedMedicationEntry =
+  | { kind: 'brand'; group: BrandProductGroup }
+  | { kind: 'single'; drugName: string };

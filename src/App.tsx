@@ -34,7 +34,7 @@ import {
   detectPreferredToxUnit,
 } from './components/ToxCalculator';
 import { MedicationCard, MedicationCardSkeleton } from './components/MedicationCard';
-import { BrandProductGroupCard } from './components/BrandProductGroupCard';
+import { BrandProductGroupCard, getBrandGroupDomId } from './components/BrandProductGroupCard';
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
 import { AssessmentView } from './components/AssessmentView';
@@ -114,6 +114,8 @@ export function App() {
   // Track whether the search was triggered by clicking a Quick Category drug
   // so we can automatically expand and fetch Gemini details for the top matching card
   const autoExpandNextResultRef = useRef(false);
+  const pendingScrollTargetRef = useRef<{ query: string; brandGroupId?: string } | null>(null);
+  const [scrollTriggerCount, setScrollTriggerCount] = useState(0);
 
   // Track which flashcards are selected/expanded
   const [selectedCardKeys, setSelectedCardKeys] = useState<Record<string, boolean>>({});
@@ -453,12 +455,19 @@ export function App() {
   // - Triggers the first-time JRCALC clinical disclaimer if not yet seen,
   //   records the selected drug, minimizes the category list, and opens the flashcard
   const handleSelectCategoryDrug = useCallback(
-    (drugName: string) => {
+    (drugName: string, options?: { scrollToResults?: boolean; brandGroupId?: string }) => {
       triggerFirstTimeClinicalWarning();
       autoExpandNextResultRef.current = true;
       setSelectedCategoryDrug(drugName);
       setIsCategoryMinimized(true);
       setSearchQuery(drugName);
+      if (options?.scrollToResults) {
+        pendingScrollTargetRef.current = {
+          query: drugName.trim().toLowerCase(),
+          brandGroupId: options.brandGroupId,
+        };
+        setScrollTriggerCount((prev) => prev + 1);
+      }
     },
     [triggerFirstTimeClinicalWarning]
   );
@@ -565,26 +574,32 @@ export function App() {
           setResults(outcome.standaloneItems);
           setIsSearching(false);
 
-          // If the user clicked a drug from Quick Categories, automatically
-          // select the first returned BNF card (or constituent) and fetch details
-          const firstItem =
-            outcome.standaloneItems[0] ?? outcome.brandGroups[0]?.constituents[0];
-          if (autoExpandNextResultRef.current && firstItem) {
+          // If the user clicked a drug from Quick Categories or Upload/Paste Med List,
+          // automatically select the first matching card unless showing a multi-drug brand hierarchy
+          if (autoExpandNextResultRef.current) {
             autoExpandNextResultRef.current = false;
-            const firstKey = getCardKey(firstItem);
-            setSelectedCardKeys((prev) => ({ ...prev, [firstKey]: true }));
-            const existingTox = getCachedToxicityDetails(firstItem.name);
-            const preferredUnit = detectPreferredToxUnit(
-              firstItem.name,
-              existingTox?.toxicThreshold
-            );
-            setToxCalculatorValues((prev) =>
-              prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
-            );
-            if (isToxicityModeRef.current) {
-              void loadToxicityDetailsForMedication(firstItem);
-            } else {
-              void loadClinicalDetailsForMedication(firstItem);
+            const shouldAutoExpandFirst =
+              outcome.standaloneItems.length > 0 ||
+              (outcome.brandGroups.length === 1 &&
+                outcome.brandGroups[0].constituents.length === 1);
+            const firstItem =
+              outcome.standaloneItems[0] ?? outcome.brandGroups[0]?.constituents[0];
+            if (shouldAutoExpandFirst && firstItem) {
+              const firstKey = getCardKey(firstItem);
+              setSelectedCardKeys((prev) => ({ ...prev, [firstKey]: true }));
+              const existingTox = getCachedToxicityDetails(firstItem.name);
+              const preferredUnit = detectPreferredToxUnit(
+                firstItem.name,
+                existingTox?.toxicThreshold
+              );
+              setToxCalculatorValues((prev) =>
+                prev.unit === preferredUnit ? prev : { ...prev, unit: preferredUnit }
+              );
+              if (isToxicityModeRef.current) {
+                void loadToxicityDetailsForMedication(firstItem);
+              } else {
+                void loadClinicalDetailsForMedication(firstItem);
+              }
             }
           }
         }
@@ -610,6 +625,37 @@ export function App() {
       abortController.abort();
     };
   }, [debouncedQuery, loadClinicalDetailsForMedication, loadToxicityDetailsForMedication]);
+
+  useEffect(() => {
+    const pending = pendingScrollTargetRef.current;
+    if (!pending || isSearching) return;
+    if (debouncedQuery.trim().toLowerCase() !== pending.query) return;
+
+    pendingScrollTargetRef.current = null;
+    const frameId = requestAnimationFrame(() => {
+      const targetEl =
+        (pending.brandGroupId
+          ? document.getElementById(getBrandGroupDomId(pending.brandGroupId))
+          : null) ??
+        (brandGroups[0] ? document.getElementById(getBrandGroupDomId(brandGroups[0].id)) : null) ??
+        document.getElementById('medspeak-results-section');
+
+      if (targetEl && typeof window !== 'undefined') {
+        const headerEl = document.querySelector('header');
+        const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
+        const targetTop = Math.max(
+          0,
+          window.scrollY + targetEl.getBoundingClientRect().top - headerHeight - 12
+        );
+        window.scrollTo({
+          top: targetTop,
+          behavior: 'smooth',
+        });
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [brandGroups, results, isSearching, debouncedQuery, scrollTriggerCount]);
 
   const hasActiveQuery = debouncedQuery.trim().length > 2;
   const totalResultCount =
@@ -907,7 +953,7 @@ export function App() {
           </div>
         ) : (
           /* Brand Product Hierarchy Groups + Responsive Standalone Flashcard Grid */
-          <div className="space-y-6">
+          <div id="medspeak-results-section" className="space-y-6">
             {brandGroups.length > 0 && (
               <section
                 aria-label="Brand and combination product active ingredients"

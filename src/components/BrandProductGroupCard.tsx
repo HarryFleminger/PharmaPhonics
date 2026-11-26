@@ -36,6 +36,10 @@ interface BrandProductGroupCardProps {
   onListen: (id: string, name: string) => void;
 }
 
+export function getBrandGroupDomId(groupId: string): string {
+  return `brand-group-card-${groupId.toLowerCase().replace(/[^a-z0-9-_]/g, '-')}`;
+}
+
 export const BrandProductGroupCard: React.FC<BrandProductGroupCardProps> = ({
   group,
   getCardKey,
@@ -78,6 +82,7 @@ export const BrandProductGroupCard: React.FC<BrandProductGroupCardProps> = ({
 
   return (
     <section
+      id={getBrandGroupDomId(group.id)}
       aria-label={`${group.brandName} active ingredients breakdown`}
       className={`rounded-2xl border-2 p-4 sm:p-5 shadow-sm transition-colors ${
         isToxicityMode

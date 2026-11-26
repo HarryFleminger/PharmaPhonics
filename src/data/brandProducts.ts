@@ -1,4 +1,9 @@
-import { BnfMedicationItem, BrandProductGroup } from '../types/medication';
+import {
+  BnfMedicationItem,
+  BrandProductGroup,
+  ExtractedBrandBreakdown,
+  ScannedMedicationEntry,
+} from '../types/medication';
 import { UK_BNF_FALLBACK_ITEMS } from './bnfNomenclature';
 
 interface CuratedBrandEntry {
@@ -738,6 +743,56 @@ function buildCombinedBrandRegistry(): InternalBrandEntry[] {
 }
 
 const ALL_BRAND_ENTRIES: InternalBrandEntry[] = buildCombinedBrandRegistry();
+const dynamicBrandEntries = new Map<string, InternalBrandEntry>();
+
+/**
+ * Registers a dynamically resolved AI brand breakdown (e.g. from a prescription scan or
+ * pasted medication list) so clicking its pill opens the full constituent hierarchy immediately.
+ */
+export function registerDynamicBrandBreakdown(
+  breakdown: ExtractedBrandBreakdown
+): BrandProductGroup {
+  const brandName = breakdown.brandName.trim();
+  const compactKey = normalizeCompactText(brandName);
+  const cleanConstituents = Array.from(
+    new Set(
+      breakdown.constituents
+        .map((c) => capitalizeConstituentName(c))
+        .filter((c) => c.length > 0)
+    )
+  );
+
+  // Return curated/static match if already registered there
+  const staticExisting = ALL_BRAND_ENTRIES.find((entry) => {
+    const terms = [entry.brandName, ...(entry.aliases ?? [])];
+    return terms.some((t) => normalizeCompactText(t) === compactKey);
+  });
+  if (staticExisting && cleanConstituents.length === 0) {
+    return materializeBrandGroup(staticExisting);
+  }
+
+  const entry: InternalBrandEntry = {
+    id: staticExisting?.id ?? `brand::dynamic::${compactKey || 'item'}`,
+    brandName: staticExisting?.brandName ?? brandName,
+    subtitle:
+      breakdown.subtitle?.trim() ||
+      staticExisting?.subtitle ||
+      (cleanConstituents.length > 1
+        ? `Combination product (${cleanConstituents.length} active drugs)`
+        : 'UK Brand-Name Preparation'),
+    constituentNames:
+      cleanConstituents.length > 0
+        ? cleanConstituents
+        : staticExisting?.constituentNames ?? [brandName],
+    supersededBnfIds: staticExisting?.supersededBnfIds,
+  };
+
+  if (compactKey && !staticExisting) {
+    dynamicBrandEntries.set(compactKey, entry);
+  }
+
+  return materializeBrandGroup(entry);
+}
 
 const DEVICE_SUFFIXES = new Set([
   'ellipta',
@@ -796,8 +851,12 @@ export function searchBrandProducts(
   if (normQuery.length < 3 || !compactQuery) return [];
 
   const scored: Array<{ entry: InternalBrandEntry; score: number }> = [];
+  const searchableEntries = [
+    ...ALL_BRAND_ENTRIES,
+    ...Array.from(dynamicBrandEntries.values()),
+  ];
 
-  for (const entry of ALL_BRAND_ENTRIES) {
+  for (const entry of searchableEntries) {
     const terms = [entry.brandName, ...(entry.aliases ?? [])];
     let bestScore = 0;
 
@@ -883,4 +942,138 @@ export function buildBrandGroupFromResolution(
         : 'Brand-name product'),
     constituents,
   };
+}
+
+function stripStrengthAndDoseSuffix(rawName: string): string {
+  return rawName
+    .replace(
+      /\s+\d+(?:\.\d+)?(?:\s*[/]\s*\d+(?:\.\d+)?)*\s*(?:mg|mcg|micrograms?|ug|g|ml|units?|%|puffs?)?.*$/i,
+      ''
+    )
+    .trim();
+}
+
+/**
+ * Matches an extracted medication string cleanly to an exact curated, BNF-derived,
+ * or dynamically registered brand/combination product if one exists.
+ */
+export function findExactBrandProduct(rawName: string): BrandProductGroup | null {
+  const candidates = [rawName.trim(), stripStrengthAndDoseSuffix(rawName.trim())].filter(
+    Boolean
+  );
+  const allEntries = [...ALL_BRAND_ENTRIES, ...Array.from(dynamicBrandEntries.values())];
+
+  for (const candidate of candidates) {
+    const normCandidate = normalizeMatchText(candidate);
+    const compactCandidate = normalizeCompactText(candidate);
+    if (!normCandidate || !compactCandidate) continue;
+
+    for (const entry of allEntries) {
+      const terms = [entry.brandName, ...(entry.aliases ?? [])];
+      for (const term of terms) {
+        const normTerm = normalizeMatchText(term);
+        const compactTerm = normalizeCompactText(term);
+        if (normTerm === normCandidate || compactTerm === compactCandidate) {
+          return materializeBrandGroup(entry);
+        }
+        const words = normTerm.split(' ');
+        if (
+          words.length > 1 &&
+          words[0].length >= 4 &&
+          words[0] === normCandidate &&
+          DEVICE_SUFFIXES.has(words[1])
+        ) {
+          return materializeBrandGroup(entry);
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolves extracted medication names from a scanned prescription image or pasted med list
+ * into a unified list where brand-name or combination products carry their full
+ * constituent generic drug breakdown alongside single generic medications.
+ */
+export function resolveScannedMedicationsHierarchy(
+  medications: string[],
+  aiBrandBreakdowns?: ExtractedBrandBreakdown[]
+): ScannedMedicationEntry[] {
+  const aiBreakdownMap = new Map<string, BrandProductGroup>();
+
+  aiBrandBreakdowns?.forEach((bd) => {
+    if (!bd.brandName.trim() || bd.constituents.length === 0) return;
+    const group = registerDynamicBrandBreakdown(bd);
+    aiBreakdownMap.set(normalizeCompactText(bd.brandName), group);
+    aiBreakdownMap.set(normalizeCompactText(group.brandName), group);
+  });
+
+  const resolved: ScannedMedicationEntry[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const rawMed of medications) {
+    const trimmed = rawMed.trim();
+    if (!trimmed) continue;
+
+    // 1. Prefer exact curated/BNF/dynamic brand match (e.g. Trimbow, Zapain, Eliquis)
+    const exactMatch = findExactBrandProduct(trimmed);
+    if (exactMatch) {
+      const dedupeKey = `brand::${normalizeCompactText(exactMatch.brandName)}`;
+      if (!seenKeys.has(dedupeKey)) {
+        seenKeys.add(dedupeKey);
+        resolved.push({ kind: 'brand', group: exactMatch });
+      }
+      continue;
+    }
+
+    // 2. Check AI-supplied brand breakdown for this medication name
+    const compactCleaned = normalizeCompactText(stripStrengthAndDoseSuffix(trimmed) || trimmed);
+    const aiGroup =
+      aiBreakdownMap.get(normalizeCompactText(trimmed)) ?? aiBreakdownMap.get(compactCleaned);
+    if (
+      aiGroup &&
+      aiGroup.constituents.length > 0 &&
+      (aiGroup.constituents.length > 1 ||
+        aiGroup.constituents[0].name.toLowerCase() !== trimmed.toLowerCase())
+    ) {
+      const dedupeKey = `brand::${normalizeCompactText(aiGroup.brandName)}`;
+      if (!seenKeys.has(dedupeKey)) {
+        seenKeys.add(dedupeKey);
+        resolved.push({ kind: 'brand', group: aiGroup });
+      }
+      continue;
+    }
+
+    // 3. Split explicit multi-ingredient slash/plus strings ("Beclometasone / Formoterol")
+    if (/(\s\/\s|\s\+\s)/.test(trimmed)) {
+      const parts = trimmed
+        .split(/\s\/\s|\s\+\s/)
+        .map((p) => capitalizeConstituentName(p))
+        .filter((p) => p.length >= 3);
+      if (parts.length > 1) {
+        const splitGroup = registerDynamicBrandBreakdown({
+          brandName: trimmed,
+          subtitle: `Combination product (${parts.length} active drugs)`,
+          constituents: parts,
+        });
+        const dedupeKey = `brand::${normalizeCompactText(splitGroup.brandName)}`;
+        if (!seenKeys.has(dedupeKey)) {
+          seenKeys.add(dedupeKey);
+          resolved.push({ kind: 'brand', group: splitGroup });
+        }
+        continue;
+      }
+    }
+
+    // 4. Single generic medication
+    const singleKey = `single::${normalizeCompactText(trimmed)}`;
+    if (!seenKeys.has(singleKey)) {
+      seenKeys.add(singleKey);
+      resolved.push({ kind: 'single', drugName: trimmed });
+    }
+  }
+
+  return resolved;
 }
