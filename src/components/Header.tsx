@@ -16,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header
-      className={`text-white shadow-md sticky top-0 z-30 border-b-4 transition-colors duration-200 ${
+      className={`text-white shadow-md md:sticky md:top-0 z-30 border-b-4 transition-colors duration-200 ${
         isToxicityMode
           ? 'bg-rose-700 border-rose-300'
           : 'bg-ambulance-green border-nhs-warmYellow'

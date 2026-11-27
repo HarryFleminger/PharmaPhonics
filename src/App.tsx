@@ -48,6 +48,7 @@ import {
   trackPageView,
   scrubSearchTermForAnalytics,
 } from './services/analyticsService';
+import { scrollElementBelowStickyHeader } from './utils/scrollUtils';
 
 const PRESCRIPTION_FEATURE_STORAGE_KEY = 'medspeak_seen_prescription_feature_v1';
 
@@ -739,18 +740,9 @@ export function App() {
         document.getElementById('medspeak-results-section') ??
         document.getElementById('medspeak-no-match-card');
 
-      if (targetEl && typeof window !== 'undefined') {
+      if (targetEl) {
         pendingScrollTargetRef.current = null;
-        const headerEl = document.querySelector('header');
-        const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
-        const targetTop = Math.max(
-          0,
-          window.scrollY + targetEl.getBoundingClientRect().top - headerHeight - 12
-        );
-        window.scrollTo({
-          top: targetTop,
-          behavior: 'smooth',
-        });
+        scrollElementBelowStickyHeader(targetEl, 12, 'smooth', 0);
       }
     });
 
@@ -913,7 +905,7 @@ export function App() {
       <main
         className={`flex-1 max-w-6xl w-full mx-auto px-3.5 py-4 sm:px-6 sm:py-8 ${
           activeSection === 'medications' && searchQuery !== ''
-            ? 'min-h-[calc(100vh+4rem)]'
+            ? 'min-h-[calc(100vh+22rem)]'
             : ''
         }`}
       >

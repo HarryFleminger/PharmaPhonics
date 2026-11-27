@@ -14,6 +14,7 @@ import {
 import { quickCategories } from '../data/quickCategories';
 import { PrescriptionUploader } from './PrescriptionUploader';
 import { trackEvent } from '../services/analyticsService';
+import { scrollElementBelowStickyHeader } from '../utils/scrollUtils';
 
 interface SearchAndFilterProps {
   searchQuery: string;
@@ -85,42 +86,31 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   const activeCategoryDrugs = activeCategory ? quickCategories[activeCategory] ?? [] : [];
   const searchSectionRef = useRef<HTMLElement | null>(null);
   const pendingScrollRef = useRef(false);
-  const lastScrollRef = useRef<{ target: number; time: number }>({ target: -1, time: 0 });
+  const settleTimerRef = useRef<number | null>(null);
 
-  const scrollSearchBelowHeader = () => {
-    const sectionEl = searchSectionRef.current;
-    if (!sectionEl || typeof window === 'undefined') return;
-
-    const headerEl = document.querySelector('header');
-    const headerHeight = headerEl ? headerEl.getBoundingClientRect().height : 0;
-    const desiredViewportTop = headerHeight + 8;
-    const currentViewportTop = sectionEl.getBoundingClientRect().top;
-
-    if (Math.abs(currentViewportTop - desiredViewportTop) <= 4) {
-      return;
-    }
-
-    const targetTop = Math.max(0, window.scrollY + currentViewportTop - desiredViewportTop);
-    const now = Date.now();
-    if (
-      Math.abs(targetTop - lastScrollRef.current.target) <= 4 &&
-      now - lastScrollRef.current.time < 400
-    ) {
-      return;
-    }
-
-    lastScrollRef.current = { target: targetTop, time: now };
-    window.scrollTo({
-      top: targetTop,
-      behavior: 'smooth',
-    });
-  };
+  useEffect(() => {
+    return () => {
+      if (settleTimerRef.current !== null && typeof window !== 'undefined') {
+        window.clearTimeout(settleTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!pendingScrollRef.current) return;
     pendingScrollRef.current = false;
+
     const frameId = requestAnimationFrame(() => {
-      scrollSearchBelowHeader();
+      scrollElementBelowStickyHeader(searchSectionRef.current, 8, 'smooth');
+      if (typeof window !== 'undefined') {
+        if (settleTimerRef.current !== null) {
+          window.clearTimeout(settleTimerRef.current);
+        }
+        settleTimerRef.current = window.setTimeout(() => {
+          settleTimerRef.current = null;
+          scrollElementBelowStickyHeader(searchSectionRef.current, 8, 'auto', 10);
+        }, 220);
+      }
     });
     return () => cancelAnimationFrame(frameId);
   }, [searchQuery, activeCategory, quickCategoriesMinimized, uploaderOpen]);
