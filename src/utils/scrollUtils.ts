@@ -1,9 +1,13 @@
 /**
  * Returns the height of `<header>` when it is actively sticky/fixed on the current
- * viewport (returns `0` on mobile viewports where `<header>` scrolls normally off-screen).
+ * viewport (returns `0` on mobile viewports `< 768px` so typing/focus scrolls the
+ * search bar to the top of the screen even when the header is sticky at `scrollY === 0`).
  */
 export function getStickyHeaderHeight(): number {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return 0;
+  }
+  if (window.innerWidth < 768) {
     return 0;
   }
   const headerEl = document.querySelector('header');

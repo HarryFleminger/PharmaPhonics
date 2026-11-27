@@ -170,6 +170,15 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) return;
+    themeColorMeta.setAttribute(
+      'content',
+      activeSection === 'medications' && isToxicityMode ? '#be123c' : '#006747'
+    );
+  }, [activeSection, isToxicityMode]);
+
+  useEffect(() => {
     if (hasTrackedAppOpenRef.current) return;
     hasTrackedAppOpenRef.current = true;
     const entryView = isGuideOpen ? 'guide' : 'medications';

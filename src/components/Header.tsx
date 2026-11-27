@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stethoscope, Sparkles, Skull, HelpCircle, X } from 'lucide-react';
 
 interface HeaderProps {
@@ -14,9 +14,23 @@ export const Header: React.FC<HeaderProps> = ({
   onExitToxicityMode,
   onOpenGuide,
 }) => {
+  const [isAtTop, setIsAtTop] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsAtTop(window.scrollY <= 2);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <header
-      className={`text-white shadow-md md:sticky md:top-0 z-30 border-b-4 transition-colors duration-200 ${
+      className={`text-white shadow-md z-30 border-b-4 transition-colors duration-200 ${
+        isAtTop ? 'sticky top-0' : 'md:sticky md:top-0'
+      } ${
         isToxicityMode
           ? 'bg-rose-700 border-rose-300'
           : 'bg-ambulance-green border-nhs-warmYellow'
