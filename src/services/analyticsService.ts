@@ -56,7 +56,7 @@ interface QueuedAnalyticsEvent {
 }
 
 let inMemorySessionId: string | null = null;
-let currentVirtualPath: AnalyticsVirtualPath = '/medications';
+let currentVirtualPath: AnalyticsVirtualPath = '/assessments';
 let eventQueue: QueuedAnalyticsEvent[] = [];
 let flushTimer: number | null = null;
 let lifecycleListenersRegistered = false;

@@ -31,11 +31,11 @@ export const HowToUseCard: React.FC<HowToUseCardProps> = ({
 }) => {
   return (
     <div
-      className={`bg-white rounded-2xl border p-6 sm:p-8 max-w-2xl mx-auto my-4 sm:my-6 shadow-sm ${
+      className={`bg-white rounded-2xl border p-4 sm:p-8 max-w-2xl mx-auto my-3 sm:my-6 shadow-sm ${
         isToxicityMode ? 'border-rose-200' : 'border-slate-200'
       }`}
     >
-      <div className="flex flex-col items-center text-center mb-5">
+      <div className="flex flex-col items-center text-center mb-3.5 sm:mb-5">
         <div
           className={`w-12 h-12 rounded-2xl border flex items-center justify-center mb-3 ${
             isToxicityMode

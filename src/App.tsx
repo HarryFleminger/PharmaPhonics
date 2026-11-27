@@ -54,7 +54,7 @@ import { scrollElementBelowStickyHeader } from './utils/scrollUtils';
 
 export function App() {
   const [activeSection, setActiveSection] = useState<'medications' | 'assessments' | 'conditions'>(
-    'medications'
+    'assessments'
   );
   const [searchQuery, setSearchQuery] = useState('');
   // No category is pre-applied when the page opens; user clicks a category pill to open it
@@ -179,12 +179,12 @@ export function App() {
   useEffect(() => {
     if (hasTrackedAppOpenRef.current) return;
     hasTrackedAppOpenRef.current = true;
-    const entryView = isGuideOpen ? 'guide' : 'medications';
+    const entryView = isGuideOpen ? 'guide' : 'assessments';
     trackEvent('app_opened', {
       entry_view: entryView,
       is_mobile: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
     });
-    trackPageView(isGuideOpen ? '/guide' : '/medications');
+    trackPageView(isGuideOpen ? '/guide' : '/assessments');
   }, [isGuideOpen]);
 
   const {

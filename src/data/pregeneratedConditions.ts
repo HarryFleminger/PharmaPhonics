@@ -1,5 +1,20 @@
 import { ClinicalConditionItem } from '../types/condition';
 
+export const COMMON_CONDITIONS_CATEGORY = 'Common Conditions';
+
+export const COMMON_CONDITION_IDS = [
+  'asthma',
+  'type-2-diabetes',
+  'epilepsy',
+  'ischaemic-heart-disease',
+  'hypertension',
+  'dementia',
+  'cerebrovascular-disease',
+  'hypothyroidism',
+  'gord-peptic-ulcer-disease',
+  'rheumatoid-arthritis',
+] as const;
+
 export const UNCOMMON_COMPLEX_CATEGORY = 'Uncommon & Complex PMH';
 
 export const UNCOMMON_COMPLEX_IDS = [
@@ -16,6 +31,7 @@ export const UNCOMMON_COMPLEX_IDS = [
 ] as const;
 
 export const CONDITION_CATEGORIES = [
+  COMMON_CONDITIONS_CATEGORY,
   UNCOMMON_COMPLEX_CATEGORY,
   'Neurological',
   'Cardiovascular',
@@ -886,6 +902,296 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Acute Gluten Exposure Reaction: Inadvertent gluten ingestion can provoke intense vomiting, abdominal colic, and dehydration mimicking acute gastroenteritis.',
       'Autoimmune Cluster Presentations: Higher background prevalence of Type 1 diabetes (DKA/hypoglycaemia) and Addison’s disease (adrenal crisis).',
       'Hyposplenism Sepsis Risk: Approximately one-third of adult coeliac patients develop functional hyposplenism, raising susceptibility to encapsulated bacterial infections.',
+    ],
+  },
+
+  // =========================================================================
+  // 7. COMMON CONDITIONS EXPANSION (10)
+  // =========================================================================
+  {
+    id: 'asthma',
+    title: 'Asthma',
+    phoneticSpelling: 'AS-muh',
+    category: 'Respiratory',
+    aliases: ['asthma', 'brittle asthma', 'status asthmaticus', 'bronchospasm', 'mart'],
+    overview:
+      'A chronic inflammatory airway disease characterised by bronchial hyper-responsiveness, reversible smooth-muscle bronchoconstriction, airway oedema, and excess mucus production. Symptoms fluctuate over time and are triggered by viral infections, allergens, cold air, or exercise.',
+    causesAndPathophysiology: [
+      'Airway Inflammation: Eosinophils, mast cells, and IgE pathways inflame the bronchial mucosa, making airways twitchy.',
+      'Reversible Bronchoconstriction: Smooth muscle around small bronchioles spasms in response to triggers, narrowing the airway lumen.',
+      'Mucus & Oedema: Thick mucus plugging and mucosal swelling further increase airway resistance and air trapping.',
+    ],
+    symptomsAndBaseline: [
+      'Classic Triad: Expiratory polyphonic wheeze, chest tightness, cough (often nocturnal/early morning), and variable dyspnoea.',
+      'Baseline State: Between exacerbations, chest auscultation and resting SpO₂ are usually completely normal.',
+      'Triggers: Viral URTIs, pollen, pet dander, smoke, cold air, NSAIDs/aspirin (in aspirin-exacerbated disease), and beta-blockers.',
+    ],
+    treatments: [
+      'AIR / MART Regimens: UK NICE/BTS guidelines favour combination ICS/formoterol inhalers (e.g. Symbicort, Fostair) as both preventer and reliever alongside salbutamol SABA.',
+      'Oral Steroids & Leukotrienes: Short prednisolone courses for flares; montelukast or biologics (omalizumab, mepolizumab) for severe asthma.',
+      'Acute Bronchodilation: Nebulised salbutamol and ipratropium bromide, parenteral hydrocortisone/prednisolone, and IV magnesium sulfate in severe flares.',
+    ],
+    commonMeds: ['Salbutamol', 'Beclometasone dipropionate', 'Prednisolone', 'Ipratropium bromide', 'Montelukast'],
+    acuteComplications: [
+      'Life-Threatening Asthma Attack: Exhaustion, silent chest, cyanosis, bradycardia, hypotension, or inability to speak in sentences indicates imminent respiratory arrest.',
+      'Normal CO₂ Warning: Unlike COPD, severe asthmatics normally hyperventilate and drop CO₂—even a normal or rising PaCO₂ signifies ventilatory fatigue.',
+      'Pneumothorax & Pneumomediastinum: High expiratory pressures from severe air trapping can rupture alveoli into the pleural space.',
+    ],
+  },
+  {
+    id: 'type-2-diabetes',
+    title: 'Type 2 Diabetes Mellitus',
+    phoneticSpelling: 'type TOO dy-uh-BEE-teez MEL-ih-tus',
+    category: 'Endocrine & Metabolic',
+    aliases: ['t2dm', 'type 2 diabetes', 'niddm', 'hhs', 'honk', 'hyperosmolar'],
+    overview:
+      'A progressive metabolic disorder driven by peripheral insulin resistance and relative beta-cell insulin deficiency, resulting in chronic hyperglycaemia. Unlike Type 1 diabetes, endogenous insulin usually prevents ketoacidosis, though severe hyperosmolar dehydration (HHS) and sulfonylurea hypoglycaemia are major acute hazards.',
+    causesAndPathophysiology: [
+      'Insulin Resistance: Skeletal muscle, liver, and adipose tissues respond poorly to insulin, leaving glucose circulating in blood.',
+      'Beta-Cell Exhaustion: Pancreatic beta cells initially over-produce insulin before gradually declining over years.',
+      'Microvascular & Macrovascular Injury: Chronic hyperglycaemia damages coronary/cerebral arteries, retinal vessels, glomeruli, and peripheral nerves.',
+    ],
+    symptomsAndBaseline: [
+      'Baseline Profile: Often asymptomatic when controlled; chronic complications include peripheral neuropathy (stocking-glove numbness), retinopathy, CKD, and ischaemic heart disease.',
+      'Hyperglycaemia Signs: Thirst, polyuria, lethargy, blurred vision, and recurrent skin or urinary infections.',
+      'Therapy Spectrum: Managed from lifestyle alone through oral/injectable agents and sometimes basal or mixed insulin.',
+    ],
+    treatments: [
+      'First-Line Oral: Metformin plus SGLT2 inhibitors (dapagliflozin, empagliflozin) for cardiorenal protection.',
+      'Additional Agents: Sulfonylureas (gliclazide), DPP-4 inhibitors (sitagliptin), GLP-1 analogues (semaglutide), and insulin.',
+    ],
+    commonMeds: ['Metformin', 'Gliclazide', 'Dapagliflozin', 'Sitagliptin', 'Semaglutide'],
+    acuteComplications: [
+      'Hyperosmolar Hyperglycaemic State (HHS): Severe infection or dehydration drives extreme hyperglycaemia (>30 mmol/L), profound hypovolaemia, hyperosmolality, focal neurology, and high thrombosis risk without major ketosis.',
+      'Prolonged Sulfonylurea Hypoglycaemia: Gliclazide accumulates in renal impairment or skipped meals, causing recurrent, slow-clearing hypoglycaemia.',
+      'Euglycaemic DKA on SGLT2 Inhibitors: Concurrent acute illness or fasting during dapagliflozin/empagliflozin therapy can precipitate ketoacidosis despite near-normal blood glucose.',
+    ],
+  },
+  {
+    id: 'epilepsy',
+    title: 'Epilepsy',
+    phoneticSpelling: 'EP-ih-lep-see',
+    category: 'Neurological',
+    aliases: ['seizure disorder', 'fits', 'status epilepticus', 'tonic clonic', 'absence', 'epilim', 'keppra'],
+    overview:
+      'A chronic neurological tendency toward unprovoked recurrent seizures caused by abnormal, excessive synchronous electrical discharges in cortical neurones. Seizures vary from brief focal awareness disturbances to generalised tonic-clonic convulsions.',
+    causesAndPathophysiology: [
+      'Cortical Hyperexcitability: An imbalance between excitatory glutamate signalling and inhibitory GABA signalling lowers the seizure threshold.',
+      'Focal vs Generalised: Focal seizures originate in one cerebral hemisphere; generalised seizures engage bilateral networks simultaneously.',
+      'Aetiology: Genetic channelopathies, prior stroke scarring, traumatic brain injury, cortical dysplasia, brain tumours, or idiopathic causes.',
+    ],
+    symptomsAndBaseline: [
+      'Seizure Semiology: Motor stiffening (tonic), rhythmic jerking (clonic), blank staring (absence), focal twitching, or sensory auras.',
+      'Post-Ictal Phase: Confusion, drowsiness, headache, transient unilateral weakness (Todd’s paresis), and aching muscles after convulsions.',
+      'Rescue Meds & Devices: Some patients carry buccal midazolam emergency packs or have an implanted Vagus Nerve Stimulator (VNS) in the chest.',
+    ],
+    treatments: [
+      'Anti-Seizure Medicines: Levetiracetam, lamotrigine, sodium valproate, carbamazepine, or topiramate.',
+      'Status Rescue: Buccal midazolam or rectal diazepam in the community; IV lorazepam/diazepam and levetiracetam/phenytoin in hospital.',
+      'Neurostimulation: Vagal nerve stimulators (activated by swiping a dedicated magnet) for drug-resistant epilepsy.',
+    ],
+    commonMeds: ['Levetiracetam', 'Sodium valproate', 'Lamotrigine', 'Carbamazepine', 'Midazolam'],
+    acuteComplications: [
+      'Convulsive Status Epilepticus: Continuous seizure activity ≥5 minutes (or repeated seizures without regaining baseline awareness) causes hypoxia, hyperthermia, rhabdomyolysis, acidosis, and neuronal injury.',
+      'Aspiration & Airway Obstruction: Loss of airway tone and ictal/post-ictal vomiting risk hypoxia and aspiration pneumonia.',
+      'Seizure-Related Trauma: Tongue/cheek lacerations, shoulder dislocations, vertebral compression fractures, and head injuries.',
+    ],
+  },
+  {
+    id: 'ischaemic-heart-disease',
+    title: 'Ischaemic Heart Disease & Angina (IHD)',
+    phoneticSpelling: 'iss-KEE-mik hart dih-ZEEZ',
+    category: 'Cardiovascular',
+    aliases: ['ihd', 'cad', 'coronary artery disease', 'angina', 'previous mi', 'cabg', 'stents', 'pci'],
+    overview:
+      'Impaired myocardial blood supply caused by atherosclerotic narrowing of the coronary arteries. Stable angina causes predictable exertional chest tightness relieved by rest or GTN, whereas plaque rupture causes Acute Coronary Syndromes (NSTEMI/STEMI).',
+    causesAndPathophysiology: [
+      'Coronary Atherosclerosis: Lipid-rich fibrofatty plaques build up in coronary artery walls, narrowing lumen diameter.',
+      'Supply-Demand Mismatch: Fixed stenosis limits oxygen delivery during exertion, anaemia, fever, or tachycardia (stable angina).',
+      'Plaque Rupture & Thrombosis: Sudden fissuring of a vulnerable plaque triggers platelet aggregation and coronary occlusion (ACS).',
+    ],
+    symptomsAndBaseline: [
+      'Stable Angina: Heavy, constricting chest tightness radiating to arms, neck, jaw, or epigastrium lasting 2–10 minutes with exertion and settling with rest/GTN.',
+      'Surgical Baseline: Many patients have prior coronary stents (PCI) or median sternotomy scars from CABG bypass grafting.',
+      'Baseline ECG: Old Q waves, T-wave flattening, or left bundle branch block from previous infarction are common.',
+    ],
+    treatments: [
+      'Anti-Anginals: Sublingual glyceryl trinitrate (GTN), beta-blockers (bisoprolol), calcium-channel blockers (amlodipine), and isosorbide mononitrate.',
+      'Secondary Prevention: Lifelong antiplatelets (aspirin/clopidogrel/ticagrelor), high-intensity statin (atorvastatin), and ACE inhibitors.',
+    ],
+    commonMeds: ['Glyceryl trinitrate', 'Aspirin', 'Atorvastatin', 'Bisoprolol', 'Ramipril'],
+    acuteComplications: [
+      'Acute Coronary Syndrome (STEMI / NSTEMI): Unheralded, prolonged chest pain at rest (>15 minutes) unremitting with GTN signals coronary thrombosis and myocardial necrosis.',
+      'Cardiogenic Shock & Pulmonary Oedema: Extensive ventricular ischaemia impairs pump output, dropping blood pressure and flooding the lungs.',
+      'Ischaemic Arrhythmias: Acute myocardial irritability frequently triggers ventricular tachycardia, ventricular fibrillation, or complete heart block.',
+    ],
+  },
+  {
+    id: 'hypertension',
+    title: 'Hypertension',
+    phoneticSpelling: 'hy-per-TEN-shun',
+    category: 'Cardiovascular',
+    aliases: ['htn', 'high blood pressure', 'malignant hypertension', 'hypertensive emergency'],
+    overview:
+      'Persistently elevated systemic arterial blood pressure (≥140/90 mmHg in clinic) that chronically damages blood vessel endothelium and forces the heart to pump against higher afterload. Usually asymptomatic at baseline, it underpins stroke, heart failure, aortic dissection, and CKD.',
+    causesAndPathophysiology: [
+      'Increased Peripheral Resistance: Essential hypertension (~90–95%) stems from arteriolar stiffening, high sympathetic tone, and renal salt/water dysregulation.',
+      'Secondary Causes: Renal artery stenosis, CKD, Conn’s syndrome, phaeochromocytoma, or obstructive sleep apnoea.',
+      'End-Organ Remodelling: Left ventricular hypertrophy, hyaline arteriolosclerosis, and accelerated atherosclerosis.',
+    ],
+    symptomsAndBaseline: [
+      'Asymptomatic Baseline: Chronic mild-to-moderate hypertension rarely causes headaches or dizziness on its own.',
+      'White-Coat & Pain Surges: Transient BP spikes (e.g. 170–190 systolic) frequently accompany acute pain, anxiety, or bladder retention without true organ damage.',
+    ],
+    treatments: [
+      'NICE Stepped Therapy: Calcium-channel blockers (amlodipine), ACEi/ARBs (ramipril, losartan), and thiazide-like diuretics (indapamide).',
+      'Resistant Disease: Spironolactone, alpha-blockers (doxazosin), or beta-blockers.',
+    ],
+    commonMeds: ['Amlodipine', 'Ramipril', 'Indapamide', 'Losartan', 'Bisoprolol'],
+    acuteComplications: [
+      'Hypertensive Emergency: Severe BP elevation (often >180/120 mmHg) accompanied by acute end-organ injury such as encephalopathy, papilloedema, intracerebral haemorrhage, ACS, pulmonary oedema, or aortic dissection.',
+      'Aortic Dissection: Longstanding uncontrolled hypertension weakens aortic media, predisposing to sudden tearing chest/back pain.',
+      'Postural Hypotension from Therapy: Over-treated or frail hypertensive patients commonly suffer orthostatic drops and falls on standing.',
+    ],
+  },
+  {
+    id: 'dementia',
+    title: "Dementia (Alzheimer's & Vascular)",
+    phoneticSpelling: 'dih-MEN-shuh',
+    category: 'Neurological',
+    aliases: ['alzheimers', 'vascular dementia', 'lewy body dementia', 'cognitive impairment', 'delirium'],
+    overview:
+      'An umbrella term for progressive, irreversible neurodegenerative or cerebrovascular syndromes causing decline in memory, reasoning, language, and daily living skills. Unlike acute delirium, true dementia evolves over months to years.',
+    causesAndPathophysiology: [
+      'Alzheimer’s Disease: Progressive deposition of extracellular beta-amyloid plaques and intracellular tau neurofibrillary tangles causes cortical atrophy and acetylcholine loss.',
+      'Vascular Dementia: Cumulative small-vessel ischaemia or stepwise strokes infarct subcortical white matter.',
+      'Lewy Body Dementia: Alpha-synuclein deposits cause fluctuating alertness, visual hallucinations, Parkinsonism, and severe neuroleptic sensitivity.',
+    ],
+    symptomsAndBaseline: [
+      'Cognitive Baseline: Impaired short-term recall, word-finding difficulty, disorientation to time/place, and reliance on carers/family for medication and personal care.',
+      'Behavioural Features: Sundowning (late-afternoon agitation), repetitive questioning, or distress in unfamiliar noisy environments.',
+      'Care Plans: Many advanced patients hold ReSPECT forms or DNACPR decisions at home or in care homes.',
+    ],
+    treatments: [
+      'Cognitive Enhancers: Acetylcholinesterase inhibitors (donepezil, rivastigmine, galantamine) or NMDA antagonist (memantine).',
+      'Vascular Risk Control: Antiplatelets, statins, and BP control in vascular dementia.',
+    ],
+    commonMeds: ['Donepezil', 'Memantine', 'Rivastigmine', 'Galantamine'],
+    acuteComplications: [
+      'Acute Delirium on Dementia: Sudden worsening confusion, lethargy, or agitation is typically driven by an acute physical trigger (UTI, chest infection, constipation, urinary retention, hypoxia, or pain) rather than dementia progression.',
+      'Falls & Occult Fractures: Impaired spatial awareness and reduced pain reporting increase risk of neck-of-femur fractures and subdural bleeds.',
+      'Neuroleptic Sensitivity (DLB): Patients with Dementia with Lewy Bodies can suffer severe rigidity, autonomic collapse, and sudden worsening if exposed to typical antipsychotics.',
+    ],
+  },
+  {
+    id: 'cerebrovascular-disease',
+    title: 'Previous Stroke & TIA (Cerebrovascular Disease)',
+    phoneticSpelling: 'seh-ree-broh-VAS-kyoo-ler dih-ZEEZ',
+    category: 'Neurological',
+    aliases: ['cva', 'stroke', 'tia', 'cerebrovascular accident', 'hemiparesis', 'dysphasia'],
+    overview:
+      'Long-term neurological deficits and vascular vulnerability following prior focal brain infarction (ischaemic stroke), intracerebral haemorrhage, or transient ischaemic attack (TIA). Pre-existing motor, speech, or visual deficits can closely complicate assessment of new acute events.',
+    causesAndPathophysiology: [
+      'Ischaemic Infarction: ~85% of UK strokes result from large-artery atherosclerosis, cardioembolism (e.g. AF), or small-vessel lacunar occlusion.',
+      'Haemorrhagic Rupture: ~15% result from hypertensive microaneurysm rupture, amyloid angiopathy, or anticoagulant bleeding.',
+      'Gliotic Scar & Neuroplasticity: Infarcted brain tissue leaves permanent focal scarring, lowered seizure threshold, and chronic spasticity.',
+    ],
+    symptomsAndBaseline: [
+      'Residual Deficits: Unilateral limb weakness/spasticity, facial asymmetry, expressive or receptive dysphasia, hemianopia, or dysphagia.',
+      'PEG & Spasticity Aids: Severe strokes may leave patients with ankle-foot orthoses, baclofen, or PEG feeding tubes.',
+    ],
+    treatments: [
+      'Ischaemic Secondary Prevention: Lifelong clopidogrel (or aspirin + dipyridamole), high-dose atorvastatin, BP control, and AF anticoagulation.',
+      'Spasticity & Post-Stroke Epilepsy: Oral baclofen, botulinum toxin injections, or anti-seizure medicines (levetiracetam).',
+    ],
+    commonMeds: ['Clopidogrel', 'Atorvastatin', 'Apixaban', 'Aspirin', 'Amlodipine'],
+    acuteComplications: [
+      'Recurrent Stroke or TIA: Prior stroke markedly raises risk of repeat vascular occlusion or haemorrhage, particularly if antiplatelets/anticoagulants are interrupted.',
+      'Post-Stroke Epilepsy: Cortical scar tissue is a common cause of new-onset focal or generalised seizures months to years after stroke.',
+      'Aspiration Pneumonia: Residual pharyngeal dysphagia remains one of the commonest causes of emergency hospital admission.',
+    ],
+  },
+  {
+    id: 'hypothyroidism',
+    title: 'Hypothyroidism',
+    phoneticSpelling: 'hy-poh-THY-roid-izm',
+    category: 'Endocrine & Metabolic',
+    aliases: ['underactive thyroid', 'myxoedema', 'myxoedema coma', 'levothyroxine', 'hashimotos'],
+    overview:
+      'Deficiency of thyroid hormones (T4 and T3), slowing whole-body cellular metabolism, heart rate, gut motility, and thermoregulation. In the UK it is most often autoimmune (Hashimoto’s thyroiditis) and straightforwardly managed with daily oral levothyroxine.',
+    causesAndPathophysiology: [
+      'Autoimmune Thyroiditis: Autoantibodies gradually destroy thyroid follicles; other causes include prior radioiodine/thyroidectomy or amiodarone/lithium therapy.',
+      'Metabolic Slowing: Low thyroid hormone reduces basal metabolic rate, cardiac contractility, adrenergic receptor sensitivity, and renal free-water clearance.',
+    ],
+    symptomsAndBaseline: [
+      'Chronic Features: Fatigue, cold intolerance, weight gain, constipation, dry coarse skin, bradycardia, and hoarse voice.',
+      'Euthyroid Baseline: Once stabilised on levothyroxine, patients are completely normal with standard observations.',
+    ],
+    treatments: [
+      'Hormone Replacement: Once-daily oral levothyroxine sodium taken on an empty stomach.',
+      'Myxoedema Care: Specialist hospital IV liothyronine/levothyroxine, hydrocortisone cover, and passive warming if severe.',
+    ],
+    commonMeds: ['Levothyroxine sodium'],
+    acuteComplications: [
+      'Myxoedema Coma: Rarely, prolonged untreated hypothyroidism decompensates during cold exposure, infection, or sedative use into hypothermia (<35°C), profound bradycardia, hypotension, hypoventilation, and coma.',
+      'Dilutional Hyponatraemia: Impaired renal free-water excretion in severe hypothyroidism lowers serum sodium, compounding confusion.',
+      'Cardiac Over-Replacement Risks: Excessive levothyroxine doses in elderly or IHD patients can precipitate fast AF or angina.',
+    ],
+  },
+  {
+    id: 'gord-peptic-ulcer-disease',
+    title: 'GORD & Peptic Ulcer Disease',
+    phoneticSpelling: 'gord & PEP-tik UL-ser dih-ZEEZ',
+    category: 'GI, Hepatic & Renal',
+    aliases: ['gord', 'gerd', 'acid reflux', 'peptic ulcer', 'gastric ulcer', 'duodenal ulcer', 'upper gi bleed'],
+    overview:
+      'Gastro-oesophageal reflux disease (GORD) occurs when gastric acid repeatedly washes past an incompetent lower oesophageal sphincter, whereas peptic ulcer disease involves mucosal breaks in the stomach or duodenum—chiefly driven by Helicobacter pylori or NSAIDs.',
+    causesAndPathophysiology: [
+      'Acid Reflux: Transient lower oesophageal sphincter relaxations or hiatus hernia expose squamous oesophageal mucosa to gastric acid and pepsin.',
+      'Mucosal Ulceration: H. pylori infection or NSAID-mediated prostaglandin blockade strips the protective gastric mucus/bicarbonate barrier.',
+    ],
+    symptomsAndBaseline: [
+      'Typical Features: Retrosternal burning heartburn (worse lying flat or after heavy meals), acid brash, belching, or gnawing epigastric pain.',
+      'Cardiac Mimic: Severe oesophageal spasm and reflux frequently mimic angina or ACS chest pain, and sometimes briefly settle after GTN spray.',
+    ],
+    treatments: [
+      'Acid Suppression: Proton pump inhibitors (omeprazole, lansoprazole) or H2-receptor antagonists (famotidine).',
+      'Mucosal Protection & Eradication: Alginate antacids (Gaviscon) and antibiotic triple therapy for H. pylori.',
+    ],
+    commonMeds: ['Omeprazole', 'Lansoprazole', 'Famotidine'],
+    acuteComplications: [
+      'Upper GI Haemorrhage: Ulcer erosion into submucosal vessels (especially alongside NSAIDs, aspirin, or anticoagulants) causes fresh/coffee-ground haematemesis, melaena, and hypovolaemic shock.',
+      'Perforated Peptic Ulcer: Full-thickness ulcer rupture spills gastric acid into the peritoneum, producing sudden-onset agonising epigastric pain, board-like abdominal rigidity, and shock.',
+      'Oesophageal Stricture & Mallory-Weiss Tear: Severe retching or chronic scarring can cause acute dysphagia or mucosal bleeding.',
+    ],
+  },
+  {
+    id: 'rheumatoid-arthritis',
+    title: 'Rheumatoid Arthritis',
+    phoneticSpelling: 'ROO-muh-toid ar-THRY-tis',
+    category: 'Autoimmune & Haematology',
+    aliases: ['ra', 'rheumatoid', 'dmard', 'methotrexate', 'atlantoaxial subluxation'],
+    overview:
+      'A chronic systemic autoimmune inflammatory arthritis targeting synovial joint linings (especially hands, wrists, feet, and cervical spine) alongside extra-articular involvement of the lungs, pericardium, and blood vessels.',
+    causesAndPathophysiology: [
+      'Synovial Pannus: Autoantibodies (RF, anti-CCP) and cytokines (TNF-alpha, IL-6) inflame synovium, forming invasive pannus tissue that erodes cartilage and bone.',
+      'Systemic Inflammation: Circulating cytokines accelerate cardiovascular disease and can inflame pleura, lung interstitium, sclera, and peripheral nerves.',
+    ],
+    symptomsAndBaseline: [
+      'Joint Baseline: Symmetrical small-joint swelling, morning stiffness (>30 mins), ulnar deviation, swan-neck deformities, and rheumatoid nodules.',
+      'Extra-Articular: Dry eyes/mouth (Sjögren’s overlap), interstitial lung fibrosis, or peripheral neuropathy.',
+      'Immunosuppression: Patients routinely take weekly methotrexate or biologic injections and sometimes long-term oral steroids.',
+    ],
+    treatments: [
+      'csDMARDs: Once-weekly methotrexate (with folic acid), sulfasalazine, leflunomide, or hydroxychloroquine.',
+      'Biologics & Targeted Therapy: Adalimumab, etanercept, rituximab, or JAK inhibitors (upadacitinib/baricitinib).',
+      'Flare Control: Short oral prednisolone courses or intra-articular steroid injections.',
+    ],
+    commonMeds: ['Methotrexate', 'Sulfasalazine', 'Hydroxychloroquine', 'Prednisolone', 'Folic acid'],
+    acuteComplications: [
+      'Cervical Spine (Atlantoaxial) Instability: Chronic C1–C2 ligament erosion can cause spinal cord compression during sudden neck flexion/extension or minor trauma.',
+      'Septic Arthritis & Opportunistic Sepsis: Biologic/DMARD immunosuppression predisposes to rapid systemic infection, and a single hot swollen joint may represent bacterial septic arthritis rather than a simple flare.',
+      'Pericarditis & ILD: Rheumatoid serositis can cause acute pleuritic chest pain or pericardial effusion, and methotrexate/RA-ILD can worsen baseline lung function.',
     ],
   },
 ];

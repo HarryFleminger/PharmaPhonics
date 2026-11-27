@@ -14,6 +14,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import {
+  COMMON_CONDITIONS_CATEGORY,
+  COMMON_CONDITION_IDS,
   CONDITION_CATEGORIES,
   UNCOMMON_COMPLEX_CATEGORY,
   UNCOMMON_COMPLEX_IDS,
@@ -123,7 +125,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
   onSetQuickCategoriesMinimized,
 }) => {
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(UNCOMMON_COMPLEX_CATEGORY);
+  const [activeCategory, setActiveCategory] = useState<string | null>(COMMON_CONDITIONS_CATEGORY);
   const [isCategoryDrawerMinimized, setIsCategoryDrawerMinimized] = useState(false);
   const [selectedConditionId, setSelectedConditionId] = useState<string | null>(null);
   const [internalQuickCategoriesMinimized, setInternalQuickCategoriesMinimized] =
@@ -211,12 +213,20 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
     for (const category of CONDITION_CATEGORIES) {
       map[category] = [];
     }
+    map[COMMON_CONDITIONS_CATEGORY] = COMMON_CONDITION_IDS.map((id) =>
+      allConditions.find((item) => item.id === id)
+    ).filter((item): item is ClinicalConditionItem => Boolean(item));
     map[UNCOMMON_COMPLEX_CATEGORY] = UNCOMMON_COMPLEX_IDS.map((id) =>
       allConditions.find((item) => item.id === id)
     ).filter((item): item is ClinicalConditionItem => Boolean(item));
 
     for (const item of allConditions) {
-      if (item.category === UNCOMMON_COMPLEX_CATEGORY) continue;
+      if (
+        item.category === COMMON_CONDITIONS_CATEGORY ||
+        item.category === UNCOMMON_COMPLEX_CATEGORY
+      ) {
+        continue;
+      }
       if (!map[item.category]) {
         map[item.category] = [];
       }
@@ -320,7 +330,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
     setQuery('');
     setAiError(null);
     setSelectedConditionId(null);
-    setActiveCategory((prev) => prev ?? UNCOMMON_COMPLEX_CATEGORY);
+    setActiveCategory((prev) => prev ?? COMMON_CONDITIONS_CATEGORY);
     setIsCategoryDrawerMinimized(false);
   };
 
@@ -424,7 +434,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
 
   return (
     <div
-      className={`space-y-4 ${
+      className={`space-y-3 sm:space-y-4 ${
         query !== '' || selectedConditionId !== null ? 'min-h-[calc(100vh+22rem)]' : ''
       }`}
     >
@@ -456,7 +466,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
       <section
         ref={searchSectionRef}
         aria-label="Medical condition search and Quick Categories"
-        className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 sm:p-5 space-y-4"
+        className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 sm:p-5 space-y-3 sm:space-y-4"
       >
         {/* 1. Search Input */}
         <div>
@@ -678,7 +688,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
               </div>
             ) : (
               <div>
-                <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 border-b bg-emerald-100/70 border-emerald-200/80">
+                <div className="flex items-center justify-between gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2.5 border-b bg-emerald-100/70 border-emerald-200/80">
                   <div className="flex items-center gap-2 min-w-0">
                     <FolderOpen
                       className="w-4 h-4 shrink-0 text-ambulance-green"
@@ -692,14 +702,14 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsCategoryDrawerMinimized(true)}
-                    className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white border border-emerald-300/80 text-ambulance-green text-xs font-semibold transition-colors cursor-pointer"
+                    className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/80 hover:bg-white border border-emerald-300/80 text-ambulance-green text-xs font-semibold transition-colors cursor-pointer"
                   >
                     <span>Minimise</span>
                     <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 </div>
 
-                <div className="p-3 sm:p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[260px] sm:max-h-none overflow-y-auto">
+                <div className="p-2 sm:p-3.5 grid grid-cols-2 md:grid-cols-3 gap-1.5 sm:gap-2 max-h-[116px] sm:max-h-none overflow-y-auto">
                   {activeCategoryItems.map((item) => {
                     const isActiveItem = selectedConditionId === item.id;
                     return (
@@ -707,7 +717,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
                         key={item.id}
                         type="button"
                         onClick={() => handleSelectConditionFromList(item)}
-                        className={`group flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-left text-xs sm:text-sm transition-all cursor-pointer border ${
+                        className={`group flex items-center justify-between gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2.5 rounded-lg text-left text-xs sm:text-sm transition-all cursor-pointer border ${
                           isActiveItem
                             ? 'bg-ambulance-green text-white border-ambulance-green font-semibold shadow-sm'
                             : 'bg-white border-emerald-200/90 text-slate-800 font-medium shadow-2xs hover:border-ambulance-green hover:shadow-sm'
