@@ -47,6 +47,11 @@ const ALLOWED_EVENTS = new Set([
   'assessment_viewed',
   'assessment_search_no_match',
   'assessment_ai_generated',
+  'condition_category_selected',
+  'condition_viewed',
+  'condition_search_no_match',
+  'condition_ai_generated',
+  'condition_med_clicked',
 ]);
 
 function getPosthogApiKey() {

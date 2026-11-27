@@ -125,6 +125,10 @@ function buildAssessmentPrompt(conditionName) {
   return `You are a UK Paramedic (JRCALC / NICE) pre-hospital clinical assessment expert. Create a rapid-reference pocketbook assessment checklist for a patient presenting with '${conditionName}'. Keep every bullet ultra-concise, telegraphic, and straight to the point (no prose explanations, no filler). For 'keyQuestions' and 'keyAssessments', start each string with a short 1-3 word label followed by a colon (max 24 chars before ':'), e.g. 'Onset: Sudden or gradual? What were they doing?' or 'Obs: RR, SpO2, HR, BP, Temp, BM, GCS'. Return ONLY a flat JSON object with exactly these 5 keys: 'title' (string: clean UK clinical title for the condition/presentation), 'category' (string: choose the closest fit from 'Cardiovascular', 'Respiratory', 'Neurological', 'Abdominal, GI & Renal', 'Medical, Endocrine & Sepsis', 'Trauma & MSK', or 'Maternity, Paeds & Mental Health'), 'keyQuestions' (array of 5 to 7 concise SOCRATES/SOCATE/ROS history questions in 'Label: question?' format), 'keyAssessments' (array of 4 to 6 concise bedside primary/secondary survey checks in 'Label: check' format), and 'redFlags' (array of 4 to 5 blunt time-critical red flag signs/symptoms). No markdown, no extra text.`;
 }
 
+function buildConditionPrompt(conditionName) {
+  return `You are a UK Paramedic (JRCALC / NICE / BNF) and NHS clinical educator. Create a rapid en-route pre-hospital refresher for the medical condition '${conditionName}'. You MUST use strictly British English spelling (e.g. neurone, haematology, oedema, ischaemia, dyspnoea, diarrhoea, anaemia, coeliac, phaeochromocytoma, haemophilia, paediatric, tumour, stabilise) and strictly UK NHS/BNF nomenclature (e.g. 'Motor Neurone Disease (MND)' not 'ALS'; Paracetamol, Salbutamol, Adrenaline, Furosemide, Co-careldopa; 999, A&E, GP, ReSPECT, NHS Steroid Emergency Card). Keep bullet points concise and scannable with a short 1-3 word prefix before a colon (max 24 chars before ':'). Return ONLY a flat JSON object with exactly these 9 keys: 'title' (string: official UK NHS condition title), 'phoneticSpelling' (string: hyphenated UK English pronunciation of the main condition name without bracketed acronyms, stressed syllables in ALL CAPS, words separated by spaces), 'category' (string: closest fit from 'Neurological', 'Cardiovascular', 'Respiratory', 'Endocrine & Metabolic', 'Autoimmune & Haematology', or 'GI, Hepatic & Renal'), 'overview' (string: crisp 2-3 sentence plain-English 'What It Is' summary), 'causesAndPathophysiology' (array of 3 to 5 concise 'Label: explanation' strings), 'symptomsAndBaseline' (array of 4 to 5 concise 'Label: explanation' strings covering presentation and typical patient baseline/devices), 'treatments' (array of 3 to 4 concise 'Label: explanation' strings covering NHS management), 'commonMeds' (array of 0 to 5 clean single UK BNF generic drug names without doses, e.g. ['Riluzole', 'Baclofen']), and 'paramedicTakeaways' (array of 4 to 5 concise 'Label: explanation' strings covering ambulance scene pitfalls, oxygen/drug cautions, and 999 crisis red flags). No markdown, no extra text.`;
+}
+
 function buildBrandPrompt(queryName) {
   return `You are a UK BNF and NHS prescribing expert. Determine whether '${queryName}' is a UK brand-name medication or multi-ingredient combination product. Return ONLY a flat JSON object with exactly these 4 keys: 'isBrandOrCombination' (boolean: true if '${queryName}' is a brand/trade name or fixed-dose combination product, false if it is already a single generic UK BNF / rINN drug name), 'productName' (string: clean capitalised brand or product name), 'subtitle' (string: brief 2 to 5 word UK formulation/class description, or empty string), and 'constituents' (array of 1 to 5 strings: the distinct active generic UK BNF / rINN drug names contained in the product, e.g. ['Beclometasone dipropionate', 'Formoterol fumarate', 'Glycopyrronium']). No markdown, no extra text.`;
 }
@@ -203,8 +207,20 @@ function buildLockedContentsFromBody(body) {
     return [{ parts: [{ text: buildAssessmentPrompt(sanitizedCondition) }] }];
   }
 
+  if (mode === 'condition') {
+    const rawCondition = typeof body.condition === 'string' ? body.condition.trim() : '';
+    if (!rawCondition) {
+      throw new Error('Missing required `condition` string.');
+    }
+    if (rawCondition.length > MAX_DRUG_NAME_LENGTH) {
+      throw new Error(`condition exceeds maximum length of ${MAX_DRUG_NAME_LENGTH} characters.`);
+    }
+    const sanitizedCondition = rawCondition.replace(/[\r\n"'`\\]/g, ' ').trim();
+    return [{ parts: [{ text: buildConditionPrompt(sanitizedCondition) }] }];
+  }
+
   throw new Error(
-    "Invalid `mode`. Expected 'clinical', 'toxicity', 'brand', 'prescription', 'medlist', or 'assessment'."
+    "Invalid `mode`. Expected 'clinical', 'toxicity', 'brand', 'prescription', 'medlist', 'assessment', or 'condition'."
   );
 }
 
@@ -314,7 +330,8 @@ export default async function handler(req, res) {
   try {
     let lastStatus = 502;
     let lastJson = { error: 'Upstream Gemini request failed.' };
-    const isMultiDrugMode = body.mode === 'medlist' || body.mode === 'prescription';
+    const isMultiDrugMode =
+      body.mode === 'medlist' || body.mode === 'prescription' || body.mode === 'condition';
     const maxOutputTokens = isMultiDrugMode
       ? MAX_MULTI_DRUG_OUTPUT_TOKENS
       : MAX_OUTPUT_TOKENS;

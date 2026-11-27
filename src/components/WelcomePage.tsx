@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Stethoscope,
+  HeartPulse,
   FolderOpen,
   Skull,
   Camera,
@@ -57,11 +58,11 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
         {/* Section Heading */}
         <div className="flex items-center justify-between">
           <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
-            How MedSpeak Works — 5 Core Study Tools
+            How MedSpeak Works — 6 Core Study Tools
           </h2>
         </div>
 
-        {/* 4 Visual Feature Cards */}
+        {/* 6 Visual Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
           {/* 1. Quick Categories & On-Scene Context */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex flex-col justify-between">
@@ -256,22 +257,17 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* 5. Pre-Hospital Scene Assessments (New Feature — Last Tile) */}
-          <div className="md:col-span-2 bg-white rounded-2xl border border-emerald-200 p-5 shadow-2xs flex flex-col justify-between">
+          {/* 5. Pre-Hospital Scene Assessments */}
+          <div className="bg-white rounded-2xl border border-emerald-200 p-5 shadow-2xs flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-ambulance-green flex items-center justify-center shrink-0">
                   <Stethoscope className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-ambulance-green">
-                      5. Clinical Assessments
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold uppercase bg-nhs-warmYellow text-slate-950">
-                      New
-                    </span>
-                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-ambulance-green">
+                    5. Clinical Assessments
+                  </span>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
                     999 Call-Out Checklists &amp; Condition Lookup
                   </h3>
@@ -305,6 +301,60 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                     <strong>Live Gemini AI Lookup:</strong> Search any other condition (e.g.{' '}
                     <em>Pericarditis</em> or <em>Ectopic Pregnancy</em>) to generate and locally
                     cache its pocketbook checklist in seconds.
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* 6. Conditions & Pathophysiology (New Feature) */}
+          <div className="bg-white rounded-2xl border border-emerald-200 p-5 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-ambulance-green flex items-center justify-center shrink-0">
+                  <HeartPulse className="w-5 h-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-ambulance-green">
+                      6. Conditions &amp; PMH
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold uppercase bg-nhs-warmYellow text-slate-950">
+                      New
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+                    Condition Refreshers &amp; On-Scene Context
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                Open the <strong>Conditions</strong> tab en route to a job to quickly refresh
+                unfamiliar or complex past medical history (e.g. <em>Motor Neurone Disease / ALS</em>,{' '}
+                <em>Addison&apos;s</em>, or <em>Myasthenia Gravis</em>).
+              </p>
+
+              <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <strong>Clear Breakdown + Paramedic Takeaways:</strong> Covers What It Is,
+                    Pathophysiology, Symptoms &amp; Baseline, Treatments, and ambulance scene red
+                    flags in British NHS terminology.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    <strong>UK Audio &amp; Common Meds Links:</strong> Hear British English
+                    pronunciation or tap any associated drug pill to jump straight to its BNF card.
                   </span>
                 </li>
               </ul>

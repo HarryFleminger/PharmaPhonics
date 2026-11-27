@@ -9,7 +9,7 @@ const ANALYTICS_ENDPOINT = '/api/analytics';
 const BATCH_FLUSH_DELAY_MS = 600;
 const MAX_BATCH_QUEUE_SIZE = 10;
 
-export type AnalyticsVirtualPath = '/medications' | '/assessments' | '/guide';
+export type AnalyticsVirtualPath = '/medications' | '/assessments' | '/conditions' | '/guide';
 
 export type AnalyticsEventName =
   | '$pageview'
@@ -39,7 +39,12 @@ export type AnalyticsEventName =
   | 'assessment_category_selected'
   | 'assessment_viewed'
   | 'assessment_search_no_match'
-  | 'assessment_ai_generated';
+  | 'assessment_ai_generated'
+  | 'condition_category_selected'
+  | 'condition_viewed'
+  | 'condition_search_no_match'
+  | 'condition_ai_generated'
+  | 'condition_med_clicked';
 
 export type AnalyticsPrimitive = string | number | boolean | null;
 export type AnalyticsProperties = Record<string, AnalyticsPrimitive>;

@@ -6,6 +6,7 @@ import {
   Sparkles,
   Pill,
   Stethoscope,
+  HeartPulse,
 } from 'lucide-react';
 import {
   BnfMedicationItem,
@@ -42,6 +43,7 @@ import { BrandProductGroupCard, getBrandGroupDomId } from './components/BrandPro
 import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
 import { AssessmentView } from './components/AssessmentView';
+import { ConditionView } from './components/ConditionView';
 import { HowToUseCard } from './components/HowToUseCard';
 import {
   trackEvent,
@@ -51,7 +53,9 @@ import {
 import { scrollElementBelowStickyHeader } from './utils/scrollUtils';
 
 export function App() {
-  const [activeSection, setActiveSection] = useState<'medications' | 'assessments'>('medications');
+  const [activeSection, setActiveSection] = useState<'medications' | 'assessments' | 'conditions'>(
+    'medications'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   // No category is pre-applied when the page opens; user clicks a category pill to open it
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -65,6 +69,12 @@ export function App() {
     return window.innerWidth < 768;
   });
   const [isAssessmentCategoriesMinimized, setIsAssessmentCategoriesMinimized] = useState<boolean>(
+    () => {
+      if (typeof window === 'undefined') return false;
+      return window.innerWidth < 768;
+    }
+  );
+  const [isConditionCategoriesMinimized, setIsConditionCategoriesMinimized] = useState<boolean>(
     () => {
       if (typeof window === 'undefined') return false;
       return window.innerWidth < 768;
@@ -813,15 +823,43 @@ export function App() {
     toxCalculatorValues.patientWeightKg,
   ]);
 
+  const getSectionVirtualPath = (
+    section: 'medications' | 'assessments' | 'conditions'
+  ) => {
+    if (section === 'assessments') return '/assessments';
+    if (section === 'conditions') return '/conditions';
+    return '/medications';
+  };
+
   const handleSwitchSection = useCallback(
-    (nextSection: 'medications' | 'assessments') => {
+    (nextSection: 'medications' | 'assessments' | 'conditions') => {
       if (activeSection !== nextSection) {
         setActiveSection(nextSection);
         trackEvent('section_switched', { section: nextSection });
-        trackPageView(nextSection === 'assessments' ? '/assessments' : '/medications');
+        trackPageView(getSectionVirtualPath(nextSection));
       }
     },
     [activeSection]
+  );
+
+  const handleSelectConditionMedication = useCallback(
+    (drugName: string, conditionTitle: string) => {
+      trackEvent('condition_med_clicked', {
+        condition_title: conditionTitle,
+        drug_name: drugName,
+      });
+      if (activeSection !== 'medications') {
+        setActiveSection('medications');
+        trackEvent('section_switched', { section: 'medications' });
+        trackPageView('/medications');
+      }
+      setActiveCategory(null);
+      setIsCategoryMinimized(false);
+      setIsUploaderOpen(false);
+      setIsQuickCategoriesMinimized(true);
+      handleSelectCategoryDrug(drugName, { scrollToResults: true });
+    },
+    [activeSection, handleSelectCategoryDrug]
   );
 
   return (
@@ -830,7 +868,7 @@ export function App() {
         <WelcomePage
           onClose={() => {
             setIsGuideOpen(false);
-            trackPageView(activeSection === 'assessments' ? '/assessments' : '/medications');
+            trackPageView(getSectionVirtualPath(activeSection));
           }}
         />
       )}
@@ -882,16 +920,16 @@ export function App() {
             : ''
         }`}
       >
-        {/* Top-Level Section Switcher: Medications | Assessments */}
+        {/* Top-Level Section Switcher: Medications | Assessments | Conditions */}
         <nav
           aria-label="MedSpeak section switcher"
-          className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-slate-200/75 border border-slate-200/90 max-w-md mx-auto mb-5"
+          className="grid grid-cols-3 gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-2xl bg-slate-200/75 border border-slate-200/90 max-w-lg mx-auto mb-5"
         >
           <button
             type="button"
             onClick={() => handleSwitchSection('medications')}
             aria-pressed={activeSection === 'medications'}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm transition-all cursor-pointer ${
+            className={`inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-all cursor-pointer ${
               activeSection === 'medications'
                 ? isToxicityMode
                   ? 'bg-white text-rose-700 shadow-sm font-bold'
@@ -907,7 +945,7 @@ export function App() {
             type="button"
             onClick={() => handleSwitchSection('assessments')}
             aria-pressed={activeSection === 'assessments'}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm transition-all cursor-pointer ${
+            className={`inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-all cursor-pointer ${
               activeSection === 'assessments'
                 ? 'bg-white text-ambulance-green shadow-sm font-bold'
                 : 'text-slate-600 hover:text-slate-900 font-semibold'
@@ -916,13 +954,23 @@ export function App() {
             <Stethoscope className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>Assessments</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => handleSwitchSection('conditions')}
+            aria-pressed={activeSection === 'conditions'}
+            className={`inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-all cursor-pointer ${
+              activeSection === 'conditions'
+                ? 'bg-white text-ambulance-green shadow-sm font-bold'
+                : 'text-slate-600 hover:text-slate-900 font-semibold'
+            }`}
+          >
+            <HeartPulse className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>Conditions</span>
+          </button>
         </nav>
 
-        <div
-          hidden={activeSection !== 'medications'}
-          className={activeSection === 'medications' ? '' : 'hidden'}
-        >
-        {/* Google Cloud TTS Error Alert */}
+        {/* Google Cloud TTS Error Alert (shared across Medications and Conditions) */}
         {ttsError && (
           <div
             role="alert"
@@ -945,6 +993,11 @@ export function App() {
             </button>
           </div>
         )}
+
+        <div
+          hidden={activeSection !== 'medications'}
+          className={activeSection === 'medications' ? '' : 'hidden'}
+        >
 
         {/* OpenPrescribing Search Error Alert */}
         {searchError && (
@@ -1072,6 +1125,20 @@ export function App() {
               requestAnimationFrame(() => {
                 const input = document.getElementById(
                   'medspeak-assessment-search'
+                ) as HTMLInputElement | null;
+                input?.focus();
+                input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }}
+            onClickConditions={() => {
+              trackEvent('how_to_use_shortcut_clicked', {
+                shortcut: 'conditions',
+                from_section: 'medications',
+              });
+              handleSwitchSection('conditions');
+              requestAnimationFrame(() => {
+                const input = document.getElementById(
+                  'medspeak-condition-search'
                 ) as HTMLInputElement | null;
                 input?.focus();
                 input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1297,10 +1364,128 @@ export function App() {
                   input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 });
               }}
+              onClickConditions={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'conditions',
+                  from_section: 'assessments',
+                });
+                handleSwitchSection('conditions');
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-condition-search'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
               onClickToxicityMode={() => {
                 trackEvent('how_to_use_shortcut_clicked', {
                   shortcut: 'toxicity_mode',
                   from_section: 'assessments',
+                });
+                handleSwitchSection('medications');
+                if (!isToxicityMode) {
+                  handleToggleToxicityMode(undefined, 'how_to_use');
+                }
+                setIsToxCalculatorMinimized(false);
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-search-input'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+            />
+        </div>
+
+        <div
+          hidden={activeSection !== 'conditions'}
+          className={activeSection === 'conditions' ? '' : 'hidden'}
+        >
+            <ConditionView
+              onOpenCondition={triggerFirstTimeClinicalWarning}
+              onSelectMedication={handleSelectConditionMedication}
+              audioLoadingId={audioLoadingId}
+              speakingId={speakingId}
+              onListen={handleListenClick}
+              isQuickCategoriesMinimized={isConditionCategoriesMinimized}
+              onSetQuickCategoriesMinimized={setIsConditionCategoriesMinimized}
+            />
+            <HowToUseCard
+              isToxicityMode={false}
+              onClickSearchDrugs={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'search',
+                  from_section: 'conditions',
+                });
+                handleSwitchSection('medications');
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-search-input'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickUploadMedList={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'upload_med_list',
+                  from_section: 'conditions',
+                });
+                handleSwitchSection('medications');
+                setIsUploaderOpen(true);
+                requestAnimationFrame(() => {
+                  const uploader =
+                    document.getElementById('medspeak-prescription-uploader') ??
+                    document.getElementById('medspeak-search-input');
+                  uploader?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickQuickCategories={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'quick_categories',
+                  from_section: 'conditions',
+                });
+                setIsConditionCategoriesMinimized(false);
+                requestAnimationFrame(() => {
+                  const categoriesEl = document.getElementById(
+                    'medspeak-condition-categories'
+                  );
+                  categoriesEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickAssessments={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'assessments',
+                  from_section: 'conditions',
+                });
+                handleSwitchSection('assessments');
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-assessment-search'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickConditions={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'conditions',
+                  from_section: 'conditions',
+                });
+                requestAnimationFrame(() => {
+                  const input = document.getElementById(
+                    'medspeak-condition-search'
+                  ) as HTMLInputElement | null;
+                  input?.focus();
+                  input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+              }}
+              onClickToxicityMode={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'toxicity_mode',
+                  from_section: 'conditions',
                 });
                 handleSwitchSection('medications');
                 if (!isToxicityMode) {

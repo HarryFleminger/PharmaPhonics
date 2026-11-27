@@ -7,6 +7,7 @@ import {
 } from '../types/medication';
 import { registerDynamicBrandBreakdown } from '../data/brandProducts';
 import { ClinicalAssessmentItem } from '../types/assessment';
+import { ClinicalConditionItem } from '../types/condition';
 import {
   alignClinicalPhoneticToDrugName,
   findPregeneratedClinicalDetails,
@@ -16,6 +17,10 @@ import {
   ASSESSMENT_CATEGORIES,
   PREGENERATED_ASSESSMENTS,
 } from '../data/pregeneratedAssessments';
+import {
+  CONDITION_CATEGORIES,
+  PREGENERATED_CONDITIONS,
+} from '../data/pregeneratedConditions';
 import { enforceRateLimit } from './rateLimitService';
 import { setServerTtsConfigured } from './googleTtsService';
 
@@ -39,6 +44,7 @@ const CLINICAL_STORAGE_KEY = 'medspeak_clinical_cache_v1';
 const TOXICITY_STORAGE_KEY = 'medspeak_toxicity_cache_v1';
 const PRESCRIPTION_SCAN_STORAGE_KEY = 'medspeak_prescription_scan_cache_v2';
 const ASSESSMENT_STORAGE_KEY = 'medspeak_assessment_cache_v1';
+const CONDITION_STORAGE_KEY = 'medspeak_condition_cache_v1';
 const BRAND_STORAGE_KEY = 'medspeak_brand_cache_v1';
 const MAX_PERSISTED_PRESCRIPTION_SCANS = 25;
 
@@ -63,6 +69,7 @@ const clinicalDetailsCache = new Map<string, GeminiClinicalDetails>();
 const toxicityDetailsCache = new Map<string, GeminiToxicityDetails>();
 const prescriptionScanCache = new Map<string, PrescriptionScanResult>();
 const assessmentCache = new Map<string, ClinicalAssessmentItem>();
+const conditionCache = new Map<string, ClinicalConditionItem>();
 const brandResolutionCache = new Map<string, GeminiBrandResolution>();
 
 // In-flight request deduplicators so concurrent requests for the same drug/image share one Promise
@@ -70,6 +77,7 @@ const inFlightClinicalRequests = new Map<string, Promise<GeminiClinicalDetails>>
 const inFlightToxicityRequests = new Map<string, Promise<GeminiToxicityDetails>>();
 const inFlightVisionRequests = new Map<string, Promise<PrescriptionScanResult>>();
 const inFlightAssessmentRequests = new Map<string, Promise<ClinicalAssessmentItem>>();
+const inFlightConditionRequests = new Map<string, Promise<ClinicalConditionItem>>();
 const inFlightBrandRequests = new Map<string, Promise<GeminiBrandResolution>>();
 
 let serverGeminiConfigured = true;
@@ -166,6 +174,36 @@ function isValidAssessmentItem(value: unknown): value is ClinicalAssessmentItem 
     isNonEmptyStringArray(record.keyQuestions) &&
     isNonEmptyStringArray(record.keyAssessments) &&
     isNonEmptyStringArray(record.redFlags)
+  );
+}
+
+function isValidConditionItem(value: unknown): value is ClinicalConditionItem {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  const isNonEmptyStringArray = (arr: unknown): arr is string[] =>
+    Array.isArray(arr) &&
+    arr.length > 0 &&
+    arr.every((item) => typeof item === 'string' && item.trim() !== '');
+
+  return (
+    typeof record.id === 'string' &&
+    record.id.trim() !== '' &&
+    typeof record.title === 'string' &&
+    record.title.trim() !== '' &&
+    typeof record.phoneticSpelling === 'string' &&
+    record.phoneticSpelling.trim() !== '' &&
+    typeof record.category === 'string' &&
+    record.category.trim() !== '' &&
+    Array.isArray(record.aliases) &&
+    record.aliases.every((item) => typeof item === 'string') &&
+    typeof record.overview === 'string' &&
+    record.overview.trim() !== '' &&
+    isNonEmptyStringArray(record.causesAndPathophysiology) &&
+    isNonEmptyStringArray(record.symptomsAndBaseline) &&
+    isNonEmptyStringArray(record.treatments) &&
+    Array.isArray(record.commonMeds) &&
+    record.commonMeds.every((item) => typeof item === 'string') &&
+    isNonEmptyStringArray(record.paramedicTakeaways)
   );
 }
 
@@ -275,6 +313,22 @@ function hydrateCachesFromLocalStorage(): void {
   }
 
   try {
+    const rawConditions = window.localStorage.getItem(CONDITION_STORAGE_KEY);
+    if (rawConditions) {
+      const parsed: unknown = JSON.parse(rawConditions);
+      if (parsed && typeof parsed === 'object') {
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+          if (isValidConditionItem(value)) {
+            conditionCache.set(key, value);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not read condition cache:', err);
+  }
+
+  try {
     const rawBrands = window.localStorage.getItem(BRAND_STORAGE_KEY);
     if (rawBrands) {
       const parsed: unknown = JSON.parse(rawBrands);
@@ -358,6 +412,20 @@ function saveAssessmentCacheToLocalStorage(): void {
     window.localStorage.setItem(ASSESSMENT_STORAGE_KEY, JSON.stringify(serialized));
   } catch (err) {
     console.warn('[GeminiClinicalService] Could not write assessment cache:', err);
+  }
+}
+
+function saveConditionCacheToLocalStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+
+  try {
+    const serialized: Record<string, ClinicalConditionItem> = {};
+    conditionCache.forEach((value, key) => {
+      serialized[key] = value;
+    });
+    window.localStorage.setItem(CONDITION_STORAGE_KEY, JSON.stringify(serialized));
+  } catch (err) {
+    console.warn('[GeminiClinicalService] Could not write condition cache:', err);
   }
 }
 
@@ -527,6 +595,10 @@ type GeminiProxyPayload =
     }
   | {
       mode: 'assessment';
+      condition: string;
+    }
+  | {
+      mode: 'condition';
       condition: string;
     };
 
@@ -1079,6 +1151,172 @@ export async function fetchConditionAssessment(
     return await requestPromise;
   } finally {
     inFlightAssessmentRequests.delete(normalizedKey);
+  }
+}
+
+function normalizeConditionCategory(rawCategory: string): string {
+  const trimmed = rawCategory.trim().toLowerCase();
+  const matched = CONDITION_CATEGORIES.find((cat) => cat.toLowerCase() === trimmed);
+  return matched ?? 'Neurological';
+}
+
+function parseAndValidateConditionJson(
+  rawText: string,
+  queriedCondition: string
+): ClinicalConditionItem {
+  const cleanedText = rawText
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+
+  const parsed: unknown = JSON.parse(cleanedText);
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid JSON structure returned by Gemini for condition guide.');
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const toCleanStringArray = (val: unknown): string[] =>
+    Array.isArray(val)
+      ? val
+          .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+          .map((item) => item.trim())
+      : [];
+
+  const title = typeof record.title === 'string' ? record.title.trim() : '';
+  const phoneticSpelling =
+    typeof record.phoneticSpelling === 'string' ? record.phoneticSpelling.trim() : '';
+  const rawCategory = typeof record.category === 'string' ? record.category.trim() : '';
+  const overview = typeof record.overview === 'string' ? record.overview.trim() : '';
+  const causesAndPathophysiology = toCleanStringArray(record.causesAndPathophysiology);
+  const symptomsAndBaseline = toCleanStringArray(record.symptomsAndBaseline);
+  const treatments = toCleanStringArray(record.treatments);
+  const commonMeds = Array.from(new Set(toCleanStringArray(record.commonMeds))).slice(0, 6);
+  const paramedicTakeaways = toCleanStringArray(record.paramedicTakeaways);
+
+  if (
+    !title ||
+    !phoneticSpelling ||
+    !overview ||
+    causesAndPathophysiology.length === 0 ||
+    symptomsAndBaseline.length === 0 ||
+    treatments.length === 0 ||
+    paramedicTakeaways.length === 0
+  ) {
+    throw new Error('Gemini condition response missing required fields.');
+  }
+
+  const slug = queriedCondition
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  const normalizedQuery = queriedCondition.trim().toLowerCase();
+
+  return {
+    id: `ai-${slug || 'condition'}`,
+    title,
+    phoneticSpelling,
+    category: normalizeConditionCategory(rawCategory),
+    aliases: normalizedQuery ? [normalizedQuery] : [],
+    overview,
+    causesAndPathophysiology,
+    symptomsAndBaseline,
+    treatments,
+    commonMeds,
+    paramedicTakeaways,
+  };
+}
+
+/**
+ * Returns all unique AI-generated condition refreshers cached in `localStorage`.
+ */
+export function getAllCachedAiConditions(): ClinicalConditionItem[] {
+  const uniqueById = new Map<string, ClinicalConditionItem>();
+  conditionCache.forEach((item) => {
+    if (!uniqueById.has(item.id)) {
+      uniqueById.set(item.id, item);
+    }
+  });
+  return Array.from(uniqueById.values());
+}
+
+/**
+ * Generates or retrieves a UK Paramedic en-route refresher for any custom
+ * medical condition (`POST /api/gemini` with `mode: 'condition'`).
+ * - Returns matching built-in pregenerated entry or `localStorage` entry with 0 tokens.
+ * - Deduplicates concurrent in-flight requests and enforces `gemini_text` rate limit.
+ */
+export async function fetchConditionGuide(
+  conditionQuery: string,
+  signal?: AbortSignal
+): Promise<ClinicalConditionItem> {
+  const trimmedCondition = conditionQuery.trim().slice(0, MAX_DRUG_NAME_LENGTH);
+  const normalizedKey = trimmedCondition.toLowerCase();
+  if (!normalizedKey) {
+    throw new Error('Please enter a medical condition.');
+  }
+
+  const pregeneratedMatch = PREGENERATED_CONDITIONS.find(
+    (item) =>
+      item.title.toLowerCase() === normalizedKey ||
+      item.aliases.some((alias) => alias.toLowerCase() === normalizedKey)
+  );
+  if (pregeneratedMatch) {
+    return pregeneratedMatch;
+  }
+
+  const directCached = conditionCache.get(normalizedKey);
+  if (directCached) {
+    return directCached;
+  }
+
+  for (const cachedItem of conditionCache.values()) {
+    if (
+      cachedItem.title.toLowerCase() === normalizedKey ||
+      cachedItem.aliases.some((alias) => alias.toLowerCase() === normalizedKey)
+    ) {
+      return cachedItem;
+    }
+  }
+
+  const existingInFlight = inFlightConditionRequests.get(normalizedKey);
+  if (existingInFlight) {
+    return existingInFlight;
+  }
+
+  enforceRateLimit('gemini_text');
+
+  const requestPromise = (async () => {
+    try {
+      const rawText = await callServerGeminiProxy(
+        {
+          mode: 'condition',
+          condition: trimmedCondition,
+        },
+        signal
+      );
+      const item = parseAndValidateConditionJson(rawText, trimmedCondition);
+
+      conditionCache.set(normalizedKey, item);
+      saveConditionCacheToLocalStorage();
+
+      return item;
+    } catch (error) {
+      console.error(
+        `[GeminiClinicalService] Failed to fetch condition guide for "${conditionQuery}":`,
+        error
+      );
+      throw error;
+    }
+  })();
+
+  inFlightConditionRequests.set(normalizedKey, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightConditionRequests.delete(normalizedKey);
   }
 }
 

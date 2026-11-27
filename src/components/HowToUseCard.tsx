@@ -6,6 +6,7 @@ import {
   Camera,
   FolderOpen,
   Stethoscope,
+  HeartPulse,
   ChevronRight,
 } from 'lucide-react';
 
@@ -15,6 +16,7 @@ interface HowToUseCardProps {
   onClickUploadMedList: () => void;
   onClickQuickCategories: () => void;
   onClickAssessments: () => void;
+  onClickConditions?: () => void;
   onClickToxicityMode: () => void;
 }
 
@@ -24,6 +26,7 @@ export const HowToUseCard: React.FC<HowToUseCardProps> = ({
   onClickUploadMedList,
   onClickQuickCategories,
   onClickAssessments,
+  onClickConditions,
   onClickToxicityMode,
 }) => {
   return (
@@ -198,6 +201,45 @@ export const HowToUseCard: React.FC<HowToUseCardProps> = ({
             />
           </button>
         </li>
+
+        {onClickConditions && (
+          <li>
+            <button
+              type="button"
+              onClick={onClickConditions}
+              className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-left transition-all cursor-pointer active:scale-[0.99] group ${
+                isToxicityMode
+                  ? 'hover:bg-rose-50/70 hover:border-rose-300'
+                  : 'hover:bg-emerald-50/70 hover:border-emerald-300'
+              }`}
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <div
+                  className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                    isToxicityMode
+                      ? 'bg-rose-100 text-rose-600'
+                      : 'bg-emerald-100 text-ambulance-green'
+                  }`}
+                >
+                  <HeartPulse className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <span className="text-xs sm:text-sm text-slate-700 leading-snug">
+                  <strong className="text-slate-900">Conditions</strong> — look up any chronic or
+                  unfamiliar condition en route for pathophysiology, baseline, treatments, and
+                  on-scene takeaways.
+                </span>
+              </div>
+              <ChevronRight
+                className={`w-4 h-4 text-slate-400 shrink-0 transition-transform group-hover:translate-x-0.5 ${
+                  isToxicityMode
+                    ? 'group-hover:text-rose-600'
+                    : 'group-hover:text-ambulance-green'
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+          </li>
+        )}
 
         <li>
           <button
