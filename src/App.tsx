@@ -170,17 +170,6 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (metaTheme) {
-      metaTheme.setAttribute(
-        'content',
-        activeSection === 'medications' && isToxicityMode ? '#be123c' : '#006747'
-      );
-    }
-  }, [activeSection, isToxicityMode]);
-
-  useEffect(() => {
     if (hasTrackedAppOpenRef.current) return;
     hasTrackedAppOpenRef.current = true;
     const entryView = isGuideOpen ? 'guide' : 'medications';
