@@ -219,14 +219,15 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                     4. Multi-Drug Vision &amp; Text AI
                   </span>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-                    Prescription Photo Scanner &amp; Holistic Reviews
+                    Multiple Meds Study &amp; Prescription Scanner
                   </h3>
                 </div>
               </div>
 
               <p className="text-sm text-slate-600 leading-relaxed mb-3">
-                Tap <strong>Upload Prescription / Med List</strong> next to the search bar to snap a
-                photo or paste text from a repeat prescription, discharge letter, or blister pack.
+                Tap <strong>Multiple Meds / Prescription</strong> next to the search bar to type or
+                paste multiple medications to study together, or snap a photo of a repeat
+                prescription, discharge letter, or blister pack.
               </p>
 
               <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700">

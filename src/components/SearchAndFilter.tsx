@@ -38,7 +38,6 @@ interface SearchAndFilterProps {
   hasActiveQuery: boolean;
   isToxicityMode?: boolean;
   onUploadActiveChange?: (isActive: boolean) => void;
-  highlightUploadButton?: boolean;
   isUploaderOpen?: boolean;
   onSetUploaderOpen?: (open: boolean | ((prev: boolean) => boolean)) => void;
   isQuickCategoriesMinimized?: boolean;
@@ -62,7 +61,6 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
   hasActiveQuery,
   isToxicityMode = false,
   onUploadActiveChange,
-  highlightUploadButton = false,
   isUploaderOpen,
   onSetUploaderOpen,
   isQuickCategoriesMinimized,
@@ -190,7 +188,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             )}
           </div>
 
-          {/* Prominent "Upload Prescription / Med List" Button */}
+          {/* Prominent "Multiple Meds / Prescription" Button */}
           <button
             type="button"
             onClick={() => {
@@ -204,8 +202,6 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             }}
             aria-expanded={uploaderOpen}
             className={`inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm font-bold shrink-0 border transition-all cursor-pointer active:scale-[0.98] shadow-xs ${
-              highlightUploadButton ? 'animate-flash-upload' : ''
-            } ${
               uploaderOpen
                 ? isToxicityMode
                   ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-600/25'
@@ -214,10 +210,10 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                 ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100/80 hover:border-rose-300'
                 : 'bg-emerald-50 text-ambulance-green border-emerald-200 hover:bg-emerald-100/80 hover:border-emerald-300'
             }`}
-            title="Upload or take a photo of a prescription or repeat medication list"
+            title="Type or paste multiple medications to study, or upload a prescription photo"
           >
             <Camera className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <span>Upload Prescription / Med List</span>
+            <span>Multiple Meds / Prescription</span>
             {!uploaderOpen && savedPrescriptionCount > 0 && (
               <span
                 className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${

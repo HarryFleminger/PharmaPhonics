@@ -224,7 +224,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   const handleExtractPastedText = useCallback(() => {
     const trimmed = pastedText.trim();
     if (!trimmed) {
-      setScanError('Please paste a medication list or clinical summary first.');
+      setScanError('Please type or paste a list of medications first.');
       return;
     }
 
@@ -463,10 +463,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             }`}
           >
             <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span>Paste Med List</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-nhs-warmYellow text-slate-950">
-              New
-            </span>
+            <span>Type / Paste Multiple Meds</span>
           </button>
         </div>
 
@@ -479,8 +476,8 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               onToggleOpen();
             }
           }}
-          aria-label="Clear prescription scanner"
-          title="Clear uploaded photo or pasted medication list"
+          aria-label="Clear multiple meds and prescription scanner"
+          title="Clear uploaded photo or multiple medications list"
           className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white/70 transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
@@ -619,15 +616,15 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
           </div>
         )
       ) : (
-        /* TAB 2: PASTE MED LIST */
+        /* TAB 2: TYPE / PASTE MULTIPLE MEDS */
         <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-3.5 space-y-2.5">
           <textarea
             value={pastedText}
             onChange={(e) => setPastedText(e.target.value)}
             rows={3}
             maxLength={4000}
-            placeholder="Paste messy text from a repeat prescription table, discharge summary, GP record, or clinical letter (e.g. 'Trimbow 2 puffs BD, Zapain 30/500mg, Eliquis 5mg BD, Ramipril 5mg OD')..."
-            aria-label="Paste medication list text"
+            placeholder="Type or paste multiple medications to study (e.g. 'amiodarone, bisoprolol, ramipril, apixaban') or paste text from a repeat prescription, discharge summary, or clinical letter..."
+            aria-label="Type or paste multiple medications"
             className={`w-full p-3 text-base bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all resize-y ${
               isToxicityMode
                 ? 'border-rose-200 focus:ring-rose-600 focus:border-rose-600'

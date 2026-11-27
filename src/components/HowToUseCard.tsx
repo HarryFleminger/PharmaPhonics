@@ -111,8 +111,9 @@ export const HowToUseCard: React.FC<HowToUseCardProps> = ({
                 <Camera className="w-4 h-4" aria-hidden="true" />
               </div>
               <span className="text-xs sm:text-sm text-slate-700 leading-snug">
-                <strong className="text-slate-900">Upload or Paste</strong> — snap a photo or paste
-                text from a patient’s medication list for an instant holistic overview.
+                <strong className="text-slate-900">Multiple Meds / Prescription</strong> — type or
+                paste multiple medications to study, or snap a prescription photo for a holistic
+                overview.
               </span>
             </div>
             <ChevronRight

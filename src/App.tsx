@@ -50,8 +50,6 @@ import {
 } from './services/analyticsService';
 import { scrollElementBelowStickyHeader } from './utils/scrollUtils';
 
-const PRESCRIPTION_FEATURE_STORAGE_KEY = 'medspeak_seen_prescription_feature_v1';
-
 export function App() {
   const [activeSection, setActiveSection] = useState<'medications' | 'assessments'>('medications');
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,16 +91,6 @@ export function App() {
       return false;
     }
   });
-
-  const [isNewFeatureModalOpen, setIsNewFeatureModalOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined' || !window.localStorage) return false;
-    try {
-      return window.localStorage.getItem(PRESCRIPTION_FEATURE_STORAGE_KEY) !== 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [highlightUploadButton, setHighlightUploadButton] = useState(false);
 
   const [hasSeenJrcalcWarning, setHasSeenJrcalcWarning] = useState(false);
   const [isJrcalcModalOpen, setIsJrcalcModalOpen] = useState(false);
@@ -439,19 +427,6 @@ export function App() {
       loadToxicityDetailsForMedication,
     ]
   );
-
-  const handleDismissNewFeatureModal = useCallback(() => {
-    setIsNewFeatureModalOpen(false);
-    try {
-      window.localStorage?.setItem(PRESCRIPTION_FEATURE_STORAGE_KEY, 'true');
-    } catch {
-      // Ignore storage errors
-    }
-    setHighlightUploadButton(true);
-    window.setTimeout(() => {
-      setHighlightUploadButton(false);
-    }, 3400);
-  }, []);
 
   // Clicking a category pill in the top row:
   // - If clicking a different category: open it expanded
@@ -868,17 +843,6 @@ export function App() {
           isToxicityMode ? 'bg-rose-50/40' : 'bg-slate-50'
         }`}
       >
-      {/* One-Time "New Feature" Prescription Upload Announcement Modal */}
-      <NoticeModal
-        isOpen={isNewFeatureModalOpen}
-        variant="new-feature"
-        title="Scan Prescriptions & Repeat Med Lists"
-        message="You can now upload a photo or screenshot of a prescription or repeat medication list to scan multiple drugs at once — complete with a holistic summary of likely patient conditions, on-scene considerations, and drug interaction risks."
-        confirmLabel="Got It"
-        onConfirm={handleDismissNewFeatureModal}
-        onClose={handleDismissNewFeatureModal}
-      />
-
       {/* First-Time JRCALC Clinical Disclaimer Modal */}
       <NoticeModal
         isOpen={isJrcalcModalOpen}
@@ -1026,7 +990,6 @@ export function App() {
           resultCount={totalResultCount}
           hasActiveQuery={hasActiveQuery}
           isToxicityMode={isToxicityMode}
-          highlightUploadButton={highlightUploadButton}
           isUploaderOpen={isUploaderOpen}
           onSetUploaderOpen={setIsUploaderOpen}
           isQuickCategoriesMinimized={isQuickCategoriesMinimized}
