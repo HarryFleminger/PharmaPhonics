@@ -23,6 +23,7 @@ import {
   GeminiToxicityDetails,
 } from '../types/medication';
 import { formatMetricNumber, ToxDoseUnit } from './ToxCalculator';
+import { trackEvent } from '../services/analyticsService';
 
 interface MedicationCardProps {
   id?: string;
@@ -400,6 +401,7 @@ export const MedicationCard: React.FC<MedicationCardProps> = ({
                         rel="noopener noreferrer"
                         onClick={() => {
                           const cleanName = getCleanToxbaseDrugName(medication.name);
+                          trackEvent('toxbase_link_clicked', { drug_name: cleanName });
                           if (typeof navigator !== 'undefined' && navigator.clipboard) {
                             void navigator.clipboard.writeText(cleanName).catch(() => {});
                           }

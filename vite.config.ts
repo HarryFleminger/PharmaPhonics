@@ -94,21 +94,85 @@ function buildLockedContents(body: LocalGeminiPayload): unknown[] {
   );
 }
 
+const LOCAL_ANALYTICS_EVENTS = new Set([
+  '$pageview',
+  '$pageleave',
+  'app_opened',
+  'section_switched',
+  'welcome_guide_opened',
+  'how_to_use_shortcut_clicked',
+  'quick_category_selected',
+  'quick_categories_toggled',
+  'drug_viewed',
+  'brand_hierarchy_viewed',
+  'brand_expand_all_clicked',
+  'drug_search_no_match',
+  'ai_drug_lookup_clicked',
+  'pronunciation_played',
+  'toxicity_mode_toggled',
+  'tox_calculator_used',
+  'toxbase_link_clicked',
+  'prescription_uploader_toggled',
+  'prescription_tab_selected',
+  'prescription_scan_started',
+  'prescription_scan_completed',
+  'prescription_scan_failed',
+  'prescription_drug_clicked',
+  'prescription_cleared',
+  'assessment_category_selected',
+  'assessment_viewed',
+  'assessment_search_no_match',
+  'assessment_ai_generated',
+]);
+
+function computeLocalDailyHash(input: string): string {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    const c = input.charCodeAt(i);
+    h1 ^= c;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 ^= c ^ (i & 0xff);
+    h2 = Math.imul(h2, 0x01000193);
+  }
+  return `${(h1 >>> 0).toString(16).padStart(8, '0')}${(h2 >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function normalizeLocalPosthogHost(rawHost: string): string {
+  const trimmed = rawHost.trim().replace(/\/+$/, '');
+  if (!trimmed) return 'https://eu.i.posthog.com';
+  if (trimmed === 'https://eu.posthog.com') return 'https://eu.i.posthog.com';
+  if (trimmed === 'https://us.posthog.com' || trimmed === 'https://app.posthog.com') {
+    return 'https://us.i.posthog.com';
+  }
+  return trimmed;
+}
+
 /**
  * Local Vite dev-server middleware that mirrors the Vercel Serverless Functions
- * (`/api/health`, `/api/gemini`, `/api/tts`) during `npm run dev` using server-side
+ * (`/api/health`, `/api/analytics`, `/api/gemini`, `/api/tts`) during `npm run dev` using server-side
  * environment variables loaded from `.env.local` (never exposed to the client bundle).
  */
 function localServerlessApiPlugin(env: Record<string, string>): Plugin {
   const geminiKey = (env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || '').trim();
   const ttsKey = (env.GOOGLE_TTS_API_KEY || env.VITE_GOOGLE_TTS_API_KEY || '').trim();
+  const posthogKey = (
+    env.POSTHOG_API_KEY ||
+    env.VITE_POSTHOG_KEY ||
+    env.NEXT_PUBLIC_POSTHOG_KEY ||
+    ''
+  ).trim();
+  const posthogHost = normalizeLocalPosthogHost(
+    env.POSTHOG_HOST || env.VITE_POSTHOG_HOST || 'https://eu.i.posthog.com'
+  );
 
   const isKeyValid = (k: string) =>
     Boolean(
       k &&
         k !== '...' &&
         k !== 'your_gemini_api_key_here' &&
-        k !== 'your_google_cloud_tts_api_key_here'
+        k !== 'your_google_cloud_tts_api_key_here' &&
+        k !== 'your_posthog_project_api_key_here'
     );
 
   return {
@@ -123,8 +187,99 @@ function localServerlessApiPlugin(env: Record<string, string>): Plugin {
             JSON.stringify({
               geminiConfigured: isKeyValid(geminiKey),
               ttsConfigured: isKeyValid(ttsKey),
+              analyticsConfigured: isKeyValid(posthogKey),
             })
           );
+          return;
+        }
+
+        if (url.startsWith('/api/analytics') && req.method === 'POST') {
+          if (!isKeyValid(posthogKey)) {
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify({ ok: true, skipped: true }));
+            return;
+          }
+
+          let rawBody = '';
+          req.on('data', (chunk: unknown) => {
+            rawBody += String(chunk);
+          });
+          req.on('end', () => {
+            void (async () => {
+              try {
+                const parsed = JSON.parse(rawBody) as {
+                  events?: Array<{
+                    event?: unknown;
+                    properties?: unknown;
+                    timestamp?: unknown;
+                  }>;
+                };
+                const rawEvents = Array.isArray(parsed.events) ? parsed.events.slice(0, 25) : [];
+                const utcDay = new Date().toISOString().slice(0, 10);
+                const ua =
+                  typeof req.headers['user-agent'] === 'string'
+                    ? req.headers['user-agent']
+                    : '';
+                const ip = req.socket?.remoteAddress || '127.0.0.1';
+                const distinctId = computeLocalDailyHash(`${posthogKey}:${utcDay}:${ip}|${ua}`);
+
+                const batch: Array<Record<string, unknown>> = [];
+                for (const item of rawEvents) {
+                  if (!item || typeof item !== 'object') continue;
+                  const eventName = typeof item.event === 'string' ? item.event.trim() : '';
+                  if (!LOCAL_ANALYTICS_EVENTS.has(eventName)) continue;
+
+                  const cleanProps: Record<string, unknown> = {};
+                  if (
+                    item.properties &&
+                    typeof item.properties === 'object' &&
+                    !Array.isArray(item.properties)
+                  ) {
+                    for (const [k, v] of Object.entries(item.properties)) {
+                      if (k === 'distinct_id' || k === '$ip' || k === '$process_person_profile') {
+                        continue;
+                      }
+                      if (typeof v === 'string') {
+                        cleanProps[k] = v.slice(0, k === '$current_url' ? 200 : 120);
+                      } else if (
+                        (typeof v === 'number' && Number.isFinite(v)) ||
+                        typeof v === 'boolean' ||
+                        v === null
+                      ) {
+                        cleanProps[k] = v;
+                      }
+                    }
+                  }
+                  cleanProps.distinct_id = distinctId;
+                  cleanProps.$ip = null;
+                  cleanProps.$process_person_profile = false;
+
+                  batch.push({
+                    event: eventName,
+                    properties: cleanProps,
+                    timestamp:
+                      typeof item.timestamp === 'string'
+                        ? item.timestamp
+                        : new Date().toISOString(),
+                  });
+                }
+
+                if (batch.length > 0) {
+                  await fetch(`${posthogHost}/batch/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: posthogKey, batch }),
+                  });
+                }
+
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+                res.end(JSON.stringify({ ok: true, forwarded: batch.length }));
+              } catch {
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+                res.end(JSON.stringify({ ok: false }));
+              }
+            })();
+          });
           return;
         }
 

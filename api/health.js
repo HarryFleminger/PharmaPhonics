@@ -10,7 +10,8 @@ function isKeyPresent(raw) {
     trimmed &&
       trimmed !== '...' &&
       trimmed !== 'your_gemini_api_key_here' &&
-      trimmed !== 'your_google_cloud_tts_api_key_here'
+      trimmed !== 'your_google_cloud_tts_api_key_here' &&
+      trimmed !== 'your_posthog_project_api_key_here'
   );
 }
 
@@ -21,10 +22,14 @@ export default function handler(_req, res) {
   const ttsConfigured = isKeyPresent(
     process.env.GOOGLE_TTS_API_KEY || process.env.VITE_GOOGLE_TTS_API_KEY
   );
+  const analyticsConfigured = isKeyPresent(
+    process.env.POSTHOG_API_KEY || process.env.VITE_POSTHOG_KEY
+  );
 
   const payload = {
     geminiConfigured,
     ttsConfigured,
+    analyticsConfigured,
   };
 
   if (typeof res.status === 'function' && typeof res.json === 'function') {

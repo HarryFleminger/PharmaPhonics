@@ -43,6 +43,11 @@ import { NoticeModal } from './components/NoticeModal';
 import { WelcomePage } from './components/WelcomePage';
 import { AssessmentView } from './components/AssessmentView';
 import { HowToUseCard } from './components/HowToUseCard';
+import {
+  trackEvent,
+  trackPageView,
+  scrubSearchTermForAnalytics,
+} from './services/analyticsService';
 
 const PRESCRIPTION_FEATURE_STORAGE_KEY = 'medspeak_seen_prescription_feature_v1';
 
@@ -125,8 +130,14 @@ export function App() {
   // Track whether the search was triggered by clicking a Quick Category drug
   // so we can automatically expand and fetch Gemini details for the top matching card
   const autoExpandNextResultRef = useRef(false);
+  const selectionSourceRef = useRef<
+    'search' | 'quick_category' | 'prescription_upload' | 'brand_hierarchy'
+  >('search');
   const pendingScrollTargetRef = useRef<{ query: string; brandGroupId?: string } | null>(null);
   const [scrollTriggerCount, setScrollTriggerCount] = useState(0);
+  const hasTrackedAppOpenRef = useRef(false);
+  const lastTrackedNoMatchDrugRef = useRef('');
+  const lastTrackedToxCalcRef = useRef('');
 
   // Track which flashcards are selected/expanded
   const [selectedCardKeys, setSelectedCardKeys] = useState<Record<string, boolean>>({});
@@ -156,6 +167,17 @@ export function App() {
       setServerHealth(status);
     });
   }, []);
+
+  useEffect(() => {
+    if (hasTrackedAppOpenRef.current) return;
+    hasTrackedAppOpenRef.current = true;
+    const entryView = isGuideOpen ? 'guide' : 'medications';
+    trackEvent('app_opened', {
+      entry_view: entryView,
+      is_mobile: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+    });
+    trackPageView(isGuideOpen ? '/guide' : '/medications');
+  }, [isGuideOpen]);
 
   const {
     loadingId: audioLoadingId,
@@ -252,6 +274,15 @@ export function App() {
 
       if (willBeSelected) {
         triggerFirstTimeClinicalWarning();
+        const isBrandConstituent = brandGroups.some((group) =>
+          group.constituents.some((constituent) => getCardKey(constituent) === cardKey)
+        );
+        trackEvent('drug_viewed', {
+          drug_name: item.name,
+          bnf_id: item.id,
+          source: isBrandConstituent ? 'brand_hierarchy' : 'search',
+          mode: isToxicityMode ? 'toxicity' : 'standard',
+        });
 
         const existingTox = toxicityDetailsByKey[cardKey] ?? getCachedToxicityDetails(item.name);
         const preferredUnit = detectPreferredToxUnit(item.name, existingTox?.toxicThreshold);
@@ -287,9 +318,13 @@ export function App() {
   // If the user toggles Toxicity Mode on/off from a drug card, ensure that drug card is
   // expanded and automatically fetch the data for all selected drugs using the appropriate prompt.
   const handleToggleToxicityMode = useCallback(
-    (clickedMedication?: BnfMedicationItem) => {
+    (clickedMedication?: BnfMedicationItem, sourceOverride?: 'card_button' | 'header_badge' | 'how_to_use') => {
       const nextToxMode = !isToxicityMode;
       setIsToxicityMode(nextToxMode);
+      trackEvent('toxicity_mode_toggled', {
+        enabled: nextToxMode,
+        source: sourceOverride ?? (clickedMedication ? 'card_button' : 'header_badge'),
+      });
 
       const nextSelectedKeys = { ...selectedCardKeys };
       if (clickedMedication) {
@@ -343,6 +378,12 @@ export function App() {
 
   const handleExpandAllConstituents = useCallback(
     (group: BrandProductGroup, expand: boolean) => {
+      trackEvent('brand_expand_all_clicked', {
+        brand_name: group.brandName,
+        expanded: expand,
+        constituent_count: group.constituents.length,
+        mode: isToxicityMode ? 'toxicity' : 'standard',
+      });
       if (expand) {
         triggerFirstTimeClinicalWarning();
       }
@@ -445,6 +486,7 @@ export function App() {
         return;
       }
 
+      trackEvent('pronunciation_played', { drug_name: name, bnf_id: id });
       void speak(id, name);
     },
     [hasSeenVoiceNotice, speak]
@@ -453,6 +495,10 @@ export function App() {
   const handleConfirmVoiceModal = useCallback(() => {
     setIsVoiceModalOpen(false);
     if (pendingSpeech) {
+      trackEvent('pronunciation_played', {
+        drug_name: pendingSpeech.name,
+        bnf_id: pendingSpeech.id,
+      });
       void speak(pendingSpeech.id, pendingSpeech.name);
       setPendingSpeech(null);
     }
@@ -467,9 +513,17 @@ export function App() {
   // - Triggers the first-time JRCALC clinical disclaimer if not yet seen,
   //   records the selected drug, minimizes the category list, and opens the flashcard
   const handleSelectCategoryDrug = useCallback(
-    (drugName: string, options?: { scrollToResults?: boolean; brandGroupId?: string }) => {
+    (
+      drugName: string,
+      options?: {
+        scrollToResults?: boolean;
+        brandGroupId?: string;
+        source?: 'quick_category' | 'prescription_upload';
+      }
+    ) => {
       triggerFirstTimeClinicalWarning();
       autoExpandNextResultRef.current = true;
+      selectionSourceRef.current = options?.source ?? 'quick_category';
       setSelectedCategoryDrug(drugName);
       setIsCategoryMinimized(true);
       setImmediateSearchQuery(drugName);
@@ -490,6 +544,13 @@ export function App() {
   const handleLookupCustomDrugWithAi = useCallback(async () => {
     const raw = debouncedQuery.trim();
     if (!raw) return;
+
+    const scrubbed = scrubSearchTermForAnalytics(raw);
+    trackEvent('ai_drug_lookup_clicked', {
+      search_term: scrubbed.term,
+      query_redacted: scrubbed.redacted,
+      mode: isToxicityMode ? 'toxicity' : 'standard',
+    });
 
     triggerFirstTimeClinicalWarning();
     setIsAiBrandLookupLoading(true);
@@ -592,6 +653,14 @@ export function App() {
           setResolvedQuery(trimmed.toLowerCase());
           setIsSearching(false);
 
+          outcome.brandGroups.forEach((group) => {
+            trackEvent('brand_hierarchy_viewed', {
+              brand_name: group.brandName,
+              constituent_count: group.constituents.length,
+              mode: isToxicityModeRef.current ? 'toxicity' : 'standard',
+            });
+          });
+
           // If the user clicked a drug from Quick Categories or Upload/Paste Med List,
           // automatically select the first matching card unless showing a multi-drug brand hierarchy
           if (autoExpandNextResultRef.current) {
@@ -605,6 +674,12 @@ export function App() {
             if (shouldAutoExpandFirst && firstItem) {
               const firstKey = getCardKey(firstItem);
               setSelectedCardKeys((prev) => ({ ...prev, [firstKey]: true }));
+              trackEvent('drug_viewed', {
+                drug_name: firstItem.name,
+                bnf_id: firstItem.id,
+                source: selectionSourceRef.current,
+                mode: isToxicityModeRef.current ? 'toxicity' : 'standard',
+              });
               const existingTox = getCachedToxicityDetails(firstItem.name);
               const preferredUnit = detectPreferredToxUnit(
                 firstItem.name,
@@ -695,9 +770,94 @@ export function App() {
     brandGroups.reduce((sum, group) => sum + group.constituents.length, 0) + results.length;
   const toxCalculatedMetrics = computeToxDoseMetrics(toxCalculatorValues);
 
+  useEffect(() => {
+    const trimmed = debouncedQuery.trim();
+    const normalized = trimmed.toLowerCase();
+    if (
+      !hasActiveQuery ||
+      isSearching ||
+      isAiBrandLookupLoading ||
+      resolvedQuery !== normalized ||
+      brandGroups.length > 0 ||
+      results.length > 0
+    ) {
+      return;
+    }
+    if (lastTrackedNoMatchDrugRef.current === normalized) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      lastTrackedNoMatchDrugRef.current = normalized;
+      const scrubbed = scrubSearchTermForAnalytics(trimmed);
+      trackEvent('drug_search_no_match', {
+        search_term: scrubbed.term,
+        query_redacted: scrubbed.redacted,
+        mode: isToxicityMode ? 'toxicity' : 'standard',
+      });
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    debouncedQuery,
+    hasActiveQuery,
+    isSearching,
+    isAiBrandLookupLoading,
+    resolvedQuery,
+    brandGroups.length,
+    results.length,
+    isToxicityMode,
+  ]);
+
+  useEffect(() => {
+    if (!isToxicityMode || toxCalculatedMetrics.totalIngested === null) {
+      return;
+    }
+    const calcSignature = `${toxCalculatedMetrics.unit}:${toxCalculatedMetrics.ingestedDosePerKg !== null}:${toxCalculatorValues.dosePerPillMg}:${toxCalculatorValues.numberOfPills}:${toxCalculatorValues.patientWeightKg}`;
+    if (lastTrackedToxCalcRef.current === calcSignature) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      lastTrackedToxCalcRef.current = calcSignature;
+      trackEvent('tox_calculator_used', {
+        unit: toxCalculatedMetrics.unit,
+        has_weight: toxCalculatedMetrics.ingestedDosePerKg !== null,
+      });
+    }, 1500);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isToxicityMode,
+    toxCalculatedMetrics.totalIngested,
+    toxCalculatedMetrics.unit,
+    toxCalculatedMetrics.ingestedDosePerKg,
+    toxCalculatorValues.dosePerPillMg,
+    toxCalculatorValues.numberOfPills,
+    toxCalculatorValues.patientWeightKg,
+  ]);
+
+  const handleSwitchSection = useCallback(
+    (nextSection: 'medications' | 'assessments') => {
+      if (activeSection !== nextSection) {
+        setActiveSection(nextSection);
+        trackEvent('section_switched', { section: nextSection });
+        trackPageView(nextSection === 'assessments' ? '/assessments' : '/medications');
+      }
+    },
+    [activeSection]
+  );
+
   return (
     <>
-      {isGuideOpen && <WelcomePage onClose={() => setIsGuideOpen(false)} />}
+      {isGuideOpen && (
+        <WelcomePage
+          onClose={() => {
+            setIsGuideOpen(false);
+            trackPageView(activeSection === 'assessments' ? '/assessments' : '/medications');
+          }}
+        />
+      )}
 
       <div
         hidden={isGuideOpen}
@@ -742,8 +902,12 @@ export function App() {
       <Header
         isGeminiApiKeyConfigured={serverHealth.geminiConfigured}
         isToxicityMode={activeSection === 'medications' && isToxicityMode}
-        onExitToxicityMode={() => setIsToxicityMode(false)}
-        onOpenGuide={() => setIsGuideOpen(true)}
+        onExitToxicityMode={() => handleToggleToxicityMode(undefined, 'header_badge')}
+        onOpenGuide={() => {
+          setIsGuideOpen(true);
+          trackEvent('welcome_guide_opened', { source: 'header' });
+          trackPageView('/guide');
+        }}
       />
 
       <main
@@ -760,7 +924,7 @@ export function App() {
         >
           <button
             type="button"
-            onClick={() => setActiveSection('medications')}
+            onClick={() => handleSwitchSection('medications')}
             aria-pressed={activeSection === 'medications'}
             className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm transition-all cursor-pointer ${
               activeSection === 'medications'
@@ -776,7 +940,7 @@ export function App() {
 
           <button
             type="button"
-            onClick={() => setActiveSection('assessments')}
+            onClick={() => handleSwitchSection('assessments')}
             aria-pressed={activeSection === 'assessments'}
             className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm transition-all cursor-pointer ${
               activeSection === 'assessments'
@@ -897,7 +1061,11 @@ export function App() {
           <HowToUseCard
             isToxicityMode={isToxicityMode}
             onClickSearchDrugs={() => {
-              setActiveSection('medications');
+              trackEvent('how_to_use_shortcut_clicked', {
+                shortcut: 'search',
+                from_section: 'medications',
+              });
+              handleSwitchSection('medications');
               requestAnimationFrame(() => {
                 const input = document.getElementById(
                   'medspeak-search-input'
@@ -907,7 +1075,11 @@ export function App() {
               });
             }}
             onClickUploadMedList={() => {
-              setActiveSection('medications');
+              trackEvent('how_to_use_shortcut_clicked', {
+                shortcut: 'upload_med_list',
+                from_section: 'medications',
+              });
+              handleSwitchSection('medications');
               setIsUploaderOpen(true);
               requestAnimationFrame(() => {
                 const uploader =
@@ -917,6 +1089,10 @@ export function App() {
               });
             }}
             onClickQuickCategories={() => {
+              trackEvent('how_to_use_shortcut_clicked', {
+                shortcut: 'quick_categories',
+                from_section: 'medications',
+              });
               setIsQuickCategoriesMinimized(false);
               requestAnimationFrame(() => {
                 const categoriesEl = document.getElementById('medspeak-quick-categories');
@@ -924,7 +1100,11 @@ export function App() {
               });
             }}
             onClickAssessments={() => {
-              setActiveSection('assessments');
+              trackEvent('how_to_use_shortcut_clicked', {
+                shortcut: 'assessments',
+                from_section: 'medications',
+              });
+              handleSwitchSection('assessments');
               requestAnimationFrame(() => {
                 const input = document.getElementById(
                   'medspeak-assessment-search'
@@ -934,8 +1114,12 @@ export function App() {
               });
             }}
             onClickToxicityMode={() => {
+              trackEvent('how_to_use_shortcut_clicked', {
+                shortcut: 'toxicity_mode',
+                from_section: 'medications',
+              });
               const willBeTox = !isToxicityMode;
-              handleToggleToxicityMode();
+              handleToggleToxicityMode(undefined, 'how_to_use');
               if (willBeTox) {
                 setIsToxCalculatorMinimized(false);
                 requestAnimationFrame(() => {
@@ -1096,7 +1280,11 @@ export function App() {
             <HowToUseCard
               isToxicityMode={false}
               onClickSearchDrugs={() => {
-                setActiveSection('medications');
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'search',
+                  from_section: 'assessments',
+                });
+                handleSwitchSection('medications');
                 requestAnimationFrame(() => {
                   const input = document.getElementById(
                     'medspeak-search-input'
@@ -1106,7 +1294,11 @@ export function App() {
                 });
               }}
               onClickUploadMedList={() => {
-                setActiveSection('medications');
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'upload_med_list',
+                  from_section: 'assessments',
+                });
+                handleSwitchSection('medications');
                 setIsUploaderOpen(true);
                 requestAnimationFrame(() => {
                   const uploader =
@@ -1116,6 +1308,10 @@ export function App() {
                 });
               }}
               onClickQuickCategories={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'quick_categories',
+                  from_section: 'assessments',
+                });
                 setIsAssessmentCategoriesMinimized(false);
                 requestAnimationFrame(() => {
                   const categoriesEl = document.getElementById(
@@ -1125,6 +1321,10 @@ export function App() {
                 });
               }}
               onClickAssessments={() => {
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'assessments',
+                  from_section: 'assessments',
+                });
                 requestAnimationFrame(() => {
                   const input = document.getElementById(
                     'medspeak-assessment-search'
@@ -1134,9 +1334,13 @@ export function App() {
                 });
               }}
               onClickToxicityMode={() => {
-                setActiveSection('medications');
+                trackEvent('how_to_use_shortcut_clicked', {
+                  shortcut: 'toxicity_mode',
+                  from_section: 'assessments',
+                });
+                handleSwitchSection('medications');
                 if (!isToxicityMode) {
-                  handleToggleToxicityMode();
+                  handleToggleToxicityMode(undefined, 'how_to_use');
                 }
                 setIsToxCalculatorMinimized(false);
                 requestAnimationFrame(() => {
@@ -1172,7 +1376,11 @@ export function App() {
           <span aria-hidden="true">·</span>
           <button
             type="button"
-            onClick={() => setIsGuideOpen(true)}
+            onClick={() => {
+              setIsGuideOpen(true);
+              trackEvent('welcome_guide_opened', { source: 'footer' });
+              trackPageView('/guide');
+            }}
             className={`hover:underline font-semibold cursor-pointer ${
               activeSection === 'medications' && isToxicityMode
                 ? 'text-rose-600'

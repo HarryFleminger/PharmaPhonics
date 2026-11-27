@@ -1,6 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -67,6 +68,85 @@ function getServerTtsKey() {
   ).trim();
   if (!key || key === 'your_google_cloud_tts_api_key_here' || key === '...') return '';
   return key;
+}
+
+function getServerPosthogKey() {
+  const key = (
+    process.env.POSTHOG_API_KEY ||
+    process.env.VITE_POSTHOG_KEY ||
+    process.env.NEXT_PUBLIC_POSTHOG_KEY ||
+    ''
+  ).trim();
+  if (!key || key === 'your_posthog_project_api_key_here' || key === '...') return '';
+  return key;
+}
+
+function getServerPosthogHost() {
+  const trimmed = (
+    process.env.POSTHOG_HOST ||
+    process.env.VITE_POSTHOG_HOST ||
+    'https://eu.i.posthog.com'
+  )
+    .trim()
+    .replace(/\/+$/, '');
+  if (!trimmed) return 'https://eu.i.posthog.com';
+  if (trimmed === 'https://eu.posthog.com') return 'https://eu.i.posthog.com';
+  if (trimmed === 'https://us.posthog.com' || trimmed === 'https://app.posthog.com') {
+    return 'https://us.i.posthog.com';
+  }
+  return trimmed;
+}
+
+const ANALYTICS_ALLOWED_EVENTS = new Set([
+  '$pageview',
+  '$pageleave',
+  'app_opened',
+  'section_switched',
+  'welcome_guide_opened',
+  'how_to_use_shortcut_clicked',
+  'quick_category_selected',
+  'quick_categories_toggled',
+  'drug_viewed',
+  'brand_hierarchy_viewed',
+  'brand_expand_all_clicked',
+  'drug_search_no_match',
+  'ai_drug_lookup_clicked',
+  'pronunciation_played',
+  'toxicity_mode_toggled',
+  'tox_calculator_used',
+  'toxbase_link_clicked',
+  'prescription_uploader_toggled',
+  'prescription_tab_selected',
+  'prescription_scan_started',
+  'prescription_scan_completed',
+  'prescription_scan_failed',
+  'prescription_drug_clicked',
+  'prescription_cleared',
+  'assessment_category_selected',
+  'assessment_viewed',
+  'assessment_search_no_match',
+  'assessment_ai_generated',
+]);
+
+const analyticsIpTimestamps = new Map();
+
+function sanitizeServerAnalyticsString(value, key) {
+  if (key === '$current_url') {
+    try {
+      const parsed = new URL(value);
+      return `${parsed.origin}${parsed.pathname}`.slice(0, 200);
+    } catch {
+      return value.split(/[?#]/)[0].slice(0, 200);
+    }
+  }
+  return value
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[redacted]')
+    .replace(/\b\d{3}[\s-]?\d{3}[\s-]?\d{4}\b/g, '[redacted]')
+    .replace(/\b\d{1,4}[/.-]\d{1,2}[/.-]\d{2,4}\b/g, '[redacted]')
+    .replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s+\d[A-Z]{2}\b/gi, '[redacted]')
+    .replace(/\b(?:\+44\s?7\d{3}|\(?07\d{3}\)?|\(?0[12]\d{2,3}\)?)\s?\d{3}\s?\d{3,4}\b/g, '[redacted]')
+    .trim()
+    .slice(0, 120);
 }
 
 // Locked upstream endpoints and safety caps
@@ -255,7 +335,110 @@ export async function handleApiRequest(req, res) {
     sendJson(res, 200, {
       geminiConfigured: Boolean(getServerGeminiKey()),
       ttsConfigured: Boolean(getServerTtsKey()),
+      analyticsConfigured: Boolean(getServerPosthogKey()),
     });
+    return true;
+  }
+
+  // 1b. POST /api/analytics
+  if (pathname === '/api/analytics' && req.method === 'POST') {
+    if (!isOriginAllowed(req)) {
+      sendJson(res, 403, { error: 'Forbidden origin.' });
+      return true;
+    }
+
+    const posthogKey = getServerPosthogKey();
+    if (!posthogKey) {
+      sendJson(res, 200, { ok: true, skipped: true });
+      return true;
+    }
+
+    const ip = getClientIp(req);
+    const now = Date.now();
+    const recent = (analyticsIpTimestamps.get(ip) || []).filter((ts) => now - ts < ONE_MINUTE_MS);
+    if (recent.length >= 120) {
+      analyticsIpTimestamps.set(ip, recent);
+      sendJson(res, 429, { error: 'Analytics rate limit reached.' });
+      return true;
+    }
+    recent.push(now);
+    analyticsIpTimestamps.set(ip, recent);
+
+    let rawBody = '';
+    try {
+      rawBody = await readRequestBody(req, 32 * 1024);
+    } catch {
+      sendJson(res, 400, { error: 'Invalid analytics payload.' });
+      return true;
+    }
+
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      sendJson(res, 400, { error: 'Invalid JSON request body.' });
+      return true;
+    }
+
+    const rawEvents = Array.isArray(parsedBody?.events) ? parsedBody.events.slice(0, 25) : [];
+    const utcDay = new Date().toISOString().slice(0, 10);
+    const ua = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '';
+    const distinctId = crypto
+      .createHmac('sha256', `${posthogKey}:${utcDay}`)
+      .update(`${ip}|${ua}`)
+      .digest('hex')
+      .slice(0, 32);
+
+    const batch = [];
+    for (const item of rawEvents) {
+      if (!item || typeof item !== 'object') continue;
+      const eventName = typeof item.event === 'string' ? item.event.trim() : '';
+      if (!ANALYTICS_ALLOWED_EVENTS.has(eventName)) continue;
+
+      const cleanProps = {};
+      if (item.properties && typeof item.properties === 'object' && !Array.isArray(item.properties)) {
+        let count = 0;
+        for (const [k, v] of Object.entries(item.properties)) {
+          if (count >= 25 || !k || k.length > 64) continue;
+          if (k === 'distinct_id' || k === '$ip' || k === '$process_person_profile') continue;
+          if (typeof v === 'string') {
+            cleanProps[k] = sanitizeServerAnalyticsString(v, k);
+            count += 1;
+          } else if ((typeof v === 'number' && Number.isFinite(v)) || typeof v === 'boolean' || v === null) {
+            cleanProps[k] = v;
+            count += 1;
+          }
+        }
+      }
+      cleanProps.distinct_id = distinctId;
+      cleanProps.$ip = null;
+      cleanProps.$process_person_profile = false;
+
+      batch.push({
+        event: eventName,
+        properties: cleanProps,
+        timestamp:
+          typeof item.timestamp === 'string' && !Number.isNaN(Date.parse(item.timestamp))
+            ? item.timestamp
+            : new Date().toISOString(),
+      });
+    }
+
+    if (batch.length === 0) {
+      sendJson(res, 200, { ok: true, forwarded: 0 });
+      return true;
+    }
+
+    try {
+      const upstreamRes = await fetch(`${getServerPosthogHost()}/batch/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: posthogKey, batch }),
+      });
+      sendJson(res, 200, { ok: upstreamRes.ok, forwarded: batch.length });
+    } catch {
+      sendJson(res, 200, { ok: false });
+    }
     return true;
   }
 

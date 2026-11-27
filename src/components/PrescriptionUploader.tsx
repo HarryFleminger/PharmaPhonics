@@ -24,6 +24,7 @@ import {
   extractMedicationsFromPrescriptionImage,
   extractMedicationsFromPastedText,
 } from '../services/geminiClinicalService';
+import { trackEvent } from '../services/analyticsService';
 
 const MAX_IMAGE_DIMENSION_PX = 1024;
 const JPEG_COMPRESSION_QUALITY = 0.75;
@@ -147,6 +148,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
       setImageFileName(file.name);
       setIsScanning(true);
       onUploadActiveChange?.(true);
+      trackEvent('prescription_scan_started', { method: 'photo' });
 
       void (async () => {
         try {
@@ -157,6 +159,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
           if (!base64Match) {
             setIsScanning(false);
             setScanError('Could not read image data.');
+            trackEvent('prescription_scan_failed', { method: 'photo', reason: 'invalid_image' });
             return;
           }
 
@@ -180,6 +183,18 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               scanResult.medications,
               scanResult.brandBreakdowns ?? []
             );
+            const brandCount = initialEntries.filter((entry) => entry.kind === 'brand').length;
+            const activeDrugCount = initialEntries.reduce(
+              (sum, entry) => sum + (entry.kind === 'brand' ? entry.group.constituents.length : 1),
+              0
+            );
+            trackEvent('prescription_scan_completed', {
+              method: 'photo',
+              extracted_count: initialEntries.length,
+              brand_count: brandCount,
+              active_drug_count: activeDrugCount,
+              mode: isToxicityMode ? 'toxicity' : 'standard',
+            });
             const firstEntry = initialEntries[0];
             const initialSelection =
               firstEntry?.kind === 'brand'
@@ -187,12 +202,14 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
                 : firstEntry?.drugName ?? scanResult.medications[0];
             onSelectMedication(initialSelection, { scrollToResults: false });
           } else {
+            trackEvent('prescription_scan_failed', { method: 'photo', reason: 'empty_result' });
             setScanError(
               'No clearly readable medication names were detected. Try a clearer photo or search above.'
             );
           }
         } catch (err) {
           setIsScanning(false);
+          trackEvent('prescription_scan_failed', { method: 'photo', reason: 'api_error' });
           setScanError(
             err instanceof Error
               ? err.message
@@ -201,7 +218,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         }
       })();
     },
-    [onFirstInteract, onSelectMedication, onUploadActiveChange]
+    [onFirstInteract, onSelectMedication, onUploadActiveChange, isToxicityMode]
   );
 
   const handleExtractPastedText = useCallback(() => {
@@ -215,6 +232,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
     setScanError(null);
     setIsScanning(true);
     onUploadActiveChange?.(true);
+    trackEvent('prescription_scan_started', { method: 'paste' });
 
     void (async () => {
       try {
@@ -232,6 +250,18 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             scanResult.medications,
             scanResult.brandBreakdowns ?? []
           );
+          const brandCount = initialEntries.filter((entry) => entry.kind === 'brand').length;
+          const activeDrugCount = initialEntries.reduce(
+            (sum, entry) => sum + (entry.kind === 'brand' ? entry.group.constituents.length : 1),
+            0
+          );
+          trackEvent('prescription_scan_completed', {
+            method: 'paste',
+            extracted_count: initialEntries.length,
+            brand_count: brandCount,
+            active_drug_count: activeDrugCount,
+            mode: isToxicityMode ? 'toxicity' : 'standard',
+          });
           const firstEntry = initialEntries[0];
           const initialSelection =
             firstEntry?.kind === 'brand'
@@ -239,12 +269,14 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
               : firstEntry?.drugName ?? scanResult.medications[0];
           onSelectMedication(initialSelection, { scrollToResults: false });
         } else {
+          trackEvent('prescription_scan_failed', { method: 'paste', reason: 'empty_result' });
           setScanError(
             'No UK medication names were detected in the pasted text. Check the text or search above.'
           );
         }
       } catch (err) {
         setIsScanning(false);
+        trackEvent('prescription_scan_failed', { method: 'paste', reason: 'api_error' });
         setScanError(
           err instanceof Error
             ? err.message
@@ -252,7 +284,7 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
         );
       }
     })();
-  }, [pastedText, onFirstInteract, onSelectMedication, onUploadActiveChange]);
+  }, [pastedText, onFirstInteract, onSelectMedication, onUploadActiveChange, isToxicityMode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -288,6 +320,9 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
   };
 
   const handleClearAll = () => {
+    if (imagePreviewUrl || pastedText.trim() !== '' || scannedMedications.length > 0 || scanError) {
+      trackEvent('prescription_cleared', { tab: activeTab });
+    }
     setImagePreviewUrl(null);
     setImageFileName(null);
     setPastedText('');
@@ -386,6 +421,9 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             role="tab"
             aria-selected={activeTab === 'photo'}
             onClick={() => {
+              if (activeTab !== 'photo') {
+                trackEvent('prescription_tab_selected', { tab: 'photo' });
+              }
               setActiveTab('photo');
               setScanError(null);
             }}
@@ -408,6 +446,9 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
             role="tab"
             aria-selected={activeTab === 'paste'}
             onClick={() => {
+              if (activeTab !== 'paste') {
+                trackEvent('prescription_tab_selected', { tab: 'paste' });
+              }
               setActiveTab('paste');
               setScanError(null);
             }}
@@ -689,12 +730,17 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
                         key={group.id}
                         type="button"
                         aria-pressed={isBrandActive}
-                        onClick={() =>
+                        onClick={() => {
+                          trackEvent('prescription_drug_clicked', {
+                            item_name: group.brandName,
+                            item_kind: 'brand',
+                            mode: isToxicityMode ? 'toxicity' : 'standard',
+                          });
                           onSelectMedication(group.brandName, {
                             scrollToResults: true,
                             brandGroupId: group.id,
-                          })
-                        }
+                          });
+                        }}
                         className={`w-full group text-left rounded-xl border p-2.5 sm:p-3 bg-white shadow-2xs transition-all cursor-pointer ${
                           isBrandActive
                             ? isToxicityMode
@@ -808,9 +854,14 @@ export const PrescriptionUploader: React.FC<PrescriptionUploaderProps> = ({
                         <button
                           key={drugName}
                           type="button"
-                          onClick={() =>
-                            onSelectMedication(drugName, { scrollToResults: true })
-                          }
+                          onClick={() => {
+                            trackEvent('prescription_drug_clicked', {
+                              item_name: drugName,
+                              item_kind: 'single',
+                              mode: isToxicityMode ? 'toxicity' : 'standard',
+                            });
+                            onSelectMedication(drugName, { scrollToResults: true });
+                          }}
                           className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-xs sm:text-sm transition-all cursor-pointer border ${
                             isActiveDrug
                               ? isToxicityMode

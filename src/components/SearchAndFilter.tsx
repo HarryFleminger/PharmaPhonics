@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { quickCategories } from '../data/quickCategories';
 import { PrescriptionUploader } from './PrescriptionUploader';
+import { trackEvent } from '../services/analyticsService';
 
 interface SearchAndFilterProps {
   searchQuery: string;
@@ -25,7 +26,11 @@ interface SearchAndFilterProps {
   onToggleMinimizeCategory: () => void;
   onSelectDrug: (
     drugName: string,
-    options?: { scrollToResults?: boolean; brandGroupId?: string }
+    options?: {
+      scrollToResults?: boolean;
+      brandGroupId?: string;
+      source?: 'quick_category' | 'prescription_upload';
+    }
   ) => void;
   isSearching: boolean;
   resultCount: number;
@@ -200,7 +205,12 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
             type="button"
             onClick={() => {
               onSearchInteract?.();
-              setUploaderOpen((prev) => !prev);
+              const nextOpen = !uploaderOpen;
+              setUploaderOpen(nextOpen);
+              trackEvent('prescription_uploader_toggled', {
+                state: nextOpen ? 'opened' : 'minimized',
+                has_saved_meds: savedPrescriptionCount > 0,
+              });
             }}
             aria-expanded={uploaderOpen}
             className={`inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm font-bold shrink-0 border transition-all cursor-pointer active:scale-[0.98] shadow-xs ${
@@ -285,7 +295,9 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
         <PrescriptionUploader
           isOpen={uploaderOpen}
           onToggleOpen={() => setUploaderOpen((prev) => !prev)}
-          onSelectMedication={(drugName, options) => onSelectDrug(drugName, options)}
+          onSelectMedication={(drugName, options) =>
+            onSelectDrug(drugName, { ...options, source: 'prescription_upload' })
+          }
           activeSearchQuery={searchQuery}
           isToxicityMode={isToxicityMode}
           onFirstInteract={onSearchInteract}
@@ -304,14 +316,26 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
       {/* 2. Below Search Bar: Quick Categories (Collapsible Header + Folder Tabs) */}
       <div id="medspeak-quick-categories" className="pt-3 border-t border-slate-100">
         <div
-          onClick={() => setQuickCategoriesMinimized((prev) => !prev)}
+          onClick={() => {
+            const nextMinimized = !quickCategoriesMinimized;
+            setQuickCategoriesMinimized(nextMinimized);
+            trackEvent('quick_categories_toggled', {
+              section: 'medications',
+              state: nextMinimized ? 'minimized' : 'opened',
+            });
+          }}
           role="button"
           tabIndex={0}
           aria-expanded={!quickCategoriesMinimized}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              setQuickCategoriesMinimized((prev) => !prev);
+              const nextMinimized = !quickCategoriesMinimized;
+              setQuickCategoriesMinimized(nextMinimized);
+              trackEvent('quick_categories_toggled', {
+                section: 'medications',
+                state: nextMinimized ? 'minimized' : 'opened',
+              });
             }
           }}
           className={`flex items-center justify-between gap-2 cursor-pointer select-none rounded-lg px-1 py-0.5 hover:bg-slate-50 transition-colors ${
@@ -379,7 +403,15 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                   type="button"
                   role="tab"
                   aria-selected={isSelected}
-                  onClick={() => onSelectCategory(category)}
+                  onClick={() => {
+                    if (!isSelected) {
+                      trackEvent('quick_category_selected', {
+                        category,
+                        mode: isToxicityMode ? 'toxicity' : 'standard',
+                      });
+                    }
+                    onSelectCategory(category);
+                  }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold shrink-0 transition-all cursor-pointer border ${
                     isSelected
                       ? isToxicityMode
@@ -546,7 +578,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
                     <button
                       key={drugName}
                       type="button"
-                      onClick={() => onSelectDrug(drugName)}
+                      onClick={() => onSelectDrug(drugName, { source: 'quick_category' })}
                       className={`group flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-left text-xs sm:text-sm transition-all cursor-pointer border ${
                         isActiveDrug
                           ? isToxicityMode

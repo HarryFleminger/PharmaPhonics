@@ -25,6 +25,7 @@ import {
 } from '../services/geminiClinicalService';
 import { ClinicalAssessmentItem } from '../types/assessment';
 import { AssessmentCard, getAssessmentCardDomId } from './AssessmentCard';
+import { trackEvent, scrubSearchTermForAnalytics } from '../services/analyticsService';
 
 interface AssessmentViewProps {
   onOpenAssessment?: () => void;
@@ -135,6 +136,8 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   const lastScrollRef = useRef<{ target: number; time: number }>({ target: -1, time: 0 });
   const pendingCardScrollIdRef = useRef<string | null>(null);
   const [cardScrollTrigger, setCardScrollTrigger] = useState(0);
+  const lastTrackedNoMatchRef = useRef('');
+  const lastTrackedSingleMatchIdRef = useRef<string | null>(null);
 
   const scrollSearchBelowHeader = () => {
     const sectionEl = searchSectionRef.current;
@@ -251,6 +254,12 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     if (!isCurrentlyExpanded) {
       pendingCardScrollIdRef.current = assessment.id;
       setCardScrollTrigger((prev) => prev + 1);
+      trackEvent('assessment_viewed', {
+        condition_title: assessment.title,
+        category: assessment.category,
+        is_ai_generated: assessment.id.startsWith('ai-'),
+        source: 'search',
+      });
     }
 
     setExpandedIds((prev) => {
@@ -282,6 +291,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
         setIsCategoryDrawerMinimized(false);
       }
     } else {
+      trackEvent('assessment_category_selected', { category });
       setActiveCategory(category);
       setIsCategoryDrawerMinimized(false);
       setSelectedAssessmentId(null);
@@ -304,6 +314,12 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     }));
     pendingCardScrollIdRef.current = assessment.id;
     setCardScrollTrigger((prev) => prev + 1);
+    trackEvent('assessment_viewed', {
+      condition_title: assessment.title,
+      category: assessment.category,
+      is_ai_generated: assessment.id.startsWith('ai-'),
+      source: 'category_drawer',
+    });
     onOpenAssessment?.();
   };
 
@@ -345,6 +361,19 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
       }));
       pendingCardScrollIdRef.current = generated.id;
       setCardScrollTrigger((prev) => prev + 1);
+      const scrubbed = scrubSearchTermForAnalytics(trimmed);
+      trackEvent('assessment_ai_generated', {
+        search_term: scrubbed.term,
+        query_redacted: scrubbed.redacted,
+        resolved_title: generated.title,
+        category: generated.category,
+      });
+      trackEvent('assessment_viewed', {
+        condition_title: generated.title,
+        category: generated.category,
+        is_ai_generated: true,
+        source: 'ai_generated',
+      });
     } catch (err) {
       setAiError(
         err instanceof Error ? err.message : 'Unable to generate assessment checklist.'
@@ -362,10 +391,43 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     searchResults.some((item) => item.title.toLowerCase() === trimmedQuery.toLowerCase());
 
   useEffect(() => {
-    if (hasSingleSearchMatch) {
+    if (hasSingleSearchMatch && searchResults[0]) {
       onOpenAssessment?.();
+      const match = searchResults[0];
+      if (lastTrackedSingleMatchIdRef.current !== match.id) {
+        lastTrackedSingleMatchIdRef.current = match.id;
+        trackEvent('assessment_viewed', {
+          condition_title: match.title,
+          category: match.category,
+          is_ai_generated: match.id.startsWith('ai-'),
+          source: 'search',
+        });
+      }
+    } else {
+      lastTrackedSingleMatchIdRef.current = null;
     }
-  }, [hasSingleSearchMatch, onOpenAssessment]);
+  }, [hasSingleSearchMatch, searchResults, onOpenAssessment]);
+
+  useEffect(() => {
+    if (trimmedQuery.length < 3 || isAiLoading || searchResults.length > 0) {
+      return;
+    }
+    const normalized = trimmedQuery.toLowerCase();
+    if (lastTrackedNoMatchRef.current === normalized) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      lastTrackedNoMatchRef.current = normalized;
+      const scrubbed = scrubSearchTermForAnalytics(trimmedQuery);
+      trackEvent('assessment_search_no_match', {
+        search_term: scrubbed.term,
+        query_redacted: scrubbed.redacted,
+      });
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [trimmedQuery, isAiLoading, searchResults.length]);
 
   return (
     <div
@@ -472,14 +534,26 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
         {/* 2. Quick Categories (Collapsible Header + Pills, minimised on mobile by default) */}
         <div id="medspeak-assessment-categories" className="pt-3 border-t border-slate-100">
           <div
-            onClick={() => setQuickCategoriesMinimized((prev) => !prev)}
+            onClick={() => {
+              const nextMinimized = !quickCategoriesMinimized;
+              setQuickCategoriesMinimized(nextMinimized);
+              trackEvent('quick_categories_toggled', {
+                section: 'assessments',
+                state: nextMinimized ? 'minimized' : 'opened',
+              });
+            }}
             role="button"
             tabIndex={0}
             aria-expanded={!quickCategoriesMinimized}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                setQuickCategoriesMinimized((prev) => !prev);
+                const nextMinimized = !quickCategoriesMinimized;
+                setQuickCategoriesMinimized(nextMinimized);
+                trackEvent('quick_categories_toggled', {
+                  section: 'assessments',
+                  state: nextMinimized ? 'minimized' : 'opened',
+                });
               }
             }}
             className={`flex items-center justify-between gap-2 cursor-pointer select-none rounded-lg px-1 py-0.5 hover:bg-slate-50 transition-colors ${
