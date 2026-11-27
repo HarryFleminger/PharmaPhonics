@@ -22,6 +22,6 @@ export interface ClinicalConditionItem {
   treatments: string[];
   /** Clean single UK BNF generic drug names for quick lookup in the Medications tab */
   commonMeds: string[];
-  /** Ambulance-relevant scene pitfalls, devices, and 999 crisis red flags */
-  paramedicTakeaways: string[];
+  /** Purely descriptive acute flares, decompensations, or emergencies caused by the condition */
+  acuteComplications: string[];
 }

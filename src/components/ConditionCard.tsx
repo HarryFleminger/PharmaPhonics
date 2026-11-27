@@ -4,7 +4,7 @@ import {
   Activity,
   Stethoscope,
   Pill,
-  AlertTriangle,
+  Zap,
   Sparkles,
   ChevronDown,
   ChevronUp,
@@ -324,27 +324,27 @@ export const ConditionCard: React.FC<ConditionCardProps> = ({
               )}
             </section>
 
-            {/* 4. Paramedic On-Scene Takeaways & Red Flags */}
+            {/* 4. Acute Complications & Crises */}
             <section
-              aria-label={`Paramedic on-scene takeaways for ${condition.title}`}
-              className="lg:col-span-2 bg-rose-50/80 rounded-xl border-2 border-rose-200 p-3.5 sm:p-4 shadow-xs"
+              aria-label={`Acute complications and crises for ${condition.title}`}
+              className="lg:col-span-2 bg-white rounded-xl border border-amber-200 p-3.5 sm:p-4 shadow-xs"
             >
-              <div className="flex items-center gap-2 pb-2 border-b border-rose-200/80">
-                <div className="p-1 rounded-md bg-rose-100 text-rose-700 shrink-0">
-                  <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+              <div className="flex items-center gap-2 pb-2 border-b border-amber-100">
+                <div className="p-1 rounded-md bg-amber-100 text-amber-700 shrink-0">
+                  <Zap className="w-3.5 h-3.5" aria-hidden="true" />
                 </div>
-                <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-rose-900">
-                  Paramedic On-Scene Takeaways &amp; Red Flags
+                <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-900">
+                  Acute Complications &amp; Crises
                 </h3>
               </div>
               <ul className="space-y-1.5 mt-2.5">
-                {condition.paramedicTakeaways.map((line, idx) => (
+                {condition.acuteComplications.map((line, idx) => (
                   <li
                     key={idx}
-                    className="flex items-start gap-2 text-xs sm:text-sm text-rose-950 leading-snug"
+                    className="flex items-start gap-2 text-xs sm:text-sm leading-snug"
                   >
-                    <span className="text-rose-600 font-bold select-none shrink-0">-</span>
-                    <span>{renderStructuredLine(line, 'text-rose-800')}</span>
+                    <span className="text-amber-600 font-bold select-none shrink-0">-</span>
+                    <span>{renderStructuredLine(line, 'text-amber-800')}</span>
                   </li>
                 ))}
               </ul>

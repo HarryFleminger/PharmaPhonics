@@ -55,21 +55,20 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     symptomsAndBaseline: [
       'Limb Weakness: Progressive asymmetric weakness, foot drop, hand clumsiness, muscle wasting, and visible fasciculations.',
       'Bulbar Features: Slurred speech (dysarthria), weak cough, difficulty swallowing (dysphagia), and pooling of saliva.',
-      'Preserved Cognition: Most patients understand everything clearly despite severe speech impairment.',
-      'Home Equipment: Frequently have nocturnal or continuous NIV (BiPAP), cough-assist machines, or PEG/RIG feeding tubes.',
+      'Preserved Cognition: Intellect, awareness, and sensory function typically remain intact despite severe speech impairment.',
+      'Home Equipment: Patients frequently use nocturnal or continuous NIV (BiPAP), cough-assist machines, or PEG/RIG feeding tubes.',
     ],
     treatments: [
       'Disease Modification: Riluzole slows progression modestly by reducing glutamate excitotoxicity.',
       'Symptom Control: Baclofen or tizanidine for spasticity; hyoscine, glycopyrronium, or carbocisteine for secretions.',
       'Respiratory Support: Domiciliary NIV (non-invasive ventilation) and mechanical cough-assist devices.',
-      'Nutrition & MDT Care: Early gastrostomy (PEG/RIG) tube placement and specialist palliative/neurology care plans.',
+      'Nutrition & MDT Care: Early gastrostomy (PEG/RIG) tube placement and specialist palliative/neurology ReSPECT care plans.',
     ],
     commonMeds: ['Riluzole', 'Baclofen', 'Hyoscine hydrobromide', 'Glycopyrronium', 'Carbocisteine'],
-    paramedicTakeaways: [
-      'Oxygen Caution: Do not give high-flow O₂ routinely; patients with ventilatory failure are prone to CO₂ retention—titrate carefully (88–92% if chronic hypercapnia) and bring their home NIV.',
-      'Choking & Aspiration: High risk of silent aspiration and mucus plugging; have suction ready and keep upright if tolerated.',
-      'Advance Care Plans: Always ask family/carers early for ReSPECT forms, DNACPR decisions, or preferred place of care.',
-      'Communication: Assume full mental capacity unless proven otherwise; use communication boards or yes/no eye signals.',
+    acuteComplications: [
+      'Hypercapnic Respiratory Failure: Progressive diaphragmatic weakness and chronic CO₂ retention cause acute respiratory acidosis, morning headaches, and somnolence.',
+      'Secretion & Mucus Plugging: A weak cough combined with pooled saliva or thick sputum frequently precipitates sudden airway obstruction.',
+      'Silent Aspiration Pneumonia: Bulbar dysphagia commonly leads to recurrent lower respiratory tract infections and rapid respiratory decompensation.',
     ],
   },
   {
@@ -84,12 +83,12 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Autoantibodies: IgG antibodies attack or block postsynaptic acetylcholine receptors (AChR) or MuSK proteins at the neuromuscular junction.',
       'Impaired Transmission: Reduced receptor availability means repetitive nerve firing fails to trigger sustained muscle contraction.',
       'Thymus Link: Associated with thymic hyperplasia or thymoma in a significant proportion of UK patients.',
-      'Crisis Triggers: Infection, surgery, pregnancy, stress, or contraindicated medicines (such as gentamicin, beta-blockers, or magnesium) can trigger acute decompensation.',
+      'Crisis Triggers: Infection, surgery, pregnancy, stress, or certain medicines (such as aminoglycosides, beta-blockers, or magnesium) can trigger acute decompensation.',
     ],
     symptomsAndBaseline: [
       'Ocular Signs: Asymmetric drooping eyelids (ptosis) and double vision (diplopia), often worse late in the day.',
-      'Bulbar Weakness: Nasal speech, difficulty chewing, dysphagia, and risk of choking.',
-      'Fatigable Limbs: Proximal arm/neck weakness (dropped head) that worsens with sustained effort.',
+      'Bulbar Weakness: Nasal speech, difficulty chewing, dysphagia, and pooling of oral secretions.',
+      'Fatigable Limbs: Proximal arm and neck weakness (dropped head) that worsens with sustained effort.',
       'Normal Sensation: Deep tendon reflexes, pupils, and skin sensation remain intact.',
     ],
     treatments: [
@@ -98,11 +97,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Acute Rescue: Hospital IV immunoglobulin (IVIG) or plasma exchange during a myasthenic crisis.',
     ],
     commonMeds: ['Pyridostigmine', 'Prednisolone', 'Azathioprine', 'Mycophenolate mofetil'],
-    paramedicTakeaways: [
-      'Myasthenic Crisis Red Flag: Rising respiratory rate, weak cough, inability to count to 20 in one breath, or bulbar pooling signals imminent ventilatory collapse—SpO₂ stays normal until late.',
-      'Airway & NIV: Avoid waiting for hypoxia before hospital pre-alert; patients may deteriorate suddenly and require urgent airway support.',
-      'Drug Caution: Check JRCALC/hospital guidance carefully—medications such as magnesium sulfate or beta-blockers can worsen neuromuscular blockade.',
-      'Cholinergic vs Myasthenic: Excess pyridostigmine causes SLUDGE cholinergic signs (salivation, bradycardia, sweating), whereas under-dosing causes dry crisis.',
+    acuteComplications: [
+      'Myasthenic Crisis: Rapidly worsening bulbar and diaphragmatic weakness leads to acute ventilatory failure and aspiration; pulse oximetry often stays normal until late exhaustion.',
+      'Cholinergic Crisis: Overdose of acetylcholinesterase inhibitors (pyridostigmine) produces paradoxical muscle weakness alongside excess salivation, lacrimation, bradycardia, and sweating.',
+      'Aspiration & Chest Sepsis: Bulbar dysfunction during a flare frequently precipitates aspiration pneumonitis and secondary respiratory infection.',
     ],
   },
   {
@@ -126,15 +124,15 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Bulbar & Facial Signs: Bilateral facial droop, swallowing difficulty, or ophthalmoplegia (Miller Fisher variant).',
     ],
     treatments: [
-      'Immunotherapy: Intravenous immunoglobulin (IVIG) or plasma exchange given urgently in hospital.',
+      'Immunotherapy: Intravenous immunoglobulin (IVIG) or plasma exchange given in hospital.',
       'Supportive Care: Serial respiratory monitoring (forced vital capacity) and ITU ventilation if diaphragmatic weakness develops.',
       'Pain & VTE Prevention: Neuropathic analgesia (gabapentin/amitriptyline) and thromboprophylaxis.',
     ],
     commonMeds: ['Gabapentin', 'Pregabalin', 'Amitriptyline'],
-    paramedicTakeaways: [
-      'Rapid Progression: Weakness can ascend from legs to diaphragm within hours—treat any new breathing difficulty, weak voice, or dysphagia as high acuity.',
-      'Autonomic Swings: Monitor 3-lead/12-lead ECG and BP closely; severe bradycardias, tachyarrhythmias, or postural drops are common.',
-      'Do Not Dismiss as Functional: Early ascending tingling with weak legs after a recent GI or viral illness should always prompt urgent ED assessment.',
+    acuteComplications: [
+      'Rapid Respiratory Arrest: Ascending weakness can involve the phrenic nerves and diaphragm within hours, causing silent hypoventilation.',
+      'Autonomic Dysfunction: Involvement of cardiac autonomic fibres causes severe labile hypertension, postural hypotension, bradyarrhythmias, or tachyarrhythmias.',
+      'Bulbar Palsy & VTE: Impaired swallowing causes aspiration, while acute immobility rapidly elevates risk of DVT and pulmonary embolism.',
     ],
   },
   {
@@ -162,10 +160,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Symptom Management: Baclofen or gabapentin for spasticity and neuropathic pain; oxybutynin for bladder symptoms.',
     ],
     commonMeds: ['Baclofen', 'Gabapentin', 'Prednisolone', 'Methylprednisolone', 'Oxybutynin'],
-    paramedicTakeaways: [
-      'Pseudo-Relapse vs True Stroke: Fever or infection (especially UTI) commonly triggers temporary worsening of old MS symptoms (Uhthoff phenomenon)—check temp and urine history, but never dismiss acute FAST-positive changes without stroke assessment.',
-      'Infection & Sepsis Risk: Patients on potent immunosuppressants or with indwelling catheters are at raised risk of rapid sepsis.',
-      'Baseline Comparison: Clarify with the patient or family which focal neurological deficits are old baseline versus brand new today.',
+    acuteComplications: [
+      'Uhthoff Pseudo-Relapse: Intercurrent fever, heat exposure, or UTI temporarily blocks conduction in old plaques, mimicking an acute MS relapse or stroke.',
+      'Urosepsis & Catheter Sepsis: Neurogenic bladder and indwelling catheters make urinary sepsis a frequent trigger of acute confusion and systemic collapse.',
+      'Severe Spasticity & Falls: Acute painful muscle spasms, clonus, or sudden loss of mobility commonly cause falls and injuries.',
     ],
   },
   {
@@ -183,20 +181,20 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     ],
     symptomsAndBaseline: [
       'Motor Triad: Bradykinesia (slow movement), cogwheel/lead-pipe rigidity, and a 4–6 Hz pill-rolling resting tremor.',
-      'Gait & Falls: Shuffling, stooped posture, freezing episodes, and poor postural reflexes leading to frequent falls.',
+      'Gait & Falls: Shuffling, stooped posture, freezing episodes, and poor postural reflexes.',
       'On/Off Fluctuations: Mobility changes dramatically depending on exact timing of dopaminergic doses.',
+      'Devices & Patches: Some patients wear transdermal rotigotine patches or have an implanted chest deep brain stimulation (DBS) generator.',
     ],
     treatments: [
       'Levodopa Combinations: Co-careldopa or co-beneldopa are first-line to replenish brain dopamine.',
       'Dopamine Agonists & Adjuncts: Pramipexole, ropinirole, rotigotine skin patches, or rasagiline.',
-      'Deep Brain Stimulation: Some patients have implanted chest neurostimulators (DBS).',
+      'Deep Brain Stimulation: Surgical DBS generators or intestinal levodopa-carbidopa gel pumps in advanced disease.',
     ],
     commonMeds: ['Co-careldopa', 'Co-beneldopa', 'Ropinirole', 'Pramipexole', 'Rasagiline'],
-    paramedicTakeaways: [
-      'Time-Critical Medication: Missed or delayed Parkinson’s doses cause severe akinesia/rigidity ("freezing") and rare acute neuroleptic-malignant-like crisis—always pack their medication box and note exact dose times for ED handover.',
-      'Antiemetic Warning: Avoid dopamine-antagonist antiemetics (metoclopramide, prochlorperazine) as they worsen Parkinsonism; use ondansetron if indicated.',
-      'Postural Hypotension: Check lying and standing BP carefully in collapses and falls, as both the disease and levodopa drop BP.',
-      'Check for Patches & DBS: Look for transdermal rotigotine patches or a chest DBS generator before placing defibrillator pads or moving forcefully.',
+    acuteComplications: [
+      'Parkinsonism-Hyperpyrexia Syndrome: Sudden withdrawal or missed doses of levodopa can trigger severe rigidity, high fever, autonomic instability, and rhabdomyolysis.',
+      'Orthostatic Syncope & Falls: Autonomic failure compounded by dopaminergic therapy causes marked postural blood pressure drops and trauma.',
+      'Silent Aspiration & Ileus: Advanced bulbar rigidity leads to aspiration pneumonia, while severe gut hypomotility can progress to pseudo-obstruction.',
     ],
   },
   {
@@ -212,8 +210,8 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Basal Ganglia Loss: Progressive atrophy of the striatum (caudate and putamen) and cerebral cortex disrupts movement inhibition and executive function.',
     ],
     symptomsAndBaseline: [
-      'Chorea & Dystonia: Dance-like involuntary jerky movements, progressing to rigidity and severe balance loss.',
-      'Dysphagia & Weight Loss: Poor swallow coordination causing high choking risk and cachexia.',
+      'Chorea & Dystonia: Dance-like involuntary jerky movements, progressing to rigidity and severe balance loss in later stages.',
+      'Dysphagia & Weight Loss: Poor swallow coordination and high energy expenditure causing cachexia.',
       'Neuropsychiatric: Irritability, depression, impulsivity, and cognitive slowing.',
     ],
     treatments: [
@@ -222,10 +220,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'MDT Support: Speech and language therapy, dietetics (PEG feeding later on), and advance care planning.',
     ],
     commonMeds: ['Tetrabenazine', 'Risperidone', 'Olanzapine', 'Sertraline'],
-    paramedicTakeaways: [
-      'Choking & Silent Aspiration: Food or fluid aspiration is a leading cause of emergency deterioration and respiratory sepsis.',
-      'High Trauma Risk: Involuntary movements make falls and occult head injuries common—assess carefully for subdural haematoma if taking anticoagulants.',
-      'Calm Scene Approach: Reduce sensory overload and allow extra time for comprehension; chorea worsens noticeably with anxiety or pain.',
+    acuteComplications: [
+      'Choking & Aspiration Pneumonia: Uncoordinated pharyngeal swallowing makes food airway obstruction and recurrent chest sepsis major emergencies.',
+      'Severe Falls & Subdural Bleeding: Pronounced chorea and gait instability cause frequent falls, traumatic head injuries, and subdural haematomas.',
+      'Acute Agitation or Delirium: Intercurrent infection, pain, or sensory overload can provoke severe behavioural distress.',
     ],
   },
   {
@@ -241,19 +239,20 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Failed Descending Control: Brainstem baroreceptors detect soaring BP and slow the heart via the vagus nerve, but inhibitory signals cannot cross the spinal cord lesion to dilate lower-body vessels.',
     ],
     symptomsAndBaseline: [
-      'Sudden Severe Hypertension: Dramatic BP rise above the patient’s low normal baseline (e.g. baseline 90/60 spiking to >160–200 mmHg systolic).',
-      'Above vs Below Injury: Pounding headache, flushing, nasal congestion, and sweating ABOVE the lesion; pale, cold, goosebumped skin BELOW it.',
+      'Low Resting Baseline: Many T6+ patients normally run a resting blood pressure around 90/60 mmHg.',
+      'Above vs Below Injury: Autonomic dysreflexia produces pounding headache, flushing, nasal congestion, and sweating ABOVE the lesion; pale, cold, goosebumped skin BELOW it.',
       'Heart Rate Clue: Reflex bradycardia (sometimes tachycardia) alongside anxiety and blurred vision.',
     ],
     treatments: [
-      'Immediate Trigger Removal: Sit patient upright, loosen tight clothing/straps, and check/flush/unblock urinary catheter or bowel.',
-      'Vasodilators: Sublingual GTN or oral nifedipine under clinical guidance if systolic BP stays dangerously high.',
+      'Trigger Management: Addressing the underlying cause (most often relieving a blocked/kinked urinary catheter or faecal impaction) rapidly lowers pressure.',
+      'Postural & Vasodilator Therapy: Upright positioning lowers venous return, and hospital/specialist protocols use fast-acting vasodilators like GTN or nifedipine when severe.',
+      'Spasticity & Bladder Meds: Chronic baclofen, oxybutynin, or solifenacin with intermittent or suprapubic catheters.',
     ],
     commonMeds: ['Glyceryl trinitrate', 'Baclofen', 'Oxybutynin', 'Solifenacin'],
-    paramedicTakeaways: [
-      'Normal BP Trap: Many T6+ quadriplegic/paraplegic patients run a resting BP of 90/60 mmHg—a reading of 140/90 with a pounding headache IS hypertensive crisis.',
-      'Sit Upright First: Lowering legs and sitting the patient upright immediately drops BP via orthostatic pooling; never lay them flat.',
-      'Check the Catheter & Skin: Kinked catheter tubing, full leg bag, tight belt, or pressure ulcer is usually the culprit—fixing the trigger rapidly resolves the crisis.',
+    acuteComplications: [
+      'Hypertensive Crisis & Haemorrhagic Stroke: A rapid BP rise ≥20–40 mmHg above baseline (e.g. >140–200 mmHg systolic) can cause intracerebral haemorrhage, seizures, or pulmonary oedema.',
+      'Common Triggers: Blocked urinary catheter, full bladder, faecal impaction, pressure sores, tight clothing, or ingrown toenails below T6.',
+      'Thermal Dysregulation: Loss of sweating and vasomotor control below the lesion predisposes patients to rapid hypothermia or heatstroke.',
     ],
   },
 
@@ -271,24 +270,23 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     causesAndPathophysiology: [
       'Pump Dysfunction: Commonly caused by prior myocardial infarction (ischaemic heart disease), hypertension, valve disease, or cardiomyopathy.',
       'Fluid Retention: Reduced cardiac output activates the RAAS and sympathetic nervous systems, retaining salt and water and increasing afterload.',
-      'Congestion: Back-pressure raises pulmonary venous pressure (flash/acute pulmonary oedema) and systemic venous pressure (ankle/sacral oedema, ascites).',
+      'Congestion: Back-pressure raises pulmonary venous pressure (acute pulmonary oedema) and systemic venous pressure (ankle/sacral oedema, ascites).',
     ],
     symptomsAndBaseline: [
       'Baseline Breathlessness: Exertional dyspnoea, orthopnoea (sleeping on multiple pillows), and paroxysmal nocturnal dyspnoea (PND).',
       'Congestion Signs: Bibasal fine crepitations, elevated JVP, and bilateral pitting ankle or sacral oedema.',
-      'Low Baseline Obs: Often hypotensive at baseline due to quadruple heart failure therapy.',
+      'Low Baseline Obs: Patients often have low resting blood pressure (90s–100s systolic) and blunted heart rate responses due to quadruple therapy.',
     ],
     treatments: [
       'Four-Pillar Therapy: ACEi/ARB or sacubitril-valsartan (Entresto), beta-blocker (bisoprolol), MRA (spironolactone), and SGLT2 inhibitor (dapagliflozin).',
       'Fluid Offloading: Loop diuretics such as furosemide or bumetanide.',
-      'Devices: Many patients have pacemakers, CRT-D, or ICDs.',
+      'Devices: Many patients have implanted pacemakers, CRT-D, or ICDs.',
     ],
     commonMeds: ['Furosemide', 'Bisoprolol', 'Ramipril', 'Dapagliflozin', 'Spironolactone'],
-    paramedicTakeaways: [
-      'Positioning & O₂: Sit patients upright with legs dependent during acute LVF; give controlled oxygen/CPAP and GTN per JRCALC if BP allows.',
-      'Judicious IV Fluids: Avoid aggressive IV fluid boluses unless clear hypovolaemia/sepsis—small, reassessed aliquots prevent worsening pulmonary oedema.',
-      'Beta-Blocker Masking: Rate-limiting drugs (bisoprolol) can blunt compensatory tachycardia during sepsis or haemorrhage.',
-      'Check for Devices: Look for ICD/CRT scars and check if implantable defibrillator shock alarms or recent therapies occurred.',
+    acuteComplications: [
+      'Acute Left Ventricular Failure (LVF): Sudden fluid shift into the alveoli causes pink frothy sputum, severe respiratory distress, hypoxia, and sympathetic panic.',
+      'Cardiorenal Decompensation: Over-diuresis or low cardiac output precipitates acute kidney injury, hyperkalaemia, and hypotension.',
+      'Ventricular Arrhythmias: Scarred myocardium creates a high substrate for VT/VF and implantable defibrillator (ICD) shocks.',
     ],
   },
   {
@@ -301,22 +299,22 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'An abnormality of the autonomic nervous system characterised by a sustained heart rate rise of ≥30 bpm (≥40 bpm in teenagers) within 10 minutes of standing, without significant orthostatic hypotension. Commonly overlaps with Ehlers-Danlos syndrome and post-viral fatigue.',
     causesAndPathophysiology: [
       'Venous Pooling: Impaired peripheral vasoconstriction causes blood to pool in the lower limbs and abdomen upon standing.',
-      'Reflex Sympathetic Surge: Baroreceptors trigger excessive noradrenaline release and tachycardia to maintain cerebral perfusion despite falling venous return.',
+      'Reflex Sympathetic Surge: Baroreceptors trigger excessive noradrenaline release and sinus tachycardia to maintain cerebral perfusion despite falling venous return.',
     ],
     symptomsAndBaseline: [
       'Orthostatic Intolerance: Palpitations, presyncope, lightheadedness, and tremor triggered rapidly by standing, hot showers, or meals.',
-      'Syncope: Occasional vasovagal fainting, with prompt recovery once flat.',
-      'Systemic Fatigue: Brain fog, nausea, purple/mottled lower legs (acrocyanosis) when upright.',
+      'Syncope: Occasional vasovagal fainting with prompt recovery once supine.',
+      'Systemic Fatigue: Brain fog, nausea, and purple/mottled lower legs (acrocyanosis) when upright.',
     ],
     treatments: [
       'Conservative Measures: High oral fluid/electrolyte intake (unless contraindicated), compression hosiery, and gradual recumbent exercise.',
       'Rate & Tone Meds: Ivabradine, propranolol/bisoprolol, midodrine (vasoconstrictor), or fludrocortisone.',
     ],
     commonMeds: ['Ivabradine', 'Propranolol', 'Midodrine', 'Fludrocortisone'],
-    paramedicTakeaways: [
-      'Lying vs Standing Obs: Classic PoTS shows normal BP and HR when supine, surging steeply on sitting/standing—do not misinterpret isolated standing sinus tachycardia as cardiac arrhythmia.',
-      'Lay Flat for Presyncope: Supine positioning with legs slightly raised restores venous return quickly.',
-      'Do Not Over-Medicalise Baseline: Always still run a 12-lead ECG and rule out PE, sepsis, anaemia, or acute SVT before attributing tachycardia solely to PoTS.',
+    acuteComplications: [
+      'Orthostatic Presyncope & Syncope: Prolonged standing, heat, fever, or mild dehydration causes abrupt cerebral hypoperfusion, collapse, and potential secondary head trauma.',
+      'Autonomic / Adrenaline Surges: Hyperadrenergic PoTS flares produce intense sinus tachycardia (130–160+ bpm), chest tightness, tremor, and severe nausea.',
+      'Supine Hypotension Paradox: Vasoconstrictors like midodrine can conversely cause elevated blood pressure when lying completely flat.',
     ],
   },
   {
@@ -335,17 +333,17 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     symptomsAndBaseline: [
       'Progressive Dyspnoea: Severe shortness of breath on minimal exertion.',
       'Right Heart Signs: Raised JVP, ankle oedema, hepatomegaly, and exertional chest pain.',
-      'Syncope Red Flag: Fainting on mild exertion signals critically limited cardiac output.',
+      'Continuous Infusion Lines: Specialist PAH patients may carry continuous Hickman-line prostacyclin pumps (epoprostenol/treprostinil).',
     ],
     treatments: [
-      'Pulmonary Vasodilators: Sildenafil, tadalafil, bosentan, ambrisentan, or continuous IV/SC prostacyclin pumps (epoprostenol/treprostinil).',
+      'Pulmonary Vasodilators: Sildenafil, tadalafil, bosentan, ambrisentan, or continuous IV/SC prostacyclin infusions.',
       'Anticoagulation & O₂: Warfarin or DOACs (especially CTEPH) and long-term home oxygen.',
     ],
     commonMeds: ['Sildenafil', 'Bosentan', 'Warfarin', 'Furosemide', 'Spironolactone'],
-    paramedicTakeaways: [
-      'Hypoxia Causes Vasoconstriction: Even brief hypoxia spikes pulmonary pressures and can precipitate right ventricular arrest—keep SpO₂ well maintained.',
-      'Continuous Infusion Pumps: NEVER stop or disconnect a patient’s Hickman-line epoprostenol/treprostinil pump; interruption causes fatal rebound pulmonary crisis within minutes.',
-      'Fluid & Vasodilator Caution: Large fluid boluses over-distend the failing right ventricle, while aggressive GTN can crash systemic BP and coronary perfusion.',
+    acuteComplications: [
+      'Right Ventricular Crisis & Arrest: Even mild hypoxia causes hypoxic pulmonary vasoconstriction, spiking pulmonary pressures and triggering cardiogenic shock or PEA arrest.',
+      'Exertional Syncope: Critical limitation of blood flow across the lungs causes sudden fainting during minor exertion.',
+      'Pump Interruption Crisis: Any disconnection or occlusion of a continuous prostacyclin infusion causes life-threatening rebound pulmonary hypertension within minutes.',
     ],
   },
   {
@@ -363,8 +361,8 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     ],
     symptomsAndBaseline: [
       'Irregular Pulse: Characteristically irregularly irregular pulse with absent P waves on 12-lead ECG.',
-      'Paroxysmal vs Permanent: Many elderly UK patients live in chronic controlled AF (HR 60–90 bpm) with no symptoms.',
-      'Fast AF Triggers: Sepsis, dehydration, hypoxia, PE, or alcohol commonly drive pre-existing AF into fast AF.',
+      'Paroxysmal vs Permanent: Many elderly UK patients live in chronic controlled AF (HR 60–90 bpm) with minimal symptoms.',
+      'Rate Variability: Intercurrent sepsis, dehydration, hypoxia, or PE frequently accelerates baseline AF.',
     ],
     treatments: [
       'Rate Control: Bisoprolol, diltiazem, or digoxin.',
@@ -372,10 +370,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Stroke Prevention: DOACs (apixaban, rivaroxaban, edoxaban, dabigatran) or warfarin.',
     ],
     commonMeds: ['Apixaban', 'Rivaroxaban', 'Bisoprolol', 'Digoxin', 'Amiodarone'],
-    paramedicTakeaways: [
-      'Treat the Driver, Not Just the ECG: New fast AF (>120–150 bpm) is frequently driven by sepsis, hypoxia, hypovolaemia, or pain—correcting the cause often settles the rate.',
-      'Major Bleeding Risk: Almost all AF patients take anticoagulants—even a minor head bump or fall requires strict head-injury trauma questioning and lower conveyance threshold.',
-      'Known vs New Onset: Ask whether AF is longstanding baseline or brand new, and check for red flags (chest pain, LVF, SBP <90, syncope).',
+    acuteComplications: [
+      'Uncontrolled Fast AF: Rapid ventricular rates (>130–160 bpm) shorten diastolic filling time, precipitating acute heart failure, chest pain, or hypotension.',
+      'Embolic Ischaemic Stroke: Clots dislodging from the left atrium can cause sudden large-vessel strokes or peripheral arterial emboli.',
+      'Anticoagulant Haemorrhage: Oral anticoagulation significantly increases the severity of intracranial haemorrhage following falls and major GI bleeding.',
     ],
   },
 
@@ -398,7 +396,7 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     symptomsAndBaseline: [
       'Chronic Baseline: Daily productive cough, exertional breathlessness, barrel chest, and pursed-lip breathing.',
       'Resting SpO₂: Many patients sit comfortably at 88–92% at baseline and hold NHS Oxygen Alert Cards.',
-      'Exacerbation Signs: Increased sputum volume/purulence, worsening wheeze, accessory muscle use, or drowsiness (CO₂ narcosis).',
+      'Exacerbation Signs: Increased sputum volume/purulence, worsening wheeze, and accessory muscle use.',
     ],
     treatments: [
       'Inhalers: Short-acting relief (salbutamol/ipratropium) plus long-acting triple therapy (LABA + LAMA + ICS, e.g. Trimbow/Trelegy).',
@@ -406,10 +404,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Home Support: Long-term oxygen therapy (LTOT) or domiciliary NIV.',
     ],
     commonMeds: ['Salbutamol', 'Ipratropium bromide', 'Tiotropium', 'Prednisolone', 'Carbocisteine'],
-    paramedicTakeaways: [
-      'Target SpO₂ 88–92%: Avoid excessive high-flow oxygen once stabilised, as hyperoxia worsens V/Q mismatch (Haldane effect) and hypercapnic acidosis.',
-      'Nebuliser Air vs O₂: If driving nebulisers with oxygen, limit to ~6 mins per JRCALC or switch to compressed air once nebulised if chronic CO₂ retainer.',
-      'Red Flags for NIV/ITU: Drowsiness, flapping tremor (asterixis), exhaustion, silent chest, or confusion indicates worsening hypercapnia requiring urgent pre-alert.',
+    acuteComplications: [
+      'Acute Hypercapnic Acidosis: Infective flares or excessive unregulated oxygen therapy worsen V/Q mismatch (Haldane effect), causing CO₂ narcosis, asterixis, drowsiness, and respiratory arrest.',
+      'Secondary Pneumothorax: Rupture of emphysematous bullae can cause sudden severe dyspnoea, pleuritic pain, and rapid collapse.',
+      'Cor Pulmonale: Chronic pulmonary vasoconstriction leads to right heart strain and peripheral oedema.',
     ],
   },
   {
@@ -426,9 +424,9 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Pancreatic Insufficiency: Blocked pancreatic ducts destroy exocrine enzymes and islet cells, leading to CF-related diabetes.',
     ],
     symptomsAndBaseline: [
-      'Respiratory Baseline: Daily wet cough, crackles/wheeze, finger clubbing, and baseline dyspnoea; haemoptysis or pneumothorax can occur acutely.',
+      'Respiratory Baseline: Daily wet cough, crackles/wheeze, finger clubbing, and baseline dyspnoea.',
       'Extrapulmonary: Pancreatic insufficiency (Creon enzymes with meals), steatorrhoea, CF-related diabetes, and liver disease.',
-      'Ports & Lines: Many adults have an implanted chest Port-a-Cath for regular IV antibiotics.',
+      'Ports & Lines: Many adults have an implanted chest Port-a-Cath for regular IV antibiotics and carry specialist CF centre contact details.',
     ],
     treatments: [
       'CFTR Modulators: Kaftrio (ivacaftor/tezacaftor/elexacaftor) dramatically improves lung function in eligible genotypes.',
@@ -436,10 +434,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Nutrition: Pancreatic enzyme replacement (pancreatin/Creon) and insulin for CF-related diabetes.',
     ],
     commonMeds: ['Dornase alfa', 'Salbutamol', 'Azithromycin', 'Insulin', 'Pancreatin'],
-    paramedicTakeaways: [
-      'Haemoptysis & Pneumothorax: Sudden pleuritic chest pain or fresh blood-streaked sputum warrants urgent hospital assessment—major haemoptysis is a life-threatening emergency.',
-      'Electrolyte & Dehydration Risk: CF patients lose excessive salt in sweat; dehydration and hyponatraemia develop rapidly in fever or hot weather.',
-      'Expert Patients: Most CF adults know their exact baseline SpO₂, target oxygen range, and specialist CF hospital team—listen closely to them and contact their specialist centre if protocol allows.',
+    acuteComplications: [
+      'Massive Haemoptysis & Pneumothorax: Eroded hypertrophied bronchial vessels can bleed heavily, while apical bullae risk spontaneous pneumothorax.',
+      'Salt-Loss Dehydration: Excessive sweat chloride loss rapidly causes hyponatraemic, hypochloraemic dehydration during heatwaves or fever.',
+      'Distal Intestinal Obstruction Syndrome (DIOS): Inspissated sticky gut contents cause acute right iliac fossa pain and bowel obstruction.',
     ],
   },
   {
@@ -456,8 +454,8 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     ],
     symptomsAndBaseline: [
       'Chronic Cough: Daily mucopurulent sputum production, often worst on waking.',
-      'Auscultation: Coarse inspiratory/expiratory crackles and scattered wheeze even when well.',
-      'Exacerbation: Increased sputum thickness/volume, pleuritic pain, fever, or coughing up small amounts of blood.',
+      'Auscultation: Coarse inspiratory/expiratory crackles and scattered wheeze are commonly present at baseline.',
+      'Exacerbation: Increased sputum thickness/volume, pleuritic pain, fever, or small amounts of blood-streaked sputum.',
     ],
     treatments: [
       'Airway Clearance: Daily chest physiotherapy techniques, Acapella/Flutter devices, and carbocisteine.',
@@ -465,10 +463,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Bronchodilators: Salbutamol or tiotropium if reversible airflow obstruction coexists.',
     ],
     commonMeds: ['Carbocisteine', 'Azithromycin', 'Salbutamol', 'Amoxicillin'],
-    paramedicTakeaways: [
-      'Do Not Confuse Crackles with LVF: Coarse basal crackles are normal baseline for bronchiectasis—compare with oedema, JVP, and fever before assuming fluid overload.',
-      'Check Sputum & Haemoptysis: Large-volume frank haemoptysis (>100 ml/24h or ongoing fresh blood) requires urgent ED pre-alert and positioning affected lung down if side is known.',
-      'Oxygen Titration: Some severe bronchiectasis patients also retain CO₂—check for an Oxygen Alert Card and monitor closely.',
+    acuteComplications: [
+      'Frank Haemoptysis: Chronic bronchial inflammation erodes fragile vessels, causing sudden large-volume coughing of fresh blood.',
+      'Severe Infective Exacerbations: Colonisation with Pseudomonas or multi-resistant bacteria drives rapid hypoxaemia and sepsis.',
+      'Type 2 Respiratory Failure: Advanced bilateral bronchiectasis can cause chronic CO₂ retention similar to severe COPD.',
     ],
   },
   {
@@ -485,7 +483,7 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     ],
     symptomsAndBaseline: [
       'Clinical Signs: Dry non-productive cough, finger clubbing, and classic fine "Velcro-like" end-inspiratory basal crackles.',
-      'Exertional Desaturation: Resting SpO₂ may look acceptable, then plummet rapidly when walking a few steps.',
+      'Exertional Desaturation: Resting SpO₂ may look acceptable, then plummet steeply with minimal physical effort.',
       'Home Oxygen: Many patients use ambulatory or continuous home oxygen cylinders/concentrators.',
     ],
     treatments: [
@@ -494,10 +492,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Supportive: Long-term oxygen therapy, pulmonary rehabilitation, and palliative opiates for severe dyspnoea.',
     ],
     commonMeds: ['Nintedanib', 'Pirfenidone', 'Prednisolone', 'Mycophenolate mofetil', 'Morphine'],
-    paramedicTakeaways: [
-      'Extreme Exertional Hypoxia: Do NOT walk an ILD patient to the ambulance—bring the carry chair/trolley to them, as standing or walking can drop SpO₂ into the 60s–70s within seconds.',
-      'Not Usually CO₂ Retainers: Unlike COPD, pure pulmonary fibrosis causes Type 1 (hypoxaemic) failure—give oxygen promptly to correct severe hypoxaemia.',
-      'Check Advance Care Plans: End-stage ILD carries high mortality; check for ReSPECT/palliative plans and community respiratory team details.',
+    acuteComplications: [
+      'Profound Type 1 Hypoxaemic Failure: Stiff fibrotic lungs typically do not retain CO₂, but suffer catastrophic oxygen drops during acute infection or exertion.',
+      'Acute IPF Exacerbation: Rapid idiopathic deterioration of fibrosis over days mimics severe pneumonia or ARDS and carries high mortality.',
+      'Secondary Pulmonary Hypertension: Chronic hypoxic vasoconstriction and destroyed capillary beds strain the right ventricle.',
     ],
   },
 
@@ -522,23 +520,23 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     causesAndPathophysiology: [
       'Adrenal Cortex Loss: Most UK cases are autoimmune destruction of the adrenal cortex; secondary insufficiency stems from pituitary disease or abrupt long-term steroid withdrawal.',
       'Hormone Deficit: Lack of cortisol impairs vascular catecholamine tone and glucose maintenance; lack of aldosterone causes renal sodium/water wasting and potassium retention.',
-      'Crisis Cascade: Stress without extra hydrocortisone triggers profound distributive/hypovolaemic shock resistant to fluids alone.',
+      'Crisis Cascade: Physiological stress without extra hydrocortisone triggers profound distributive/hypovolaemic shock resistant to fluids alone.',
     ],
     symptomsAndBaseline: [
       'Chronic Features: Fatigue, weight loss, salt craving, postural dizziness, and bronze skin hyperpigmentation (palmar creases, gums).',
-      'Adrenal Crisis: Severe hypotension/shock, persistent vomiting, abdominal or back pain, confusion, and hypoglycaemia.',
-      'Patient Alerts: Patients carry a blue/red NHS Steroid Emergency Card and often an emergency IM hydrocortisone kit.',
+      'Acute Decompensation: Severe hypotension, persistent vomiting, abdominal or back pain, confusion, and hypoglycaemia.',
+      'Patient Alerts: Patients usually carry an NHS Steroid Emergency Card and often hold an emergency IM hydrocortisone kit.',
     ],
     treatments: [
       'Daily Replacement: Oral hydrocortisone (cortisol) plus fludrocortisone (aldosterone replacement).',
       'Sick-Day Rules: Doubling oral hydrocortisone during minor illness/fever.',
-      'Emergency Crisis Care: Immediate IM or IV hydrocortisone 100 mg plus rapid 0.9% sodium chloride infusion.',
+      'Emergency Crisis Care: Parenteral hydrocortisone 100 mg and IV 0.9% sodium chloride replacement.',
     ],
     commonMeds: ['Hydrocortisone', 'Fludrocortisone', 'Prednisolone'],
-    paramedicTakeaways: [
-      'Steroid Before Everything in Crisis: Hypotension + vomiting/illness in a steroid-dependent patient is an adrenal crisis until proven otherwise—give 100 mg IM/IV hydrocortisone immediately per JRCALC (can use patient’s own kit if needed).',
-      'Check BM Immediately: Cortisol deficiency causes severe hypoglycaemia, especially alongside vomiting.',
-      'Avoid Delay: Adrenal crisis shock will NOT respond properly to IV fluids alone without hydrocortisone—pre-alert ED.',
+    acuteComplications: [
+      'Addisonian (Adrenal) Crisis: Infection, gastroenteritis, trauma, or missed steroids precipitates refractory vasodilatory and hypovolaemic shock that responds poorly to fluids until cortisol is replaced.',
+      'Profound Hypoglycaemia: Cortisol deficiency impairs hepatic gluconeogenesis, rapidly dropping blood glucose—especially alongside vomiting.',
+      'Electrolyte Derangement: Aldosterone deficit drives severe hyponatraemia and life-threatening hyperkalaemia.',
     ],
   },
   {
@@ -555,8 +553,8 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     ],
     symptomsAndBaseline: [
       'Hyperglycaemia / DKA: Polyuria, polydipsia, vomiting, abdominal pain, deep Kussmaul breathing, pear-drop ketotic breath, and tachycardia.',
-      'Hypoglycaemia: Sweating, tremor, aggression/confusion, slurred speech, seizures, or coma (BM <4.0 mmol/L).',
-      'Wearable Tech: Most UK patients now wear Libre/Dexcom CGM sensors and/or insulin pumps (Omnipod, Tandem, Medtronic).',
+      'Hypoglycaemia: Sweating, tremor, confusion/aggression, slurred speech, seizures, or coma (BM <4.0 mmol/L).',
+      'Wearable Tech: Most UK patients now wear Libre/Dexcom CGM sensors (which can lag behind capillary glucose during rapid swings) and/or insulin pumps.',
     ],
     treatments: [
       'Basal-Bolus Insulin: Long-acting (insulin glargine/degludec) plus rapid-acting mealtime insulin (NovoRapid/Fiasp) or continuous pump.',
@@ -564,10 +562,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'DKA Protocol: Hospital IV 0.9% sodium chloride, fixed-rate IV insulin infusion, and potassium monitoring.',
     ],
     commonMeds: ['Insulin aspart', 'Insulin glargine', 'Insulin degludec', 'Glucagon'],
-    paramedicTakeaways: [
-      'Never Stop Background Insulin Without Reason: In DKA, withholding all insulin worsens ketosis—if an insulin pump is delivering insulin during severe HYPOGLYCAEMIA, suspend/disconnect it, then inform ED.',
-      'Verify CGM with Fingerprick BM: Sensors lag behind true blood glucose during rapid swings or poor perfusion—always check a capillary BM.',
-      'Euglycaemic DKA Trap: Even T1DM patients with modest glucose (<11 mmol/L, especially if ill or using SGLT2 adjuncts) can still have ketoacidosis—check blood ketones if available and treat vomiting + unwell T1DM seriously.',
+    acuteComplications: [
+      'Diabetic Ketoacidosis (DKA): Infection, pump failure, or missed insulin drives severe dehydration, metabolic acidosis, and dangerous total-body potassium shifts.',
+      'Severe Hypoglycaemia: Excess insulin or missed meals causes neuroglycopenic seizures, coma, or fatal arrhythmias.',
+      'Euglycaemic DKA: Ketoacidosis can still occur with only mildly raised blood glucose (<11 mmol/L), particularly during fasting illness or concurrent SGLT2 inhibitor use.',
     ],
   },
   {
@@ -585,18 +583,18 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     ],
     symptomsAndBaseline: [
       'Extreme Output: Passing 4–20 litres of pale, watery urine daily alongside intense thirst.',
-      'Normal Blood Sugar: BM is normal—do not confuse with diabetes mellitus.',
-      'Crisis Signs: Lethargy, confusion, dry mucous membranes, tachycardia, and seizures if unable to drink (e.g. vomiting illness).',
+      'Normal Blood Glucose: Blood glucose remains normal, as the disorder affects water regulation rather than insulin.',
+      'Dehydration Signs: Lethargy, confusion, dry mucous membranes, and tachycardia if unable to keep up with fluid losses.',
     ],
     treatments: [
       'Cranial DI: Desmopressin (DDAVP) nasal spray, oral tablets, or sublingual melts—a time-critical NHS medication.',
-      'Nephrogenic DI: Thiazide diuretics, NSAIDs, or stopping/adjusting lithium under specialist care.',
+      'Nephrogenic DI: Thiazide diuretics, NSAIDs, or adjusting lithium under specialist care.',
     ],
     commonMeds: ['Desmopressin', 'Bendroflumethiazide', 'Lithium carbonate'],
-    paramedicTakeaways: [
-      'Do Not Confuse with Diabetes Mellitus: Normal BM does not rule out a serious Diabetes Insipidus emergency; missed desmopressin is fatal if hypernatraemia escalates.',
-      'Time-Critical Desmopressin: Ensure patients bring their desmopressin supply to A&E and flag to triage immediately if they have been vomiting or missed doses.',
-      'Fluid Caution: Severe hypernatraemia needs careful hospital correction (rapid drops cause cerebral oedema)—resuscitate shock per JRCALC, and clearly document total urine output and thirst.',
+    acuteComplications: [
+      'Severe Hypernatraemic Dehydration: Vomiting, reduced consciousness, or missed desmopressin doses prevents drinking to match renal water loss, causing cellular brain shrinkage, seizures, and coma.',
+      'Hyponatraemia (Water Intoxication): Excess desmopressin combined with excessive fluid intake can conversely trigger dangerous dilutional hyponatraemia.',
+      'Post-Pituitary Crisis: Cranial DI after neurosurgery frequently coexists with panhypopituitarism and acute adrenal insufficiency.',
     ],
   },
   {
@@ -608,12 +606,12 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     overview:
       'A rare catecholamine-secreting neuroendocrine tumour arising from the adrenal medulla. It discharges unpredictable bursts of adrenaline and noradrenaline into the bloodstream, causing paroxysmal life-threatening hypertension, tachycardia, and cardiomyopathy.',
     causesAndPathophysiology: [
-      'Catecholamine Surges: Tumour cells release massive pulses of adrenaline and noradrenaline either spontaneously or when triggered by palpation, stress, anaesthesia, or certain drugs.',
+      'Catecholamine Surges: Tumour cells release massive pulses of adrenaline and noradrenaline either spontaneously or when provoked by abdominal pressure, stress, anaesthesia, or certain drugs (e.g. metoclopramide or unopposed beta-blockers).',
       'Alpha & Beta Overload: Extreme alpha-mediated vasoconstriction spikes BP dangerously while beta stimulation drives tachyarrhythmias.',
     ],
     symptomsAndBaseline: [
       'Classic Triad: Episodic severe throbbing headache, profuse drenching sweats, and pounding palpitations.',
-      'Pallor & Panic: Extreme facial pallor (not flushing), tremor, chest tightness, and a sense of impending doom.',
+      'Pallor & Panic: Extreme facial pallor (rather than flushing), tremor, chest tightness, and a sense of impending doom.',
       'Labile BP: Wild blood pressure swings from severe hypertensive crisis to postural hypotension.',
     ],
     treatments: [
@@ -621,10 +619,10 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Definitive Cure: Specialist laparoscopic adrenalectomy once safely alpha-blocked.',
     ],
     commonMeds: ['Doxazosin', 'Phenoxybenzamine', 'Propranolol', 'Bisoprolol'],
-    paramedicTakeaways: [
-      'NEVER Give Beta-Blockers Alone: Unopposed alpha vasoconstriction causes catastrophic hypertensive crisis—flag the diagnosis clearly to ED before any rate-control meds.',
-      'Trigger Avoidance: Avoid deep abdominal palpation over the flanks/adrenals and avoid dopamine-antagonist antiemetics like metoclopramide, which can trigger a catecholamine surge.',
-      'Stroke & ACS Risk: Treat surges with urgent calm transport, continuous 12-lead monitoring, and immediate ED pre-alert for IV alpha-blockade.',
+    acuteComplications: [
+      'Catecholamine Storm: Unprovoked or drug-triggered surges (including unopposed beta-blockade causing unopposed alpha vasoconstriction) precipitate malignant hypertension, stroke, or acute pulmonary oedema.',
+      'Stress Cardiomyopathy & Arrhythmias: Catecholamine excess causes Takotsubo cardiomyopathy, myocardial ischaemia, and ventricular tachyarrhythmias.',
+      'Rebound Orthostatic Shock: Chronic vasoconstriction contracts intravascular volume, causing paradoxical severe hypotension between surges.',
     ],
   },
 
@@ -645,20 +643,19 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Functional Asplenia: Repeated splenic infarcts in childhood leave adults highly vulnerable to overwhelming encapsulated bacterial sepsis.',
     ],
     symptomsAndBaseline: [
-      'Vaso-Occlusive Crisis: Excruciating deep bone, back, chest, or abdominal pain triggered by cold, infection, stress, or dehydration.',
-      'Acute Chest Syndrome: Fever, cough, chest pain, tachypnoea, and falling SpO₂—the leading cause of death in adults with SCD.',
-      'Chronic Baseline: Baseline Hb often 70–90 g/L with mild scleral jaundice; many carry NHS Sickle Cell Alert Cards.',
+      'Vaso-Occlusive Crisis: Severe deep bone, back, chest, or abdominal pain triggered by cold, infection, stress, or dehydration.',
+      'Acute Chest Syndrome: Fever, cough, chest pain, tachypnoea, and falling SpO₂.',
+      'Chronic Baseline: Haemoglobin typically sits at 70–90 g/L with mild scleral jaundice; many patients carry NHS Sickle Cell Alert Cards.',
     ],
     treatments: [
-      'Crisis Management: Rapid strong analgesia (morphine/oxycodone), warmth, IV/oral hydration, oxygen if hypoxic, and early antibiotics.',
+      'Crisis Management: Rapid strong analgesia, warmth, fluid hydration, oxygen when hypoxic, and early antibiotics.',
       'Disease Modification: Hydroxycarbamide (hydroxyurea), folic acid, prophylactic phenoxymethylpenicillin, or exchange blood transfusions.',
     ],
     commonMeds: ['Hydroxycarbamide', 'Folic acid', 'Phenoxymethylpenicillin', 'Morphine', 'Paracetamol'],
-    paramedicTakeaways: [
-      'Treat Pain Immediately: NICE/JRCALC recommend analgesia within 30 minutes—believe the patient’s pain score, give strong analgesia promptly, and never label frequent callers as drug-seeking.',
-      'Keep Warm & Hydrated: Cold exposure triggers further sickling—warm the ambulance and avoid cold exposure.',
-      'Acute Chest & Stroke Red Flags: Any new chest pain, shortness of breath, fever, or focal neurology requires urgent high-priority ED pre-alert.',
-      'Low Baseline Anaemia: Pallor and mild tachycardia can be chronic baseline; give O₂ if SpO₂ <95% or in respiratory distress.',
+    acuteComplications: [
+      'Acute Chest Syndrome: Pulmonary vaso-occlusion and infection rapidly cause worsening hypoxia and respiratory failure—the leading cause of death in adult SCD.',
+      'Overwhelming Sepsis: Functional asplenia allows rapid progression of pneumococcal or meningococcal septicaemia.',
+      'Stroke & Splenic Sequestration: Intracranial vessel sickling can cause acute ischaemic or haemorrhagic stroke, while sudden splenic trapping drops haemoglobin abruptly.',
     ],
   },
   {
@@ -676,17 +673,17 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     symptomsAndBaseline: [
       'Skin & Joints: Butterfly malar facial rash, photosensitivity, mouth ulcers, and symmetrical migratory joint pain.',
       'Organ Involvement: Pleuritic chest pain, pericardial effusions, frothy urine (nephritis), Raynaud’s phenomenon, or CNS lupus (seizures/psychosis).',
-      'Fatigue & Flares: Severe fatigue and low-grade fevers during active flares.',
+      'Fatigue & Flares: Marked fatigue, low-grade fevers, and often long-term oral steroid use.',
     ],
     treatments: [
       'Foundation Therapy: Hydroxychloroquine for virtually all SLE patients.',
       'Immunosuppression: Prednisolone, azathioprine, mycophenolate, methotrexate, or rituximab/belimumab.',
     ],
     commonMeds: ['Hydroxychloroquine', 'Prednisolone', 'Mycophenolate mofetil', 'Azathioprine', 'Methotrexate'],
-    paramedicTakeaways: [
-      'High Sepsis Risk: Immunosuppressed SLE patients with fever may be in neutropenic/opportunistic sepsis rather than "just a flare"—do full sepsis screening.',
-      'Steroid Dependency: Check for long-term prednisolone use and NHS Steroid Emergency Cards if unwell, vomiting, or hypotensive.',
-      'Premature Cardiac & VTE Risk: Young adults with SLE carry markedly higher risk of MI, pericarditis, PE, and stroke—always obtain a 12-lead ECG for chest pain.',
+    acuteComplications: [
+      'Opportunistic & Neutropenic Sepsis: Immunosuppressive therapies mask typical inflammatory signs while raising the risk of rapid severe infection.',
+      'Serositis & Pericardial Effusion: Active lupus inflammation can cause acute pericarditis, cardiac tamponade, or pleural effusions.',
+      'Premature Vascular Events & NPSLE: Accelerated atherosclerosis and overlapping antiphospholipid antibodies increase risk of young-onset MI, PE, stroke, and lupus seizures.',
     ],
   },
   {
@@ -704,17 +701,17 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     symptomsAndBaseline: [
       'Joint & Skin Signs: Frequent subluxations/dislocations (shoulders, knees, ribs), velvety stretchy skin, and easy bruising.',
       'Overlaps: Frequently coexists with PoTS, MCAS (mast cell activation/allergic reactions), and gastroparesis.',
-      'vEDS Red Flags: Sudden severe chest, back, or abdominal pain from spontaneous arterial dissection or organ perforation.',
+      'Lidocaine Resistance: Local anaesthetics such as lidocaine are frequently less effective in EDS patients.',
     ],
     treatments: [
       'Supportive Care: Specialist physiotherapy, joint bracing, multimodal analgesia, and PoTS management.',
       'vEDS Surveillance: Celiprolol in specialist vascular centres to reduce arterial wall stress and strict trauma avoidance.',
     ],
     commonMeds: ['Paracetamol', 'Gabapentin', 'Amitriptyline', 'Ivabradine', 'Cetirizine'],
-    paramedicTakeaways: [
-      'Ask the Subtype First: Vascular EDS (vEDS) + sudden chest/back/abdominal pain or headache must be treated as potential aortic/arterial dissection or bowel rupture until excluded.',
-      'Local Anaesthetic Resistance: Many EDS patients metabolise lidocaine poorly—warn ED if suturing/nerve blocks are planned, and check allergies carefully if they have MCAS.',
-      'Gentle Handling: Fragile tissues bruise/tear easily; handle carefully, immobilise suspected dislocations rather than forcing reductions (some hEDS patients safely self-relocate).',
+    acuteComplications: [
+      'Spontaneous Vascular & Organ Rupture (vEDS): Fragile connective tissue in Vascular EDS predisposes to spontaneous aortic/arterial dissection, carotid-cavernous fistula, pneumothorax, and bowel or uterine perforation.',
+      'Recurrent Dislocations & Craniocervical Instability: Minor movements can provoke acute large-joint dislocations or brainstem compression symptoms.',
+      'MCAS Anaphylactoid Flares: Coexisting mast cell activation causes sudden flushing, urticaria, bronchospasm, and hypotension.',
     ],
   },
   {
@@ -730,19 +727,19 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Deep Bleeding Pattern: Unlike superficial platelet oozing, haemophilia causes delayed, deep, ongoing bleeding into joints, soft tissues, GI tract, and cranium.',
     ],
     symptomsAndBaseline: [
-      'Haemarthrosis: Early tingling/warmth ("aura") before painful swollen knees, ankles, or elbows.',
-      'Dangerous Sites: Head trauma, neck/throat swelling (airway compression), and psoas/retroperitoneal bleeds.',
-      'Haemophilia Care Cards: Patients hold UK Haemophilia Centre emergency contact cards and often keep factor concentrate at home.',
+      'Haemarthrosis: Early tingling/warmth ("aura") followed by painful swollen knees, ankles, or elbows.',
+      'Deep Haematomas: Risk of muscle haematomas from minor knocks or intramuscular trauma.',
+      'Haemophilia Care Cards: Patients hold UK Haemophilia Centre emergency contact cards and often keep home factor concentrates.',
     ],
     treatments: [
       'Factor Replacement: Prophylactic or emergency IV Factor VIII / Factor IX concentrates, or subcutaneous emicizumab.',
       'Adjunct Clotting: Tranexamic acid for mucosal bleeds (nosebleeds, mouth) and desmopressin (DDAVP) in mild Haemophilia A.',
     ],
     commonMeds: ['Tranexamic acid', 'Desmopressin'],
-    paramedicTakeaways: [
-      'Treat First, Scan After in ED: "Factor first" is the golden rule—if the patient has home Factor VIII/IX, bring it with them and pre-alert ED + their Haemophilia Centre immediately.',
-      'Avoid IM Injections & NSAIDs: Do NOT give intramuscular injections (severe muscle haematoma risk) or ibuprofen/aspirin; use IV/oral/IN routes per JRCALC.',
-      'Head & Neck Trauma = Priority 1: Even a trivial head knock or tongue bite requires urgent hospital assessment and factor replacement before symptoms appear.',
+    acuteComplications: [
+      'Intracranial Haemorrhage: Even seemingly trivial head knocks can cause delayed, progressive brain bleeding without immediate neurological signs.',
+      'Airway & Neck Haematoma: Floor-of-mouth, tongue, or neck bleeds can expand silently to cause acute airway obstruction.',
+      'Compartment Syndrome & Iliopsoas Bleed: Deep intramuscular or retroperitoneal haemorrhage can cause hypovolaemic shock, femoral nerve palsy, or limb ischaemia.',
     ],
   },
   {
@@ -758,19 +755,19 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Arterial & Venous Clots: Unlike most thrombophilias, APS causes clots in BOTH veins (DVT/PE) and arteries (stroke, MI, splenic/renal infarcts).',
     ],
     symptomsAndBaseline: [
-      'Vascular Events: Young-onset stroke/TIA, PE, DVT, or mottled net-like skin rash (livedo reticularis).',
+      'Vascular History: Young-onset stroke/TIA, PE, DVT, or mottled net-like skin rash (livedo reticularis).',
       'Migraine & Visual Aura: Frequent vascular headaches and transient visual disturbance.',
-      'Catastrophic APS: Rare life-threatening multi-organ microthrombosis over days.',
+      'Lifelong Anticoagulation: Most patients take warfarin (often targeting higher INRs of 2.5–3.5) rather than DOACs.',
     ],
     treatments: [
       'Long-Term Warfarin: Warfarin (usually preferred over DOACs in high-risk/triple-positive APS) or low-molecular-weight heparin in pregnancy.',
       'Antiplatelets & SLE Meds: Low-dose aspirin or hydroxychloroquine if secondary to lupus.',
     ],
     commonMeds: ['Warfarin', 'Aspirin', 'Hydroxychloroquine', 'Enoxaparin'],
-    paramedicTakeaways: [
-      'Clots Despite Young Age: Never dismiss chest pain, calf swelling, or stroke symptoms in a 20–40-year-old with APS.',
-      'Warfarin Bleeding Risk: Because most patients rely on lifelong warfarin (often high INR targets 2.5–3.5), check for head injury, GI bleeding, or epistaxis carefully.',
-      'Medication Compliance Check: Ask about recent missed warfarin doses or sub-therapeutic INR readings if presenting with breathlessness or neurological signs.',
+    acuteComplications: [
+      'Venous & Arterial Thromboembolism: High risk of acute pulmonary embolism, DVT, ischaemic stroke, and myocardial infarction—including in young adults.',
+      'Catastrophic APS (CAPS): Rare life-threatening storm of widespread microvascular thrombosis causing rapid multi-organ failure over days.',
+      'Anticoagulant Haemorrhage: High-target warfarin therapy raises the risk of severe bleeding following head trauma or GI ulceration.',
     ],
   },
 
@@ -791,20 +788,19 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Renal Anaemia & Uraemia: Reduced erythropoietin drops haemoglobin; uraemic toxins irritate pericardium and platelets.',
     ],
     symptomsAndBaseline: [
-      'Haemodialysis Access: Look for a palpable/buzzing AV fistula in an arm ("thrill") or a tunnelled chest Tesio/permcath line.',
+      'Haemodialysis Access: Many Stage 5 patients have a surgical arteriovenous (AV) fistula in a forearm/upper arm (palpable "thrill") or a tunnelled chest Tesio/permcath line.',
       'Peritoneal Dialysis: Indwelling abdominal PD catheter.',
-      'Uraemic & Overload Signs: Fatigue, pruritus, dyspnoea/fluid overload if dialysis missed, or muscle weakness from hyperkalaemia.',
+      'Uraemic Baseline: Fatigue, pruritus, baseline mild anaemia, and reduced daily urine output.',
     ],
     treatments: [
       'Renal Protection: Ramipril/losartan, dapagliflozin, and strict BP control.',
       'Dialysis & Support: 3x-weekly haemodialysis or daily peritoneal dialysis, phosphate binders, vitamin D, and erythropoietin.',
     ],
     commonMeds: ['Ramipril', 'Dapagliflozin', 'Furosemide', 'Folic acid', 'Calcium carbonate'],
-    paramedicTakeaways: [
-      'Protect the Fistula Arm: NEVER take blood pressure, apply a tourniquet, or cannulate an arm with an AV fistula or graft ("No BP/IV" alert).',
-      'Hyperkalaemia ECG Check: Missed dialysis + weakness, chest pain, or bradycardia mandates an urgent 12-lead ECG (peaked T waves, wide QRS, sine wave) and rapid pre-alert.',
-      'Fistula Bleeding Emergency: Ruptured AV fistula bleeds under arterial-like pressure—apply direct firm focal fingertip pressure (not bulky loose gauze) and summon urgent backup/pre-alert.',
-      'Avoid NSAIDs: Never give ibuprofen or naproxen in CKD.',
+    acuteComplications: [
+      'Severe Hyperkalaemia: Missed dialysis or intercurrent illness spikes serum potassium, causing peaked T waves, widened QRS, sine-wave ECGs, bradycardia, and cardiac arrest.',
+      'Flash Pulmonary Oedema: Fluid overload between dialysis sessions rapidly floods alveoli, causing acute dyspnoea and hypoxia.',
+      'AV Fistula Rupture & Infection: High-pressure arterialised fistula bleeding can cause fatal exsanguination, while tunnelled lines and PD catheters carry high sepsis/peritonitis risk.',
     ],
   },
   {
@@ -822,18 +818,18 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     ],
     symptomsAndBaseline: [
       'Stigmata of CLD: Jaundice, spider naevi, palmar erythema, distended abdomen (ascites), and low baseline BP.',
-      'Encephalopathy: Altered sleep cycle, confusion, slurred speech, and flapping hand tremor (asterixis).',
-      'Variceal Bleed: Sudden large-volume fresh haematemesis or melaena with rapid haemorrhagic shock.',
+      'Encephalopathy Features: Reversed sleep cycle, confusion, slurred speech, and flapping hand tremor (asterixis).',
+      'Coagulopathy: Easy bruising and prolonged bleeding from minor mucosal or skin injuries.',
     ],
     treatments: [
       'Varices Prevention: Carvedilol or propranolol (non-selective beta-blockers) and endoscopic variceal band ligation.',
       'Ascites & Encephalopathy: Spironolactone, furosemide, lactulose, and rifaximin.',
     ],
     commonMeds: ['Spironolactone', 'Furosemide', 'Carvedilol', 'Lactulose', 'Rifaximin'],
-    paramedicTakeaways: [
-      'Variceal Haematemesis = Major Haemorrhage: Large-bore IV access (2x if possible), cautious permissive hypotension per JRCALC, TXA as indicated locally, and immediate ED pre-alert for blood/terlipressin/endoscopy.',
-      'Spontaneous Bacterial Peritonitis (SBP): Any new abdominal pain, fever, or worsening confusion in a patient with ascites can be SBP sepsis—check temperature and convey promptly.',
-      'Check BM & Don’t Assume Intoxication: Hepatic encephalopathy and hypoglycaemia look identical to alcohol intoxication—always check BM and assess carefully.',
+    acuteComplications: [
+      'Oesophageal Variceal Haemorrhage: Ruptured high-pressure varices cause massive fresh haematemesis or melaena and rapid haemorrhagic shock compounded by baseline coagulopathy.',
+      'Spontaneous Bacterial Peritonitis (SBP): Bacterial translocation into ascitic fluid causes abdominal pain, fever, hepatic decompensation, and occult sepsis.',
+      'Hepatic Encephalopathy & Hypoglycaemia: Constipation, infection, or GI bleeding precipitates acute confusion/coma alongside impaired hepatic glycogen stores.',
     ],
   },
   {
@@ -851,17 +847,17 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
     symptomsAndBaseline: [
       'Acute Flare: Severe cramping abdominal pain, frequent bloody diarrhoea, fever, dehydration, and tachycardia.',
       'Surgical History: Many patients have an ileostomy or colostomy stoma bag.',
-      'Complications: Bowel obstruction/perforation (rigid abdomen, absent sounds) or toxic megacolon.',
+      'Extraintestinal Baseline: Associated joint pain, mouth ulcers, erythema nodosum, and iron-deficiency anaemia.',
     ],
     treatments: [
       'Anti-Inflammatories: Mesalazine (5-ASA) for UC; short courses of prednisolone or budesonide for flares.',
       'Immunosuppressants & Biologics: Azathioprine, methotrexate, infliximab, adalimumab, or ustekinumab.',
     ],
     commonMeds: ['Mesalazine', 'Prednisolone', 'Budesonide', 'Azathioprine', 'Loperamide'],
-    paramedicTakeaways: [
-      'Severe Flare / Toxic Megacolon: Fever + severe abdominal pain/distension + tachycardia + bloody stools warrants urgent hospital conveyance (risk of perforation).',
-      'Stoma Dehydration: High-output ileostomies lose vast fluid and electrolytes rapidly during gastroenteritis—assess hydration and BP carefully.',
-      'Steroid & Biologic Risk: Many flare patients take oral steroids or biologics—watch for masked peritonitis, adrenal suppression, and opportunistic sepsis.',
+    acuteComplications: [
+      'Toxic Megacolon & Perforation: Severe acute colitis causes colonic dilatation, high fever, tachycardia, abdominal rigidity, and septic shock.',
+      'High-Output Stoma Dehydration: Gastroenteritis or flares in ileostomy patients rapidly cause severe hypovolaemia, acute kidney injury, and electrolyte loss.',
+      'Bowel Obstruction & Abscess: Transmural Crohn’s strictures and fistulae frequently precipitate mechanical bowel obstruction or intra-abdominal sepsis.',
     ],
   },
   {
@@ -877,19 +873,19 @@ export const PREGENERATED_CONDITIONS: ClinicalConditionItem[] = [
       'Villous Atrophy: Destruction of small-bowel microvilli dramatically reduces surface area for absorbing iron, folate, calcium, and calories.',
     ],
     symptomsAndBaseline: [
-      'Accidental Exposure: Acute cramping abdominal pain, bloating, nausea, diarrhoea, and malaise lasting hours to days after eating gluten.',
+      'Accidental Exposure: Acute cramping abdominal pain, bloating, nausea, vomiting, and diarrhoea lasting hours to days after eating gluten.',
       'Chronic Deficiency: Iron-deficiency anaemia, fatigue, osteoporosis, and weight loss.',
-      'Autoimmune Overlaps: Frequently associated with Type 1 diabetes and autoimmune thyroid disease.',
+      'Autoimmune Overlaps: Frequently coexists with Type 1 diabetes mellitus and autoimmune thyroid or adrenal disease.',
     ],
     treatments: [
       'Lifelong Gluten-Free Diet: Strict avoidance of wheat, barley, and rye allows mucosal healing.',
       'Nutritional Replacement: Iron, folic acid, vitamin B12, and calcium/vitamin D supplements if deficient.',
     ],
     commonMeds: ['Ferrous fumarate', 'Folic acid', 'Hydroxocobalamin', 'Colecalciferol'],
-    paramedicTakeaways: [
-      'Check Excipients / Oral Meds Caution: Although most emergency IV/inhaled drugs are gluten-free, ask before giving non-essential oral snacks/tablets if severe coeliac.',
-      'Autoimmune Associations: If a known coeliac patient is acutely unwell, keep Type 1 diabetes (check BM) and Addison’s disease in mind, as autoimmune conditions cluster together.',
-      'Don’t Blame Gluten for Red Flags: Severe rigid abdomen, rectal bleeding, or haemodynamic instability needs full surgical/medical workup—coeliac flares don’t cause peritonitis.',
+    acuteComplications: [
+      'Acute Gluten Exposure Reaction: Inadvertent gluten ingestion can provoke intense vomiting, abdominal colic, and dehydration mimicking acute gastroenteritis.',
+      'Autoimmune Cluster Presentations: Higher background prevalence of Type 1 diabetes (DKA/hypoglycaemia) and Addison’s disease (adrenal crisis).',
+      'Hyposplenism Sepsis Risk: Approximately one-third of adult coeliac patients develop functional hyposplenism, raising susceptibility to encapsulated bacterial infections.',
     ],
   },
 ];

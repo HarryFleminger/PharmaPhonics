@@ -226,7 +226,7 @@ export const HowToUseCard: React.FC<HowToUseCardProps> = ({
                 <span className="text-xs sm:text-sm text-slate-700 leading-snug">
                   <strong className="text-slate-900">Conditions</strong> — look up any chronic or
                   unfamiliar condition en route for pathophysiology, baseline, treatments, and
-                  on-scene takeaways.
+                  acute complications.
                 </span>
               </div>
               <ChevronRight

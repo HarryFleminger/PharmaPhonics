@@ -99,7 +99,7 @@ function searchConditions(
       item.commonMeds.some((med) => normalizeSearchText(med).includes(qNorm)) ||
       item.causesAndPathophysiology.some((line) => normalizeSearchText(line).includes(qNorm)) ||
       item.symptomsAndBaseline.some((line) => normalizeSearchText(line).includes(qNorm)) ||
-      item.paramedicTakeaways.some((line) => normalizeSearchText(line).includes(qNorm))
+      item.acuteComplications.some((line) => normalizeSearchText(line).includes(qNorm))
     ) {
       score = 25;
     }
@@ -816,8 +816,8 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
               No local condition entry found for &ldquo;{trimmedQuery}&rdquo;
             </h2>
             <p className="text-sm text-slate-600 mt-1.5">
-              Generate a UK paramedic refresher (What It Is, Pathophysiology, Baseline, Treatments,
-              and On-Scene Takeaways) directly with Gemini AI, or check your spelling.
+              Generate a UK clinical refresher (What It Is, Pathophysiology, Baseline, Treatments,
+              and Acute Complications) directly with Gemini AI, or check your spelling.
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
               <button

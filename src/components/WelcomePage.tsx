@@ -324,7 +324,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                     </span>
                   </div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-                    Condition Refreshers &amp; On-Scene Context
+                    Condition Refreshers &amp; Pathophysiology
                   </h3>
                 </div>
               </div>
@@ -342,9 +342,9 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
                     aria-hidden="true"
                   />
                   <span>
-                    <strong>Clear Breakdown + Paramedic Takeaways:</strong> Covers What It Is,
-                    Pathophysiology, Symptoms &amp; Baseline, Treatments, and ambulance scene red
-                    flags in British NHS terminology.
+                    <strong>Clear Clinical Breakdown:</strong> Covers What It Is, Pathophysiology,
+                    Symptoms &amp; Baseline, Treatments, and Acute Complications in British NHS
+                    terminology.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">

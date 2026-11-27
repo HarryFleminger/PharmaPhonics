@@ -44,7 +44,7 @@ const CLINICAL_STORAGE_KEY = 'medspeak_clinical_cache_v1';
 const TOXICITY_STORAGE_KEY = 'medspeak_toxicity_cache_v1';
 const PRESCRIPTION_SCAN_STORAGE_KEY = 'medspeak_prescription_scan_cache_v2';
 const ASSESSMENT_STORAGE_KEY = 'medspeak_assessment_cache_v1';
-const CONDITION_STORAGE_KEY = 'medspeak_condition_cache_v1';
+const CONDITION_STORAGE_KEY = 'medspeak_condition_cache_v2';
 const BRAND_STORAGE_KEY = 'medspeak_brand_cache_v1';
 const MAX_PERSISTED_PRESCRIPTION_SCANS = 25;
 
@@ -203,7 +203,7 @@ function isValidConditionItem(value: unknown): value is ClinicalConditionItem {
     isNonEmptyStringArray(record.treatments) &&
     Array.isArray(record.commonMeds) &&
     record.commonMeds.every((item) => typeof item === 'string') &&
-    isNonEmptyStringArray(record.paramedicTakeaways)
+    isNonEmptyStringArray(record.acuteComplications)
   );
 }
 
@@ -1191,7 +1191,7 @@ function parseAndValidateConditionJson(
   const symptomsAndBaseline = toCleanStringArray(record.symptomsAndBaseline);
   const treatments = toCleanStringArray(record.treatments);
   const commonMeds = Array.from(new Set(toCleanStringArray(record.commonMeds))).slice(0, 6);
-  const paramedicTakeaways = toCleanStringArray(record.paramedicTakeaways);
+  const acuteComplications = toCleanStringArray(record.acuteComplications);
 
   if (
     !title ||
@@ -1200,7 +1200,7 @@ function parseAndValidateConditionJson(
     causesAndPathophysiology.length === 0 ||
     symptomsAndBaseline.length === 0 ||
     treatments.length === 0 ||
-    paramedicTakeaways.length === 0
+    acuteComplications.length === 0
   ) {
     throw new Error('Gemini condition response missing required fields.');
   }
@@ -1224,7 +1224,7 @@ function parseAndValidateConditionJson(
     symptomsAndBaseline,
     treatments,
     commonMeds,
-    paramedicTakeaways,
+    acuteComplications,
   };
 }
 
