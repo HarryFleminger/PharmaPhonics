@@ -27,7 +27,9 @@ export function scrollElementBelowStickyHeader(
 ): boolean {
   if (!element || typeof window === 'undefined') return false;
 
-  const desiredViewportTop = getStickyHeaderHeight() + extraOffsetPx;
+  const responsiveOffset =
+    window.innerWidth < 768 ? Math.min(extraOffsetPx, 6) : extraOffsetPx;
+  const desiredViewportTop = getStickyHeaderHeight() + responsiveOffset;
   const currentViewportTop = element.getBoundingClientRect().top;
 
   if (Math.abs(currentViewportTop - desiredViewportTop) <= tolerancePx) {
