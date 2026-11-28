@@ -43,6 +43,8 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'tight chest',
       'pleuritic',
       'pericarditis',
+      'ischaemic heart disease & angina',
+      'ischaemic heart disease',
     ],
     keyQuestions: [
       'Site: Where exactly in the chest?',
@@ -83,6 +85,8 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'ectopics',
       'tachycardia',
       'bradycardia',
+      'atrial fibrillation',
+      'postural tachycardia syndrome',
     ],
     keyQuestions: [
       'Onset & Trigger: Sudden start/stop vs gradual? Triggered by exertion, posture, stress, or at rest?',
@@ -160,6 +164,8 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'orthopnoea',
       'pnd',
       'swollen ankles',
+      'chronic heart failure',
+      'heart failure',
     ],
     keyQuestions: [
       'Onset: Sudden acute respiratory distress vs gradual worsening over days/weeks?',
@@ -271,6 +277,7 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'iecopd',
       'blue bloater',
       'pink puffer',
+      'chronic obstructive pulmonary disease',
     ],
     keyQuestions: [
       'Baseline: Normal exercise tolerance, baseline SOB, usual SpO₂, and oxygen alert card (target 88–92%)?',
@@ -382,6 +389,8 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'hemiparesis',
       'dysphasia',
       'brain attack',
+      'previous stroke & tia',
+      'cerebrovascular disease',
     ],
     keyQuestions: [
       'Time Last Seen Well: Exact clock time symptoms began, or exact time patient was last seen completely normal (or wake-up stroke)?',
@@ -453,6 +462,7 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'agitated',
       'dementia flare',
       'confusion',
+      'dementia',
     ],
     keyQuestions: [
       'Baseline vs Acute: Collateral history from carer/family — what is their normal baseline and when did confusion change?',
@@ -522,6 +532,9 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'rectal bleed',
       'varices',
       'gi bleed',
+      'gord & peptic ulcer disease',
+      'peptic ulcer disease',
+      'liver cirrhosis & portal hypertension',
     ],
     keyQuestions: [
       'Site & Colour: Fresh red vomit, dark coffee-ground vomit, black tarry foul-smelling stool (melaena), or bright/dark PR blood + clots?',
@@ -668,6 +681,8 @@ export const PREGENERATED_ASSESSMENTS: ClinicalAssessmentItem[] = [
       'bm',
       'low blood sugar',
       'high blood sugar',
+      'type 1 diabetes mellitus',
+      'type 2 diabetes mellitus',
     ],
     keyQuestions: [
       'Type & Meds: Type 1 vs Type 2, insulin regimen (pen/pump), sulfonylureas (gliclazide), or SGLT2i ("-flozin")?',

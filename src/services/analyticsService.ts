@@ -44,7 +44,8 @@ export type AnalyticsEventName =
   | 'condition_viewed'
   | 'condition_search_no_match'
   | 'condition_ai_generated'
-  | 'condition_med_clicked';
+  | 'condition_med_clicked'
+  | 'condition_assessment_clicked';
 
 export type AnalyticsPrimitive = string | number | boolean | null;
 export type AnalyticsProperties = Record<string, AnalyticsPrimitive>;

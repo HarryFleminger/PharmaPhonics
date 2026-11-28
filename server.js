@@ -131,6 +131,7 @@ const ANALYTICS_ALLOWED_EVENTS = new Set([
   'condition_search_no_match',
   'condition_ai_generated',
   'condition_med_clicked',
+  'condition_assessment_clicked',
 ]);
 
 const analyticsIpTimestamps = new Map();

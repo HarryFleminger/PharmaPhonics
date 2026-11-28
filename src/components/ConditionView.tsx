@@ -33,6 +33,7 @@ import { scrollElementBelowStickyHeader } from '../utils/scrollUtils';
 interface ConditionViewProps {
   onOpenCondition?: () => void;
   onSelectMedication: (drugName: string, conditionTitle: string) => void;
+  onSearchInAssessments: (conditionTitle: string) => void;
   audioLoadingId: string | null;
   speakingId: string | null;
   onListen: (id: string, name: string) => void;
@@ -118,6 +119,7 @@ function searchConditions(
 export const ConditionView: React.FC<ConditionViewProps> = ({
   onOpenCondition,
   onSelectMedication,
+  onSearchInAssessments,
   audioLoadingId,
   speakingId,
   onListen,
@@ -809,6 +811,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
                   isExpanded={Boolean(expandedIds[condition.id]) || hasSingleSearchMatch}
                   onToggle={handleToggleCard}
                   onSelectMedication={onSelectMedication}
+                  onSearchInAssessments={onSearchInAssessments}
                   isAudioLoading={audioLoadingId === ttsItemId}
                   isSpeaking={speakingId === ttsItemId}
                   onListen={onListen}
@@ -884,6 +887,7 @@ export const ConditionView: React.FC<ConditionViewProps> = ({
             isExpanded={expandedIds[selectedCondition.id] ?? true}
             onToggle={handleToggleCard}
             onSelectMedication={onSelectMedication}
+            onSearchInAssessments={onSearchInAssessments}
             isAudioLoading={audioLoadingId === `cond-${selectedCondition.id}`}
             isSpeaking={speakingId === `cond-${selectedCondition.id}`}
             onListen={onListen}

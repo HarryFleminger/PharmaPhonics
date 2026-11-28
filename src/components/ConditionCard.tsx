@@ -21,6 +21,7 @@ interface ConditionCardProps {
   isExpanded: boolean;
   onToggle: (condition: ClinicalConditionItem) => void;
   onSelectMedication: (drugName: string, conditionTitle: string) => void;
+  onSearchInAssessments: (conditionTitle: string) => void;
   isAudioLoading: boolean;
   isSpeaking: boolean;
   onListen: (id: string, name: string) => void;
@@ -95,6 +96,7 @@ export const ConditionCard: React.FC<ConditionCardProps> = ({
   isExpanded,
   onToggle,
   onSelectMedication,
+  onSearchInAssessments,
   isAudioLoading,
   isSpeaking,
   onListen,
@@ -171,6 +173,17 @@ export const ConditionCard: React.FC<ConditionCardProps> = ({
                   <span>Listen</span>
                 </>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onSearchInAssessments(condition.title)}
+              aria-label={`Search ${spokenTitle} in Assessments`}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-ambulance-green border border-emerald-200 hover:bg-ambulance-green hover:text-white hover:border-ambulance-green transition-all cursor-pointer active:scale-[0.98]"
+            >
+              <Stethoscope className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Search in Assessments</span>
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-80" aria-hidden="true" />
             </button>
           </div>
         </div>

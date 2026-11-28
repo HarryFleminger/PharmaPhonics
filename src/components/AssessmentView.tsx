@@ -32,6 +32,7 @@ interface AssessmentViewProps {
   onOpenAssessment?: () => void;
   isQuickCategoriesMinimized?: boolean;
   onSetQuickCategoriesMinimized?: (minimized: boolean | ((prev: boolean) => boolean)) => void;
+  externalSearchRequest?: { query: string; trigger: number } | null;
 }
 
 function normalizeSearchText(text: string): string {
@@ -111,6 +112,7 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
   onOpenAssessment,
   isQuickCategoriesMinimized,
   onSetQuickCategoriesMinimized,
+  externalSearchRequest,
 }) => {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(COMMON_CALLOUT_CATEGORY);
@@ -194,6 +196,34 @@ export const AssessmentView: React.FC<AssessmentViewProps> = ({
     }
     return Array.from(mergedMap.values());
   }, [aiAssessments]);
+
+  const lastHandledExternalTriggerRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (
+      !externalSearchRequest ||
+      externalSearchRequest.trigger === lastHandledExternalTriggerRef.current
+    ) {
+      return;
+    }
+    lastHandledExternalTriggerRef.current = externalSearchRequest.trigger;
+    const nextQuery = externalSearchRequest.query.trim();
+    setActiveCategory(null);
+    setIsCategoryDrawerMinimized(false);
+    setSelectedAssessmentId(null);
+    setAiError(null);
+    setQuickCategoriesMinimized(true);
+
+    const matches = searchAssessments(nextQuery, allAssessments);
+    if (matches.length > 1 && matches[0]) {
+      setExpandedIds({ [matches[0].id]: true });
+    } else {
+      setExpandedIds({});
+    }
+
+    pendingScrollRef.current = true;
+    setQuery(nextQuery);
+  }, [externalSearchRequest, allAssessments, setQuickCategoriesMinimized]);
 
   const assessmentsByCategory = useMemo(() => {
     const map: Record<string, ClinicalAssessmentItem[]> = {};

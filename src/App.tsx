@@ -80,6 +80,10 @@ export function App() {
       return window.innerWidth < 768;
     }
   );
+  const [externalAssessmentSearch, setExternalAssessmentSearch] = useState<{
+    query: string;
+    trigger: number;
+  } | null>(null);
 
   // Toxicity Mode state & Tox Calculator inputs
   const [isToxicityMode, setIsToxicityMode] = useState(false);
@@ -862,6 +866,27 @@ export function App() {
     [activeSection, handleSelectCategoryDrug]
   );
 
+  const handleSearchConditionInAssessments = useCallback(
+    (conditionTitle: string) => {
+      const cleanQuery = conditionTitle.replace(/\s*\([^)]*\)/g, '').trim() || conditionTitle;
+      trackEvent('condition_assessment_clicked', {
+        condition_title: conditionTitle,
+        search_query: cleanQuery,
+      });
+      if (activeSection !== 'assessments') {
+        setActiveSection('assessments');
+        trackEvent('section_switched', { section: 'assessments' });
+        trackPageView('/assessments');
+      }
+      setIsAssessmentCategoriesMinimized(true);
+      setExternalAssessmentSearch((prev) => ({
+        query: cleanQuery,
+        trigger: (prev?.trigger ?? 0) + 1,
+      }));
+    },
+    [activeSection]
+  );
+
   return (
     <>
       {isGuideOpen && (
@@ -1307,6 +1332,7 @@ export function App() {
               onOpenAssessment={triggerFirstTimeClinicalWarning}
               isQuickCategoriesMinimized={isAssessmentCategoriesMinimized}
               onSetQuickCategoriesMinimized={setIsAssessmentCategoriesMinimized}
+              externalSearchRequest={externalAssessmentSearch}
             />
             <HowToUseCard
               isToxicityMode={false}
@@ -1406,6 +1432,7 @@ export function App() {
             <ConditionView
               onOpenCondition={triggerFirstTimeClinicalWarning}
               onSelectMedication={handleSelectConditionMedication}
+              onSearchInAssessments={handleSearchConditionInAssessments}
               audioLoadingId={audioLoadingId}
               speakingId={speakingId}
               onListen={handleListenClick}
