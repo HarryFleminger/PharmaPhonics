@@ -25,10 +25,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
               <div className="p-2 bg-white/10 rounded-xl border border-white/20 flex items-center justify-center">
                 <Stethoscope className="w-6 h-6 text-nhs-warmYellow" aria-hidden="true" />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-baseline gap-2">
                 <span className="text-xl sm:text-2xl font-bold tracking-tight">MedSpeak</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-white/15 text-emerald-100 border border-white/20">
-                  UK BNF
+                <span className="text-xs sm:text-sm font-medium text-emerald-100/95">
+                  A Paramedic Companion App
                 </span>
               </div>
             </div>
@@ -47,9 +47,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onClose }) => {
             UK Paramedic Medication &amp; Assessment Study Tool
           </h1>
           <p className="mt-2.5 text-sm sm:text-base text-emerald-100/95 max-w-3xl leading-relaxed">
-            Built for UK paramedics, EMTs, and student clinicians to search 999 assessment
-            checklists, BNF drugs, medical conditions, overdose doses, and multiple-med
-            breakdowns.
+            Built for UK paramedics, EMT/AAPs, and student clinicians to search 999 assessments, UK
+            NHS drugs, medical conditions, overdose doses, and multiple-med breakdowns.
           </p>
         </div>
       </header>

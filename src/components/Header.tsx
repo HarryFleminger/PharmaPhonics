@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Column: Title, Subtitle & Action Badges (aligned on the same left edge on mobile) */}
         <div className="flex-1 min-w-0 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-baseline gap-2">
               <h1 className="text-lg sm:text-2xl font-bold tracking-tight">
                 MedSpeak
               </h1>
@@ -67,15 +67,13 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>TOXICITY / OVERDOSE MODE</span>
                   <X className="w-3 h-3 text-rose-200 shrink-0" aria-hidden="true" />
                 </button>
+              ) : isToxicityMode ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-semibold border shrink-0 bg-rose-900/60 text-rose-100 border-rose-300/40">
+                  TOXICITY / OVERDOSE MODE
+                </span>
               ) : (
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-semibold border shrink-0 ${
-                    isToxicityMode
-                      ? 'bg-rose-900/60 text-rose-100 border-rose-300/40'
-                      : 'bg-white/15 text-emerald-100 border-white/20'
-                  }`}
-                >
-                  {isToxicityMode ? 'TOXICITY / OVERDOSE MODE' : 'UK BNF'}
+                <span className="text-xs sm:text-sm font-medium text-emerald-100/95">
+                  A Paramedic Companion App
                 </span>
               )}
             </div>
@@ -86,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {isToxicityMode
                 ? 'Pre-Hospital Overdose & Toxbase Study Assessment'
-                : 'Built for UK paramedics, EMTs, and student clinicians to search 999 assessment checklists, BNF drugs, medical conditions, overdose doses, and multiple-med breakdowns.'}
+                : 'Built for UK paramedics, EMT/AAPs, and student clinicians to search 999 assessments, UK NHS drugs, medical conditions, overdose doses, and multiple-med breakdowns.'}
             </p>
           </div>
 
